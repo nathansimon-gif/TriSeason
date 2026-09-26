@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080c14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>TriSeason — Forme & Prévisions</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    .confidence-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; padding: 3px 9px; border-radius: 20px;
+    }
+    .confidence-badge--high   { background: rgba(34,212,114,.15); color: var(--green); }
+    .confidence-badge--medium { background: rgba(245,200,74,.15); color: var(--yellow); }
+    .confidence-badge--low    { background: rgba(240,72,74,.15);  color: var(--red); }
+    .pred-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .pred-row:last-child { border-bottom: none; }
+    .pred-row__dist { font-size: 13px; font-weight: 600; }
+    .pred-row__time { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--accent2); }
+    .tsb-tile {
+      text-align: center; padding: 16px; border-radius: var(--r-sm);
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+    .tsb-tile__val { font-size: 28px; font-weight: 800; letter-spacing: -.03em; }
+    .tsb-tile__label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
+    .obs-card {
+      padding: 12px 14px; background: var(--surface2); border-radius: var(--r-sm);
+      margin-bottom: 8px; border-left: 3px solid var(--border2);
+    }
+    .obs-card__title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .obs-card__text  { font-size: 12px; color: var(--text-2); line-height: 1.6; }
+    .disclaimer-box {
+      background: rgba(245,200,74,.08); border: 1px solid rgba(245,200,74,.25);
+      border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
+      color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav__logo"><div class="nav__logo-icon">◈</div> TriSeason</div>
+  <div class="nav__links" id="navLinks">
+    <a href="index.html"        class="nav__link">Dashboard</a>
+    <a href="sport.html"        class="nav__link">Sports</a>
+    <a href="sessions.html"     class="nav__link">Séances</a>
+    <a href="competitions.html" class="nav__link">Compétitions</a>
+    <a href="nutrition.html"    class="nav__link">Nutrition</a>
+    <a href="records.html"      class="nav__link">Records</a>
+    <a href="forme.html"        class="nav__link active">Forme</a>
+  </div>
+  <div class="nav__actions">
+    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil">👤</a>
+    <button class="nav__menu-btn" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+
+<div class="page"><div class="container">
+
+  <div class="page-header" style="margin-bottom:16px">
+    <h1>Forme & Prévisions</h1>
+    <p>Estimations de temps de course et analyse de la charge d'entraînement</p>
+  </div>
+
+  <div class="disclaimer-box">
+    ⚠️ Ces estimations sont basées sur des modèles statistiques génériques (Riegel, Banister) et sur vos propres données. Elles ne remplacent pas un avis d'entraîneur ou de médecin du sport, et leur fiabilité dépend directement du volume de données saisies.
+  </div>
+
+  <!-- ── Prédicteur de temps (Riegel) ── -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px">
+      <span>🎯 Prédicteur de temps de course</span>
+      <span class="confidence-badge confidence-badge--high">Fiabilité élevée</span>
+      <span class="tip-icon" data-tip="Formule de Riegel : T2 = T1 × (D2/D1)^1.06. Valide surtout en course à pied, à utiliser avec prudence en natation/vélo.">?</span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="form-group" style="flex:1;min-width:160px">
+        <label class="form-label">Sport</label>
+        <select class="form-select" id="predSport" onchange="populatePredSource();renderPrediction()">
+          <option value="run">🏃 Course à pied</option>
+          <option value="nat">🏊 Natation</option>
+          <option value="velo">🚴 Vélo</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;min-width:200px">
+        <label class="form-label">Record de référence</label>
+        <select class="form-select" id="predSource" onchange="renderPrediction()"></select>
+      </div>
+    </div>
+    <div id="predictionResults"></div>
+  </div>
+
+  <!-- ── Charge d'entraînement (CTL/ATL/TSB) ── -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px">
+      <span>📈 Charge d'entraînement & Forme</span>
+      <span class="confidence-badge confidence-badge--high">Méthode établie</span>
+      <span class="tip-icon" data-tip="CTL (fitness) = charge moyenne sur 42 jours. ATL (fatigue) = charge moyenne sur 7 jours. TSB (forme) = CTL - ATL. Un TSB positif avant une course indique une bonne fraîcheur.">?</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px" id="tsbTiles"></div>
+    <div style="position:relative;height:220px;overflow:hidden">
+      <canvas id="chartPMC"></canvas>
+    </div>
+    <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
+  </div>
+
+  <!-- ── Observations (corrélations descriptives) ── -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px">
+      <span>🔍 Observations sur vos données</span>
+      <span class="confidence-badge confidence-badge--low">Descriptif — non causal</span>
+      <span class="tip-icon" data-tip="Ces observations décrivent des tendances dans VOS données uniquement — elles ne prouvent aucun lien de cause à effet et reposent souvent sur un petit nombre d'exemples.">?</span>
+    </div>
+    <div id="observations"></div>
+  </div>
+
+</div></div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <a href="index.html"        class="mobile-nav__item"><span class="mobile-nav__icon">⊞</span>Dashboard</a>
+  <a href="sessions.html"     class="mobile-nav__item"><span class="mobile-nav__icon">▷</span>Séances</a>
+  <a href="sport.html"        class="mobile-nav__item"><span class="mobile-nav__icon">◎</span>Sports</a>
+  <a href="nutrition.html"    class="mobile-nav__item"><span class="mobile-nav__icon">🥗</span>Nutrition</a>
+  <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon">👤</span>Profil</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+let charts = {};
+Chart.defaults.animation = false;
+Chart.defaults.responsive = true;
+Chart.defaults.maintainAspectRatio = false;
+
+function makeChart(id, config) {
+  if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  charts[id] = new Chart(canvas, config);
+  return charts[id];
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  populatePredSource();
+  renderPrediction();
+  renderPMC();
+  renderObservations();
+  TS.initTooltips();
+});
+
+window.addEventListener('triseason:update', () => {
+  populatePredSource();
+  renderPrediction();
+  renderPMC();
+  renderObservations();
+});
+
+// ── Time helpers ──────────────────────────────────────────────────────────────
+function timeToSec(str) {
+  if (!str) return 0;
+  const p = str.trim().split(':').map(Number);
+  if (p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
+  if (p.length === 2) return p[0] >= 10 ? p[0]*60 + p[1] : p[0]*3600 + p[1]*60;
+  return 0;
+}
+function secToTime(sec) {
+  sec = Math.round(sec);
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// ── Riegel predictor ──────────────────────────────────────────────────────────
+const DIST_KM = {
+  '50m':0.05,'100m':0.1,'200m':0.2,'400m':0.4,'800m':0.8,'1500m':1.5,'3,8km (Ironman)':3.8,
+  '1km':1,'1 mile':1.609,'3km':3,'5km':5,'10km':10,'Semi-marathon (21,1km)':21.1,'Marathon (42,2km)':42.195,
+  '20km':20,'40km':40,'50km':50,'100km':100,'180km (Ironman)':180,
+};
+
+const TARGET_DISTANCES = {
+  run:  ['1km','3km','5km','10km','Semi-marathon (21,1km)','Marathon (42,2km)'],
+  nat:  ['100m','200m','400m','800m','1500m','3,8km (Ironman)'],
+  velo: ['10km','20km','40km','100km','180km (Ironman)'],
+};
+
+function getRecordsForSport(sport) {
+  return (TS.getData().records || []).filter(r => r.sport === sport && DIST_KM[r.dist] && r.time);
+}
+
+function populatePredSource() {
+  const sport = document.getElementById('predSport').value;
+  const sel   = document.getElementById('predSource');
+  const recs  = getRecordsForSport(sport);
+  if (!recs.length) {
+    sel.innerHTML = '<option value="">Aucun record disponible</option>';
+    return;
+  }
+  sel.innerHTML = recs
+    .sort((a,b) => DIST_KM[a.dist] - DIST_KM[b.dist])
+    .map(r => `<option value="${r.id}">${r.dist} — ${r.time}</option>`)
+    .join('');
+}
+
+function renderPrediction() {
+  const sport = document.getElementById('predSport').value;
+  const el    = document.getElementById('predictionResults');
+  const recs  = getRecordsForSport(sport);
+  const srcId = document.getElementById('predSource').value;
+  const src   = recs.find(r => r.id === srcId);
+
+  if (!src) {
+    el.innerHTML = `<div class="empty"><div class="empty__text">Ajoutez au moins un record dans cette discipline pour obtenir des prédictions.</div>
+      <a href="records.html" class="btn btn--ghost btn--sm" style="margin-top:8px">Ajouter un record →</a></div>`;
+    return;
+  }
+
+  const d1 = DIST_KM[src.dist];
+  const t1 = timeToSec(src.time);
+  const targets = TARGET_DISTANCES[sport] || [];
+  const exponent = sport === 'run' ? 1.06 : sport === 'nat' ? 1.05 : 1.02; // moins agressif pour vélo (endurance différente)
+
+  const rows = targets
+    .filter(dist => dist !== src.dist)
+    .map(dist => {
+      const d2 = DIST_KM[dist];
+      const t2 = t1 * Math.pow(d2 / d1, exponent);
+      return { dist, time: secToTime(t2), km: d2 };
+    });
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">
+      Basé sur votre record de <b>${src.dist}</b> en <b style="color:var(--accent2)">${src.time}</b>${src.date ? ' (' + new Date(src.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) + ')' : ''}
+    </div>
+    ${rows.map(r => `<div class="pred-row">
+      <div class="pred-row__dist">${r.dist}</div>
+      <div class="pred-row__time">${r.time}</div>
+    </div>`).join('')}
+    <div style="font-size:11px;color:var(--text-3);margin-top:10px">
+      Plus l'écart entre les distances est grand, moins l'estimation est fiable — surtout au-delà du marathon ou en changeant fortement de type d'effort.
+    </div>`;
+}
+
+// ── Performance Management Chart (CTL/ATL/TSB) ───────────────────────────────
+function renderPMC() {
+  const sessions = TS.getSessions().filter(s => s.date && s.duration && s.rpe);
+  if (sessions.length < 5) {
+    document.getElementById('tsbTiles').innerHTML =
+      '<div style="grid-column:1/-1"><div class="empty"><div class="empty__text">Saisissez au moins 5 séances avec durée et RPE pour voir votre courbe de forme.</div></div></div>';
+    document.getElementById('tsbInterpretation').textContent = '';
+    return;
+  }
+
+  // Daily TSS map
+  const dailyTSS = {};
+  sessions.forEach(s => {
+    dailyTSS[s.date] = (dailyTSS[s.date] || 0) + TS.calcTSS(s.duration, s.rpe);
+  });
+
+  // Build continuous date range from first session to today
+  const dates = Object.keys(dailyTSS).sort();
+  const start = new Date(dates[0] + 'T00:00:00');
+  const end   = new Date();
+  const days  = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(d.toISOString().split('T')[0]);
+  }
+
+  // Exponentially weighted CTL (42d) / ATL (7d)
+  const ctlK = 1 - Math.exp(-1/42);
+  const atlK = 1 - Math.exp(-1/7);
+  let ctl = 0, atl = 0;
+  const series = days.map(day => {
+    const tss = dailyTSS[day] || 0;
+    ctl = ctl + (tss - ctl) * ctlK;
+    atl = atl + (tss - atl) * atlK;
+    return { day, ctl: Math.round(ctl*10)/10, atl: Math.round(atl*10)/10, tsb: Math.round((ctl-atl)*10)/10 };
+  });
+
+  const last = series[series.length - 1];
+  const tsbColor = last.tsb > 5 ? 'var(--green)' : last.tsb < -20 ? 'var(--red)' : 'var(--yellow)';
+
+  document.getElementById('tsbTiles').innerHTML = `
+    <div class="tsb-tile"><div class="tsb-tile__val" style="color:var(--accent2)">${last.ctl}</div><div class="tsb-tile__label">CTL (Fitness)</div></div>
+    <div class="tsb-tile"><div class="tsb-tile__val" style="color:var(--run)">${last.atl}</div><div class="tsb-tile__label">ATL (Fatigue)</div></div>
+    <div class="tsb-tile"><div class="tsb-tile__val" style="color:${tsbColor}">${last.tsb > 0 ? '+' : ''}${last.tsb}</div><div class="tsb-tile__label">TSB (Forme)</div></div>`;
+
+  // Interpretation
+  let msg;
+  if (last.tsb > 15) msg = "Forme très fraîche — vous êtes bien reposé, potentiellement un peu en sous-charge si loin d'une échéance.";
+  else if (last.tsb > 5) msg = "Bonne fraîcheur — profil favorable à l'approche d'une compétition.";
+  else if (last.tsb > -10) msg = "Charge équilibrée — vous entraînez sans excès de fatigue accumulée.";
+  else if (last.tsb > -25) msg = "Fatigue significative — phase de charge active, pensez à intégrer de la récupération.";
+  else msg = "Fatigue élevée — risque de surentraînement si cette tendance se prolonge. Une semaine allégée pourrait être bénéfique.";
+  document.getElementById('tsbInterpretation').innerHTML = `<b>Interprétation :</b> ${msg}`;
+
+  // Chart — last 90 days max for readability
+  const recent = series.slice(-90);
+  makeChart('chartPMC', {
+    type: 'line',
+    data: {
+      labels: recent.map(s => new Date(s.day+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
+      datasets: [
+        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#5b73f5', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#f4613a', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#22d472', backgroundColor:'rgba(34,212,114,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#8496b8', font:{size:11}, boxWidth:8 } } },
+      scales:{
+        x:{ grid:{color:'rgba(30,45,71,.5)'}, ticks:{color:'#3d5070', font:{size:9}, maxTicksLimit:10, maxRotation:0} },
+        y:{ grid:{color:'rgba(30,45,71,.5)'}, ticks:{color:'#3d5070', font:{size:10}} }
+      }
+    }
+  });
+}
+
+// ── Observations descriptives ────────────────────────────────────────────────
+function renderObservations() {
+  const el = document.getElementById('observations');
+  const observations = [];
+
+  // 1. Poids vs allure (vélo W/kg trend, ou run pace trend)
+  const weights = (TS.getData().weight || []).slice().sort((a,b) => a.date.localeCompare(b.date));
+  if (weights.length >= 3) {
+    const first = weights[0].value, last = weights[weights.length-1].value;
+    const diff  = (last - first).toFixed(1);
+    if (Math.abs(diff) >= 1) {
+      observations.push({
+        title: '⚖️ Évolution du poids',
+        text: `Votre poids a ${diff > 0 ? 'augmenté' : 'diminué'} de ${Math.abs(diff)} kg depuis le début de vos mesures (${weights.length} pesées). ${Math.abs(diff) >= 3 ? "Une variation de cette ampleur peut avoir un effet notable sur vos performances en course à pied et en vélo (rapport poids/puissance)." : "Variation modérée, effet probablement limité sur vos performances."}`
+      });
+    }
+  }
+
+  // 2. RPE moyen par mois — tendance de forme perçue
+  const sessions = TS.getSessions().filter(s => s.rpe && s.date);
+  if (sessions.length >= 8) {
+    const byMonth = {};
+    sessions.forEach(s => {
+      const mk = s.date.slice(0,7);
+      if (!byMonth[mk]) byMonth[mk] = [];
+      byMonth[mk].push(s.rpe);
+    });
+    const months = Object.keys(byMonth).sort();
+    if (months.length >= 2) {
+      const firstAvg = byMonth[months[0]].reduce((a,b)=>a+b,0) / byMonth[months[0]].length;
+      const lastAvg  = byMonth[months[months.length-1]].reduce((a,b)=>a+b,0) / byMonth[months[months.length-1]].length;
+      const diff = (lastAvg - firstAvg).toFixed(1);
+      if (Math.abs(diff) >= 0.5) {
+        observations.push({
+          title: '💪 Ressenti d’effort (RPE)',
+          text: `Votre RPE moyen est passé de ${firstAvg.toFixed(1)}/10 à ${lastAvg.toFixed(1)}/10 entre vos premières et dernières séances renseignées. ${diff < 0 ? "Une baisse peut indiquer une progression de la forme (mêmes efforts perçus comme plus faciles)." : "Une hausse peut refléter une charge d'entraînement plus exigeante ou un début de fatigue accumulée."}`
+        });
+      }
+    }
+  }
+
+  // 3. Volume hebdo vs nombre de séances RPE élevé
+  const highRpeCount = sessions.filter(s => s.rpe >= 8).length;
+  const totalSessions = sessions.length;
+  if (totalSessions >= 10) {
+    const pct = Math.round(highRpeCount / totalSessions * 100);
+    observations.push({
+      title: '🔥 Répartition de l’intensité',
+      text: `${pct}% de vos séances renseignées ont un RPE ≥ 8/10 (${highRpeCount} sur ${totalSessions}). ${pct > 30 ? "C'est une proportion élevée — la littérature sportive recommande généralement 70-80% du volume en endurance fondamentale (RPE bas) pour limiter le risque de surentraînement." : "Cette répartition semble cohérente avec un modèle d'entraînement polarisé classique."}`
+    });
+  }
+
+  // 4. Comparaison courses avec TSB au moment de la course (si CTL/ATL dispo)
+  const comps = TS.getCompetitions().filter(c => c.actual_time && c.goal_time);
+  if (comps.length >= 2) {
+    const achieved = comps.filter(c => timeToSec(c.actual_time) <= timeToSec(c.goal_time)).length;
+    observations.push({
+      title: '🏁 Taux de réussite des objectifs',
+      text: `Vous avez atteint votre objectif de temps sur ${achieved} course${achieved>1?'s':''} sur ${comps.length} renseignée${comps.length>1?'s':''} (${Math.round(achieved/comps.length*100)}%). ${comps.length < 5 ? "Échantillon encore restreint — ce taux se précisera avec plus de courses." : ""}`
+    });
+  }
+
+  if (!observations.length) {
+    const monthsCount = (() => {
+      const m = {};
+      sessions.forEach(s => { m[s.date.slice(0,7)] = true; });
+      return Object.keys(m).length;
+    })();
+    const progressRows = [
+      { label: 'Pesées enregistrées',              current: weights.length,  target: 3  },
+      { label: 'Séances avec RPE renseigné',        current: sessions.length, target: 10 },
+      { label: 'Mois différents avec des séances',  current: monthsCount,     target: 2  },
+      { label: 'Compétitions avec objectif et résultat', current: comps.length, target: 2 },
+    ];
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Pas encore assez de données pour générer des observations. Voici ce qu\u2019il vous reste à saisir :</div>'
+      + progressRows.map(r => {
+          const pct = Math.min(100, Math.round(r.current / r.target * 100));
+          const done = r.current >= r.target;
+          const color = done ? 'var(--green)' : 'var(--accent2)';
+          return '<div style="margin-bottom:10px">'
+            + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'
+            + '<span style="color:var(--text-2)">' + (done ? '✅ ' : '') + r.label + '</span>'
+            + '<span style="font-weight:700;color:' + color + '">' + r.current + ' / ' + r.target + '</span>'
+            + '</div>'
+            + '<div class="progress"><div class="progress__bar" style="width:' + pct + '%;background:' + color + '"></div></div>'
+            + '</div>';
+        }).join('')
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:6px">Certaines observations nécessitent aussi une variation minimale dans vos données (ex : au moins 1 kg de différence de poids), même une fois le seuil de quantité atteint.</div>';
+    return;
+  }
+
+  el.innerHTML = observations.map(o => `
+    <div class="obs-card">
+      <div class="obs-card__title">${o.title}</div>
+      <div class="obs-card__text">${o.text}</div>
+    </div>`).join('');
+}
+
+function toggleMenu() { document.getElementById('navLinks').classList.toggle('open'); }
+</script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+  </script>
+</body>
+</html>

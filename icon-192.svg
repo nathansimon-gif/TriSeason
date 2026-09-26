@@ -1,0 +1,12 @@
+<svg width="192" height="192" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="40" fill="#080c14"/>
+  <rect width="192" height="192" rx="40" fill="url(#g)"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0bbfcd" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#5b73f5" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+  <text x="96" y="115" font-size="80" text-anchor="middle" font-family="Arial">◈</text>
+  <text x="96" y="160" font-size="22" text-anchor="middle" font-family="Arial" fill="#8496b8" font-weight="bold">TRI</text>
+</svg>
