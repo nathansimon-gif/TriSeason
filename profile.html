@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080c14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TriSeason">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>TriSeason — Profil</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--nat), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+    .stat-block {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .stat-block__val   { font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+    .stat-block__label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .07em; }
+    .pb-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .pb-row:last-child { border-bottom: none; }
+    .pb-row__dist  { font-size: 12px; color: var(--text-2); min-width: 140px; }
+    .pb-row__time  { font-family: var(--mono); font-size: 15px; font-weight: 700; flex: 1; }
+    .pb-row__pace  { font-size: 11px; color: var(--text-2); font-family: var(--mono); }
+    .section-card  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; margin-bottom: 12px; }
+    .section-card__title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--text-2); margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-card__title::before {
+      content: ''; display: block; width: 3px; height: 14px;
+      border-radius: 2px; background: var(--accent);
+    }
+    .data-export-btn {
+      width: 100%; padding: 12px; border-radius: var(--r-sm);
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      transition: all .15s;
+    }
+    .data-export-btn:hover { background: var(--surface3); border-color: var(--border2); }
+    .zone-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav__logo"><div class="nav__logo-icon">◈</div> TriSeason</div>
+    <div class="nav__links" id="navLinks">
+    <a href="index.html"        class="nav__link ">Dashboard</a>
+    <a href="sport.html"        class="nav__link ">Sports</a>
+    <a href="sessions.html"     class="nav__link ">Séances</a>
+    <a href="competitions.html" class="nav__link ">Compétitions</a>
+    <a href="nutrition.html"    class="nav__link ">Nutrition</a>
+    <a href="records.html"      class="nav__link ">Records</a>
+    <a href="forme.html"        class="nav__link">Forme</a>
+  </div>
+  <div class="nav__actions">
+    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil">👤</a>
+    <button class="nav__menu-btn" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+
+<div class="page"><div class="container">
+
+  <!-- ── Header profil ── -->
+  <div class="section-card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap">
+      <div class="avatar" id="avatarEl">?</div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.03em" id="profileName">Mon profil</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:2px" id="profileSub"></div>
+      </div>
+      <button class="btn btn--ghost btn--sm" onclick="openEditModal()">✏️ Modifier</button>
+    </div>
+
+    <!-- Stats rapides -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px" id="quickStats"></div>
+  </div>
+
+  <!-- ── Records personnels ── -->
+  <div class="section-card">
+    <div class="section-card__title">🏆 Records personnels</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="pbGrid">
+      <!-- filled by JS -->
+    </div>
+    <div style="margin-top:12px;text-align:center">
+      <a href="records.html" class="btn btn--ghost btn--sm">Gérer mes records →</a>
+    </div>
+  </div>
+
+  <!-- ── Saison en cours ── -->
+  <div class="section-card">
+    <div class="section-card__title">📊 Saison en cours</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="seasonStats"></div>
+  </div>
+
+  <!-- ── Zones d'entraînement ── -->
+  <div class="section-card">
+    <div class="section-card__title">⚡ Zones FC personnalisées
+      <span class="tip-icon" data-tip="Basé sur votre FC max. Renseignez-la dans 'Modifier le profil'.">?</span>
+    </div>
+    <div id="fcZones"></div>
+  </div>
+
+  <!-- ── Données & Confidentialité ── -->
+  <div class="section-card">
+    <div class="section-card__title">💾 Données</div>
+    <div class="stack">
+      <button class="data-export-btn" onclick="TS.exportData()">
+        <span style="font-size:18px">📤</span>
+        <div>
+          <div>Exporter mes données</div>
+          <div style="font-size:11px;color:var(--text-2);font-weight:400">Sauvegarde complète au format JSON</div>
+        </div>
+      </button>
+      <label class="data-export-btn" style="cursor:pointer">
+        <span style="font-size:18px">📥</span>
+        <div>
+          <div>Importer des données</div>
+          <div style="font-size:11px;color:var(--text-2);font-weight:400">Restaurer depuis une sauvegarde JSON</div>
+        </div>
+        <input type="file" accept=".json" style="display:none" onchange="handleImport(event)">
+      </label>
+      <button class="data-export-btn" onclick="clearAllData()" style="color:var(--red);border-color:rgba(240,72,74,.25)">
+        <span style="font-size:18px">🗑</span>
+        <div>
+          <div>Effacer toutes les données</div>
+          <div style="font-size:11px;color:var(--text-3);font-weight:400">Irréversible — supprime tout le localStorage</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:var(--text-3);padding:16px 0">
+    TriSeason Tracker · Données stockées localement sur cet appareil
+  </div>
+
+</div></div>
+
+<!-- Edit profile modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal__header">
+      <div class="modal__title">Mon profil</div>
+      <button class="modal__close" onclick="closeModal()">×</button>
+    </div>
+    <div class="stack">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Prénom</label>
+          <input class="form-input" type="text" id="p_name" placeholder="Ton prénom">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Âge</label>
+          <input class="form-input" type="number" id="p_age" placeholder="30">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Taille (cm)</label>
+          <input class="form-input" type="number" id="p_height" placeholder="175">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Club / équipe</label>
+          <input class="form-input" type="text" id="p_club" placeholder="ex: TC Brest">
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.07em">Données physiologiques</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" data-tip="FC maximale mesurée à l'effort">FC max (bpm)</label>
+          <input class="form-input" type="number" id="p_fcmax" placeholder="185">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-tip="FC au repos, mesurée le matin">FC repos (bpm)</label>
+          <input class="form-input" type="number" id="p_fcrest" placeholder="50">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-tip="Puissance maximale soutenue 60 min">FTP (W)</label>
+          <input class="form-input" type="number" id="p_ftp" placeholder="250">
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.07em">Objectif saison</div>
+      <div class="form-group">
+        <label class="form-label">Course principale</label>
+        <input class="form-input" type="text" id="p_mainrace" placeholder="ex: Ironman Nice, Marathon de Paris...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input" type="date" id="p_racedate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Objectif de temps</label>
+          <input class="form-input" type="text" id="p_racetime" placeholder="ex: 10:30:00">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn btn--primary" onclick="saveProfile()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderProfile();
+  renderPBs();
+  renderSeasonStats();
+  renderFCZones();
+  loadEditForm();
+  TS.initTooltips();
+});
+
+// ── Profile render ────────────────────────────────────────────────────────────
+function renderProfile() {
+  const p = TS.getProfile();
+  const name = p.name || 'Athlète';
+  document.getElementById('avatarEl').textContent = name[0]?.toUpperCase() || '?';
+  document.getElementById('profileName').textContent = name;
+
+  const weight = TS.getLatestWeight();
+  const sub = [
+    p.club,
+    p.age ? p.age + ' ans' : null,
+    p.height ? p.height + ' cm' : null,
+    weight ? weight + ' kg' : null,
+  ].filter(Boolean).join(' · ');
+  document.getElementById('profileSub').textContent = sub || 'Complétez votre profil →';
+
+  // Quick stats
+  const stats = TS.getSeasonStats();
+  const bmi = (weight && p.height) ? (weight / (p.height/100)**2).toFixed(1) : null;
+  const wkg  = (() => {
+    const sessions = TS.getSessions({sport:'velo'}).filter(s=>s.power_avg);
+    if (!sessions.length || !weight) return null;
+    const avg = sessions.reduce((a,s)=>a+s.power_avg,0)/sessions.length;
+    return (avg/weight).toFixed(2);
+  })();
+
+  document.getElementById('quickStats').innerHTML = [
+    { val: stats.total.sessions,          label: 'Séances',    color: 'var(--accent2)' },
+    { val: stats.total.h.toFixed(0)+'h',  label: 'Heures',     color: 'var(--text)' },
+    { val: bmi || '—',                    label: 'IMC',         color: bmi ? (bmi<18.5||bmi>=25?'var(--yellow)':'var(--green)') : 'var(--text-2)' },
+    { val: wkg ? wkg+' W/kg' : '—',       label: 'W/kg vélo',  color: 'var(--velo)' },
+    { val: p.ftp ? p.ftp+'W' : '—',       label: 'FTP',        color: 'var(--text)' },
+    { val: p.fcmax ? p.fcmax+' bpm' : '—',label: 'FC max',     color: 'var(--red)' },
+  ].map(s => `<div class="stat-block">
+    <div class="stat-block__val" style="color:${s.color}">${s.val}</div>
+    <div class="stat-block__label">${s.label}</div>
+  </div>`).join('');
+
+  // Main race countdown
+  if (p.mainrace && p.racedate) {
+    const diff = Math.ceil((new Date(p.racedate) - new Date()) / 86400000);
+    if (diff > 0) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:linear-gradient(135deg,rgba(91,115,245,.15),rgba(11,191,205,.1));border:1px solid rgba(91,115,245,.3);border-radius:var(--r-sm);padding:12px 16px;margin-top:16px;display:flex;align-items:center;gap:14px';
+      banner.innerHTML = `<div style="font-size:28px;font-weight:800;color:var(--accent2)">${diff}j</div>
+        <div><div style="font-size:13px;font-weight:700">${p.mainrace}</div>
+        <div style="font-size:12px;color:var(--text-2)">${p.racedate ? new Date(p.racedate+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : ''}${p.racetime ? ' · Objectif : '+p.racetime : ''}</div></div>`;
+      document.getElementById('quickStats').after(banner);
+    }
+  }
+}
+
+// ── Personal bests ────────────────────────────────────────────────────────────
+function renderPBs() {
+  const records = TS.getData().records || [];
+  const COLORS  = { nat:'var(--nat)', velo:'var(--velo)', run:'var(--run)', tri:'var(--accent)' };
+  const EMOJIS  = { nat:'🏊', velo:'🚴', run:'🏃', tri:'🏆' };
+
+  // Best time per distance per sport
+  const bests = {};
+  records.forEach(r => {
+    const key = r.sport + '|' + r.dist;
+    const t   = timeToSec(r.time);
+    if (!bests[key] || t < timeToSec(bests[key].time)) bests[key] = r;
+  });
+
+  const bySection = { nat:[], velo:[], run:[], tri:[] };
+  Object.values(bests).forEach(r => { if (bySection[r.sport]) bySection[r.sport].push(r); });
+
+  const grid = document.getElementById('pbGrid');
+  let html = '';
+
+  for (const [sport, recs] of Object.entries(bySection)) {
+    if (!recs.length) continue;
+    const color = COLORS[sport];
+    html += `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.08em;margin-top:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${EMOJIS[sport]} ${{nat:'Natation',velo:'Vélo',run:'Course',tri:'Triathlon'}[sport]}</div>`;
+    recs.sort((a,b) => a.dist.localeCompare(b.dist)).forEach(r => {
+      const pace = calcPaceStr(r);
+      html += `<div class="pb-row" style="grid-column:1/-1">
+        <div class="pb-row__dist">${r.dist}</div>
+        <div class="pb-row__time" style="color:${color}">${r.time}</div>
+        ${pace ? `<div class="pb-row__pace">${pace}</div>` : ''}
+        <div style="font-size:11px;color:var(--text-3)">${r.date ? new Date(r.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'}) : ''}</div>
+      </div>`;
+    });
+  }
+
+  grid.innerHTML = html || '<div style="grid-column:1/-1;font-size:13px;color:var(--text-3)">Aucun record enregistré. <a href="records.html" style="color:var(--accent2)">Ajouter →</a></div>';
+}
+
+function calcPaceStr(r) {
+  const DIST_KM = {'50m':0.05,'100m':0.1,'200m':0.2,'400m':0.4,'800m':0.8,'1500m':1.5,'1km':1,'3km':3,'5km':5,'10km':10,'1 mile':1.609,'Semi-marathon (21,1km)':21.1,'Marathon (42,2km)':42.195,'3,8km (Ironman)':3.8,'40km':40,'100km':100,'180km (Ironman)':180,'20km':20,'50km':50};
+  const secs = timeToSec(r.time), km = DIST_KM[r.dist];
+  if (!secs || !km) return null;
+  const h = secs/3600;
+  if (r.sport==='velo') return (km/h).toFixed(1)+' km/h';
+  if (r.sport==='run')  { const m=secs/60/km; return Math.floor(m)+"'"+String(Math.round((m%1)*60)).padStart(2,'0')+'" /km'; }
+  if (r.sport==='nat')  { const m=secs/60/(km*10); return Math.floor(m)+"'"+String(Math.round((m%1)*60)).padStart(2,'0')+'" /100m'; }
+  return null;
+}
+
+function timeToSec(str) {
+  if (!str) return 0;
+  const p = str.trim().split(':').map(Number);
+  if (p.length===3) return p[0]*3600+p[1]*60+p[2];
+  if (p.length===2) return p[0]>=10 ? p[0]*60+p[1] : p[0]*3600+p[1]*60;
+  return 0;
+}
+
+// ── Season stats ──────────────────────────────────────────────────────────────
+function renderSeasonStats() {
+  const stats = TS.getSeasonStats();
+  const SPORTS = [{k:'nat',label:'Natation',color:'var(--nat)',emoji:'🏊'},{k:'velo',label:'Vélo',color:'var(--velo)',emoji:'🚴'},{k:'run',label:'Course',color:'var(--run)',emoji:'🏃'}];
+  document.getElementById('seasonStats').innerHTML = SPORTS.map(s => `
+    <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
+      <div style="font-size:18px">${s.emoji}</div>
+      <div style="font-size:20px;font-weight:800;color:${s.color};margin:4px 0">${stats[s.k].km.toFixed(0)}</div>
+      <div style="font-size:10px;color:var(--text-2)">km · ${stats[s.k].sessions} séances</div>
+    </div>`).join('');
+}
+
+// ── FC Zones ──────────────────────────────────────────────────────────────────
+function renderFCZones() {
+  const p = TS.getProfile();
+  const fcmax = p.fcmax;
+  const el = document.getElementById('fcZones');
+  if (!fcmax) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-3)">Renseignez votre FC max dans le profil pour voir vos zones.</div>';
+    return;
+  }
+  const zones = [
+    { num:1, name:'Récupération',   pct:[50,60],  color:'#22d472' },
+    { num:2, name:'Endurance fond.', pct:[60,70], color:'#5b73f5' },
+    { num:3, name:'Aérobie',        pct:[70,80],  color:'#f59e42' },
+    { num:4, name:'Seuil',          pct:[80,90],  color:'#f4613a' },
+    { num:5, name:'VO2max',         pct:[90,100], color:'#f0484a' },
+  ];
+  el.innerHTML = zones.map(z => {
+    const lo = Math.round(fcmax * z.pct[0]/100);
+    const hi = Math.round(fcmax * z.pct[1]/100);
+    return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="width:28px;height:28px;border-radius:6px;background:${z.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">Z${z.num}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${z.name}</div><div style="font-size:11px;color:var(--text-2)">${z.pct[0]}-${z.pct[1]}% FC max</div></div>
+      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${z.color}">${lo}–${hi} <span style="font-size:11px;font-weight:400;color:var(--text-2)">bpm</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── Edit modal ────────────────────────────────────────────────────────────────
+function loadEditForm() {
+  const p = TS.getProfile();
+  document.getElementById('p_name').value     = p.name     || '';
+  document.getElementById('p_age').value      = p.age      || '';
+  document.getElementById('p_height').value   = p.height   || '';
+  document.getElementById('p_club').value     = p.club     || '';
+  document.getElementById('p_fcmax').value    = p.fcmax    || '';
+  document.getElementById('p_fcrest').value   = p.fcrest   || '';
+  document.getElementById('p_ftp').value      = p.ftp      || '';
+  document.getElementById('p_mainrace').value = p.mainrace || '';
+  document.getElementById('p_racedate').value = p.racedate || '';
+  document.getElementById('p_racetime').value = p.racetime || '';
+}
+
+function openEditModal() {
+  loadEditForm();
+  document.getElementById('editModal').classList.add('open');
+}
+
+function saveProfile() {
+  TS.saveProfile({
+    name:      document.getElementById('p_name').value,
+    age:       parseInt(document.getElementById('p_age').value)||null,
+    height:    parseFloat(document.getElementById('p_height').value)||null,
+    club:      document.getElementById('p_club').value,
+    fcmax:     parseInt(document.getElementById('p_fcmax').value)||null,
+    fcrest:    parseInt(document.getElementById('p_fcrest').value)||null,
+    ftp:       parseInt(document.getElementById('p_ftp').value)||null,
+    mainrace:  document.getElementById('p_mainrace').value,
+    racedate:  document.getElementById('p_racedate').value,
+    racetime:  document.getElementById('p_racetime').value,
+  });
+  closeModal();
+  renderProfile();
+  renderFCZones();
+  TS.toast('Profil enregistré');
+}
+
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+
+function handleImport(e) {
+  const f = e.target.files[0]; if (!f) return;
+  TS.importData(f).then(() => { TS.toast('Données importées !'); location.reload(); })
+    .catch(() => TS.toast('Fichier invalide', 'error'));
+}
+
+function clearAllData() {
+  if (!confirm('Effacer toutes les données ? Cette action est irréversible.')) return;
+  if (!confirm('Dernière confirmation — toutes vos données seront supprimées.')) return;
+  localStorage.clear();
+  TS.toast('Données effacées');
+  setTimeout(() => location.reload(), 800);
+}
+
+function toggleMenu() { document.getElementById('navLinks').classList.toggle('open'); }
+</script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <a href="index.html" class="mobile-nav__item"><span class="mobile-nav__icon">⊞</span>Dashboard</a>
+  <a href="sessions.html" class="mobile-nav__item"><span class="mobile-nav__icon">▷</span>Séances</a>
+  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon">◎</span>Sports</a>
+  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon">🥗</span>Nutrition</a>
+  <a href="profile.html" class="mobile-nav__item active"><span class="mobile-nav__icon">👤</span>Profil</a>
+</nav>
+</body>
+</html>
