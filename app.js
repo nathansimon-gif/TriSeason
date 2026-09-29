@@ -199,10 +199,45 @@ function deleteSession(id) {
   saveData(data);
 }
 
-// ── Competitions CRUD ────────────────────────────────────────────────────────
-function getCompetitions() {
+
+// ── Saisons ──────────────────────────────────────────────────────────────────
+// Une "saison" = une année calendaire (2026, 2025, ...), déduite des dates
+// réellement présentes dans les séances, compétitions et records. Persistée
+// séparément de la donnée principale, pour ne pas toucher au schéma existant.
+const SEASON_KEY = 'triseason_season_filter';
+
+function getSeasonsAvailable() {
   const data = getData();
-  return (data.competitions || []).sort((a, b) => a.date.localeCompare(b.date));
+  const years = new Set();
+  (data.sessions || []).forEach(s => { if (s.date) years.add(s.date.slice(0, 4)); });
+  (data.competitions || []).forEach(c => { if (c.date) years.add(c.date.slice(0, 4)); });
+  (data.records || []).forEach(r => { if (r.date) years.add(r.date.slice(0, 4)); });
+  const current = String(new Date().getFullYear());
+  years.add(current);
+  return Array.from(years).sort((a, b) => b.localeCompare(a)); // plus récente d'abord
+}
+
+function getSeasonFilter() {
+  try { return localStorage.getItem(SEASON_KEY) || 'all'; } catch { return 'all'; }
+}
+
+function setSeasonFilter(value) {
+  try { localStorage.setItem(SEASON_KEY, value); } catch {}
+}
+
+// { from, to } au format YYYY-MM-DD pour une saison donnée, ou null pour "Toutes"
+function getSeasonRange(value) {
+  if (!value || value === 'all') return null;
+  return { from: value + '-01-01', to: value + '-12-31' };
+}
+
+// ── Competitions CRUD ────────────────────────────────────────────────────────
+function getCompetitions(filters = {}) {
+  const data = getData();
+  let comps = data.competitions || [];
+  if (filters.from) comps = comps.filter(c => c.date >= filters.from);
+  if (filters.to)   comps = comps.filter(c => c.date <= filters.to);
+  return comps.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function saveCompetition(comp) {
@@ -379,25 +414,54 @@ function toast(msg, type = 'success') {
 }
 
 // ── Tooltip helper ────────────────────────────────────────────────────────────
+// Infobulles : un seul écouteur global (délégation d'événements).
+// - fonctionne aussi pour le contenu généré dynamiquement après le chargement
+// - idempotent : les pages peuvent appeler initTooltips() autant de fois que voulu
 function initTooltips() {
-  document.querySelectorAll('[data-tip]').forEach(el => {
-    el.addEventListener('mouseenter', e => {
-      const tip = document.createElement('div');
-      tip.className = 'tooltip';
-      tip.textContent = el.dataset.tip;
-      document.body.appendChild(tip);
-      const r = el.getBoundingClientRect();
-      let left = r.left + r.width/2 - tip.offsetWidth/2;
-      let top  = r.top - tip.offsetHeight - 8;
-      // Keep tooltip inside the viewport
-      left = Math.max(8, Math.min(left, window.innerWidth - tip.offsetWidth - 8));
-      if (top < 8) top = r.bottom + 8; // flip below if no room above
-      tip.style.left = `${left}px`;
-      tip.style.top  = `${top}px`;
-      el._tip = tip;
-    });
-    el.addEventListener('mouseleave', () => { el._tip?.remove(); el._tip = null; });
+  if (window.__tipInit) return;
+  window.__tipInit = true;
+
+  let tip = null;
+  let current = null;
+
+  function hide() {
+    if (tip) { tip.remove(); tip = null; }
+    current = null;
+  }
+
+  function show(el) {
+    hide();
+    const text = el.getAttribute('data-tip');
+    if (!text || !text.trim()) return;
+    tip = document.createElement('div');
+    tip.className = 'tooltip';
+    tip.textContent = text;
+    document.body.appendChild(tip);
+    const r = el.getBoundingClientRect();
+    let left = r.left + r.width / 2 - tip.offsetWidth / 2;
+    let top  = r.top - tip.offsetHeight - 8;
+    left = Math.max(8, Math.min(left, window.innerWidth - tip.offsetWidth - 8));
+    if (top < 8) top = r.bottom + 8; // sous l'élément s'il n'y a pas la place au-dessus
+    tip.style.left = left + 'px';
+    tip.style.top  = top + 'px';
+    current = el;
+  }
+
+  document.addEventListener('mouseover', function (e) {
+    if (current && !document.body.contains(current)) hide(); // élément re-généré entre-temps
+    const el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (el) { if (el !== current) show(el); }
+    else if (current) hide();
   });
+
+  document.addEventListener('mouseout', function (e) {
+    if (!current) return;
+    const to = e.relatedTarget;
+    if (!to || !current.contains(to)) hide();
+  });
+
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('triseason:update', hide);
 }
 
 // ── Sport config ─────────────────────────────────────────────────────────────
@@ -442,6 +506,7 @@ window.TS = {
   getWeekMonday, formatDate, formatDateInput, getISOWeek,
   getSessions, saveSession, deleteSession,
   getCompetitions, saveCompetition, deleteCompetition,
+  getSeasonsAvailable, getSeasonFilter, setSeasonFilter, getSeasonRange,
   getWeight, saveWeight, deleteWeight, getLatestWeight,
   getProfile, saveProfile,
   calcPace, calcTSS, calcWkg, wkgLevel, tssLevel,

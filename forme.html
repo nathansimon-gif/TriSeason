@@ -32,6 +32,7 @@
     }
     .tsb-tile__val { font-size: 28px; font-weight: 800; letter-spacing: -.03em; }
     .tsb-tile__label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
+    .tsb-tile[data-tip] { cursor: help; }
     .obs-card {
       padding: 12px 14px; background: var(--surface2); border-radius: var(--r-sm);
       margin-bottom: 8px; border-left: 3px solid var(--border2);
@@ -248,6 +249,17 @@ function renderPrediction() {
 }
 
 // ── Performance Management Chart (CTL/ATL/TSB) ───────────────────────────────
+// Explications des trois indicateurs (affichées en infobulle dans chaque case)
+var TILE_TIPS = {
+  ctl: "Charge chronique : moyenne pondérée de ta charge quotidienne sur ~42 jours (les jours récents pèsent plus). Charge d’une séance = durée (h) × RPE² ÷ 100 ; un jour de repos compte 0 ; les séances sans durée ou sans RPE sont ignorées. Formule : CTL = CTL veille + (charge du jour − CTL veille) × (1 − e^(−1/42)). Représente ta condition de fond : elle monte avec la régularité et baisse lentement à l’arrêt.",
+  atl: "Charge aiguë : même calcul que le CTL, mais sur ~7 jours. Formule : ATL = ATL veille + (charge du jour − ATL veille) × (1 − e^(−1/7)). Elle réagit vite : elle grimpe après des séances dures ou rapprochées et retombe en quelques jours de repos. Représente ta fatigue récente.",
+  tsb: "Balance de forme = CTL − ATL (condition de fond moins fatigue récente). Positif : tu es frais (repère courant : +5 à +25 avant une course). Proche de 0 : charge équilibrée. Sous −25 : fatigue accumulée élevée, risque de surentraînement si cela dure. Ce n’est pas un niveau de performance, mais un état de fraîcheur."
+};
+
+function tipAttr(text) {
+  return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
 function renderPMC() {
   const sessions = TS.getSessions().filter(s => s.date && s.duration && s.rpe);
   if (sessions.length < 5) {
@@ -287,9 +299,9 @@ function renderPMC() {
   const tsbColor = last.tsb > 5 ? 'var(--green)' : last.tsb < -20 ? 'var(--red)' : 'var(--yellow)';
 
   document.getElementById('tsbTiles').innerHTML = `
-    <div class="tsb-tile"><div class="tsb-tile__val" style="color:var(--accent2)">${last.ctl}</div><div class="tsb-tile__label">CTL (Fitness)</div></div>
-    <div class="tsb-tile"><div class="tsb-tile__val" style="color:var(--run)">${last.atl}</div><div class="tsb-tile__label">ATL (Fatigue)</div></div>
-    <div class="tsb-tile"><div class="tsb-tile__val" style="color:${tsbColor}">${last.tsb > 0 ? '+' : ''}${last.tsb}</div><div class="tsb-tile__label">TSB (Forme)</div></div>`;
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.ctl)}"><div class="tsb-tile__val" style="color:var(--accent2)">${last.ctl}</div><div class="tsb-tile__label">CTL (Fitness) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.ctl)}">?</span></div></div>
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.atl)}"><div class="tsb-tile__val" style="color:var(--run)">${last.atl}</div><div class="tsb-tile__label">ATL (Fatigue) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.atl)}">?</span></div></div>
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.tsb)}"><div class="tsb-tile__val" style="color:${tsbColor}">${last.tsb > 0 ? '+' : ''}${last.tsb}</div><div class="tsb-tile__label">TSB (Forme) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.tsb)}">?</span></div></div>`;
 
   // Interpretation
   let msg;

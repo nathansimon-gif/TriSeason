@@ -62,7 +62,8 @@
   <div class="section-title" style="margin-bottom:12px">Calendrier saison</div>
 
   <!-- Filter -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison (année)"></select>
     <button class="btn btn--ghost btn--sm filter-btn active" onclick="filterComps('all', this)">Toutes</button>
     <button class="btn btn--ghost btn--sm filter-btn" onclick="filterComps('upcoming', this)">À venir</button>
     <button class="btn btn--ghost btn--sm filter-btn" onclick="filterComps('done', this)">Réalisées</button>
@@ -162,6 +163,7 @@ function makeChart(id, config) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
+  populateSeasonFilter();
   renderAll();
   TS.initTooltips();
   // Update calc on input
@@ -172,6 +174,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('triseason:update', renderAll);
 
+function getFilteredCompetitions() {
+  const range = TS.getSeasonRange(TS.getSeasonFilter());
+  return TS.getCompetitions(range || {});
+}
+
+function populateSeasonFilter() {
+  const sel = document.getElementById('filterSeason');
+  const seasons = TS.getSeasonsAvailable();
+  sel.innerHTML = '<option value="all">Toutes les saisons</option>'
+    + seasons.map(y => `<option value="${y}">Saison ${y}</option>`).join('');
+  sel.value = TS.getSeasonFilter();
+}
+
+function onSeasonChange() {
+  TS.setSeasonFilter(document.getElementById('filterSeason').value);
+  renderAll();
+}
+
 function renderAll() {
   renderKPIs();
   renderCharts();
@@ -180,7 +200,7 @@ function renderAll() {
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function renderKPIs() {
-  const comps = TS.getCompetitions();
+  const comps = getFilteredCompetitions();
   const today = new Date().toISOString().split('T')[0];
   const done     = comps.filter(c => c.actual_time);
   const upcoming = comps.filter(c => c.date >= today && !c.actual_time);
@@ -200,7 +220,7 @@ function renderKPIs() {
 
 // ── Charts ────────────────────────────────────────────────────────────────────
 function renderCharts() {
-  const comps = TS.getCompetitions().filter(c => c.actual_time && c.goal_time);
+  const comps = getFilteredCompetitions().filter(c => c.actual_time && c.goal_time);
   if (comps.length) {
     const labels = comps.map(c => c.name.length > 14 ? c.name.slice(0,14)+'…' : c.name);
     charts['chartResults'] = makeChart('chartResults', {
@@ -221,7 +241,7 @@ function renderCharts() {
     });
   }
 
-  const allComps = TS.getCompetitions();
+  const allComps = getFilteredCompetitions();
   const byType = {};
   for (const c of allComps) { byType[c.type] = (byType[c.type]||0) + 1; }
   if (Object.keys(byType).length) {
@@ -314,7 +334,7 @@ function renderCompPrep(c) {
 
 function renderList() {
   const today = new Date().toISOString().split('T')[0];
-  let comps = TS.getCompetitions();
+  let comps = getFilteredCompetitions();
   if (currentFilter === 'upcoming') comps = comps.filter(c=>c.date>=today);
   else if (currentFilter === 'done') comps = comps.filter(c=>c.date<today||c.actual_time);
   else if (currentFilter === 'goal_ok') comps = comps.filter(c=>c.actual_time&&c.goal_time&&timeToSec(c.actual_time)<=timeToSec(c.goal_time));

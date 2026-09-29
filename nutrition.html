@@ -70,6 +70,11 @@
     .nutri-kpi { text-align:center; padding:12px; }
     .nutri-kpi__val { font-size:22px; font-weight:800; letter-spacing:-.02em; }
     .nutri-kpi__label { font-size:10px; color:var(--text-2); text-transform:uppercase; letter-spacing:.07em; margin-top:3px; }
+    .disclaimer-box {
+      background: rgba(245,200,74,.08); border: 1px solid rgba(245,200,74,.25);
+      border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
+      color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
+    }
   </style>
 </head>
 <body>
@@ -101,13 +106,20 @@
     <button class="btn btn--primary" onclick="openMealModal()">+ Ajouter</button>
   </div>
 
+  <div class="disclaimer-box">
+    ⚠️ Ce suivi nutritionnel est indicatif : les macros détectées automatiquement et les repères donnés sont des estimations génériques, pas un avis personnalisé. Ils ne remplacent pas les conseils d'un nutritionniste ou d'un médecin du sport.
+  </div>
+
   <!-- Day navigator -->
   <div class="day-nav-strip" style="flex-wrap:wrap;gap:8px">
     <button class="btn btn--ghost btn--sm btn--icon" onclick="changeDay(-1)" style="font-size:18px;line-height:1;flex-shrink:0">‹</button>
     <div style="flex:1;text-align:center;min-width:150px;display:flex;align-items:center;justify-content:center;gap:6px">
       <div id="dayLabel" style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-      <button class="btn btn--ghost btn--sm btn--icon" onclick="openDayPicker()" style="font-size:14px;flex-shrink:0" title="Choisir une date">📅</button>
-      <input type="date" id="dayPicker" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0" onchange="onDayPicked(this.value)">
+      <span style="position:relative;flex-shrink:0;width:26px;height:26px">
+        <button class="btn btn--ghost btn--sm btn--icon" tabindex="-1" aria-hidden="true" style="font-size:14px;width:100%;height:100%;pointer-events:none">📅</button>
+        <input type="date" id="dayPicker" title="Choisir une date" onchange="onDayPicked(this.value)"
+               style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;-webkit-appearance:none;cursor:pointer">
+      </span>
     </div>
     <button class="btn btn--ghost btn--sm btn--icon" onclick="changeDay(1)" style="font-size:18px;line-height:1;flex-shrink:0">›</button>
     <button class="btn btn--ghost btn--sm" id="todayBtn" onclick="goToToday()">↺ Aujourd'hui</button>
@@ -423,6 +435,8 @@ function updateDayNav() {
       const badge   = isNow ? '<span style="font-size:10px;color:var(--accent2);background:rgba(91,115,245,.15);padding:1px 7px;border-radius:20px;font-weight:600">Aujourd’hui</span>' : '';
       label.innerHTML = dateStr + (badge ? ' ' + badge : '');
     }
+    const dp = document.getElementById('dayPicker');
+    if (dp) dp.value = currentDay;
     if (btn) {
       btn.style.opacity = isNow ? '0.35' : '1';
       btn.style.pointerEvents = isNow ? 'none' : 'auto';
@@ -446,13 +460,6 @@ function goToToday() {
   currentDay = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
   updateDayNav();
   renderAll();
-}
-
-function openDayPicker() {
-  const input = document.getElementById('dayPicker');
-  input.value = currentDay;
-  if (input.showPicker) input.showPicker();
-  else input.click();
 }
 
 function onDayPicked(value) {
@@ -842,78 +849,218 @@ const FOODS = [
   { keys:["wok","sauté de légumes"],                                  g:12, p:10,  l:5,   portion:300, unit:"g" },
 ];
 
-function parseQuantity(text, foodKeys) {
-  // Try to find a number before or after the food keyword
-  for (const key of foodKeys) {
-    const patterns = [
-      new RegExp('(\d+(?:[.,]\d+)?)\s*g?\s*(?:de\s+)?' + key, 'i'),
-      new RegExp(key + '\s*(\d+(?:[.,]\d+)?)\s*g?', 'i'),
-      new RegExp('(\d+)\s*(?:×|x)\s*' + key, 'i'),
-    ];
-    for (const pat of patterns) {
-      const m = text.match(pat);
-      if (m) return parseFloat(m[1].replace(',', '.'));
+// ── Analyse de la description : la quantite placee devant un aliment lui est associee ──
+// Exemples : "150g riz + 120g poulet", "2 oeufs", "1,5 l de lait", "demi avocat"
+
+function normalizeText(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\u0153/g, "oe")
+    .replace(/\u00d7/g, "x")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u2019'`]/g, " ");
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+var FOOD_INDEX = null;
+
+// Index plat (cle, aliment), trie du plus long au plus court pour que
+// "lait chocolate" ou "riz au lait" passent avant "lait" ou "riz".
+function getFoodIndex() {
+  if (FOOD_INDEX) return FOOD_INDEX;
+  var pairs = [];
+  FOODS.forEach(function (food) {
+    food.keys.forEach(function (k) {
+      var nk = normalizeText(k).trim();
+      if (!nk) return;
+      pairs.push({
+        key: nk,
+        label: k,
+        food: food,
+        re: new RegExp("\\b" + escapeRegExp(nk) + "(?:s|x)?\\b", "g")
+      });
+    });
+  });
+  pairs.sort(function (a, b) { return b.key.length - a.key.length; });
+  FOOD_INDEX = pairs;
+  return pairs;
+}
+
+function findFoodMatches(t) {
+  var claimed = [];
+  var matches = [];
+  function overlaps(s, e) {
+    for (var i = 0; i < claimed.length; i++) {
+      if (s < claimed[i][1] && e > claimed[i][0]) return true;
     }
+    return false;
   }
-  return null;
+  getFoodIndex().forEach(function (pair) {
+    pair.re.lastIndex = 0;
+    var m;
+    while ((m = pair.re.exec(t)) !== null) {
+      var s = m.index;
+      var e = s + m[0].length;
+      if (!overlaps(s, e)) {
+        claimed.push([s, e]);
+        matches.push({ food: pair.food, label: pair.label, start: s, end: e });
+      }
+      if (m[0].length === 0) pair.re.lastIndex++;
+    }
+  });
+  matches.sort(function (a, b) { return a.start - b.start; });
+
+  // Deux synonymes du meme aliment cote a cote ("flocons d avoine") = une seule mention
+  var merged = [];
+  matches.forEach(function (m) {
+    var prev = merged[merged.length - 1];
+    if (prev && prev.food === m.food && /^\s*(?:d|de|du|des)?\s*$/.test(t.slice(prev.end, m.start))) {
+      prev.end = m.end;
+    } else {
+      merged.push(m);
+    }
+  });
+  return merged;
+}
+
+var QTY_UNITS = { kg: 1000, g: 1, gr: 1, gramme: 1, grammes: 1, ml: 1, cl: 10, dl: 100, l: 1000, litre: 1000, litres: 1000 };
+var WORD_NUMBERS = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, demi: 0.5, demie: 0.5 };
+
+// Quantite collee juste AVANT l'aliment (fin de la chaine analysee)
+var QTY_BEFORE_RE = /(^|[^0-9a-z.,:\/])(\d+\/\d+|\d+(?:[.,]\d+)?|un|une|deux|trois|quatre|cinq|six|demi|demie)\s*(kg|gr|g|ml|cl|dl|litres?|grammes?|l|x)?\s*(?:(?:petit|petite|petits|petites|gros|grosse|grosses|grand|grande|grands|grandes|moyen|moyenne|moyens|moyennes)\s+)?(?:(?:de|du|des|d)\s+)?$/;
+
+// Repli : quantite juste APRES l'aliment ("riz 150g, poulet 120g")
+var QTY_AFTER_RE = /^\s*(\d+(?:[.,]\d+)?)\s*(kg|gr|g|ml|cl|dl|litres?|grammes?|l|x)?(?![0-9a-z])/;
+
+function parseNumberToken(tok) {
+  if (WORD_NUMBERS.hasOwnProperty(tok)) return WORD_NUMBERS[tok];
+  if (tok.indexOf("/") !== -1) {
+    var f = tok.split("/");
+    var d = parseFloat(f[1]);
+    return d ? parseFloat(f[0]) / d : NaN;
+  }
+  return parseFloat(tok.replace(",", "."));
+}
+
+function computeFoodEntry(food, qty) {
+  var perGram = food.unit === "g" || food.unit === "ml";
+  var factor;
+  var label;
+  var isDefault = false;
+
+  if (qty && !isNaN(qty.value) && qty.value > 0) {
+    var u = qty.unit;
+    if (u && QTY_UNITS.hasOwnProperty(u)) {
+      if (perGram) {
+        var amount = qty.value * QTY_UNITS[u];
+        factor = amount / 100;
+        label = Math.round(amount) + food.unit;
+      } else {
+        isDefault = true; // un poids pour un aliment compte a l'unite : conversion impossible
+      }
+    } else if (perGram) {
+      if (!u && qty.value >= 20) {
+        factor = qty.value / 100;             // "riz 150" = grammes
+        label = Math.round(qty.value) + food.unit;
+      } else {
+        factor = qty.value * food.portion / 100; // "2 tomates" = 2 portions
+        label = "\u00d7" + qty.value;
+      }
+    } else {
+      factor = qty.value;                     // "2 oeufs", "1 gel"
+      label = "\u00d7" + qty.value;
+    }
+  } else {
+    isDefault = true;
+  }
+
+  if (isDefault || factor === undefined) {
+    isDefault = true;
+    factor = perGram ? food.portion / 100 : food.portion;
+    label = perGram ? "~" + food.portion + food.unit : "~" + food.portion + " " + food.unit;
+  }
+  return { g: food.g * factor, p: food.p * factor, l: food.l * factor, label: label, isDefault: isDefault };
+}
+
+function parseDescription(text) {
+  var t = normalizeText(text);
+  var matches = findFoodMatches(t);
+  var claimed = [];
+
+  // Passe 1 : la quantite juste devant chaque aliment lui appartient
+  matches.forEach(function (m) {
+    var before = t.slice(0, m.start);
+    var q = QTY_BEFORE_RE.exec(before);
+    if (q) {
+      m.qty = { value: parseNumberToken(q[2]), unit: q[3] || null };
+      claimed.push([q.index + q[1].length, m.start]);
+    }
+  });
+
+  // Passe 2 : pour les aliments restes sans quantite, un nombre juste apres
+  // (sauf s'il est deja la quantite de l'aliment suivant)
+  matches.forEach(function (m) {
+    if (m.qty) return;
+    var a = QTY_AFTER_RE.exec(t.slice(m.end));
+    if (!a) return;
+    var numStart = m.end + a[0].indexOf(a[1]);
+    for (var i = 0; i < claimed.length; i++) {
+      if (numStart >= claimed[i][0] && numStart < claimed[i][1]) return;
+    }
+    m.qty = { value: parseNumberToken(a[1]), unit: a[2] || null };
+  });
+
+  var items = [];
+  var totalG = 0;
+  var totalP = 0;
+  var totalL = 0;
+  matches.forEach(function (m) {
+    var r = computeFoodEntry(m.food, m.qty || null);
+    var g = Math.round(r.g);
+    var p = Math.round(r.p);
+    var l = Math.round(r.l);
+    totalG += g;
+    totalP += p;
+    totalL += l;
+    items.push({ label: m.food.name || m.label, qtyLabel: r.label, isDefault: r.isDefault, g: g, p: p, l: l });
+  });
+  return { items: items, g: totalG, p: totalP, l: totalL, kcal: totalG * 4 + totalP * 4 + totalL * 9 };
 }
 
 function analyzeDescription() {
-  const desc = document.getElementById('m_desc').value.toLowerCase();
+  var descEl = document.getElementById("m_desc");
+  var analysisEl = document.getElementById("descAnalysis");
+  var desc = descEl.value;
   if (!desc.trim()) {
-    document.getElementById('descAnalysis').textContent = '';
+    analysisEl.textContent = "";
     return;
   }
 
-  let totalG = 0, totalP = 0, totalL = 0;
-  const detected = [];
-
-  for (const food of FOODS) {
-    const found = food.keys.some(k => desc.includes(k));
-    if (!found) continue;
-
-    // Try to find quantity in text
-    const qty = parseQuantity(desc, food.keys);
-    const portion = qty !== null ? qty : food.portion;
-    const factor  = food.unit === 'g' || food.unit === 'ml'
-      ? portion / 100
-      : portion; // for units like "1 œuf", factor = nombre d'unités
-
-    const g = Math.round(food.g * factor);
-    const p = Math.round(food.p * factor);
-    const l = Math.round(food.l * factor);
-
-    totalG += g; totalP += p; totalL += l;
-    const label = food.name || food.keys[0];
-    const qtyLabel = qty !== null
-      ? `${qty}${food.unit==='g'||food.unit==='ml' ? food.unit : ''}`
-      : `~${food.portion}${food.unit}`;
-    detected.push(`${label} (${qtyLabel})`);
-  }
-
-  const kcal = totalG*4 + totalP*4 + totalL*9;
-  const analysisEl = document.getElementById('descAnalysis');
-
-  if (!detected.length) {
+  var res = parseDescription(desc);
+  if (!res.items.length) {
     analysisEl.innerHTML = '<span style="color:var(--text-3)">Aliments non reconnus — saisissez les macros manuellement si besoin.</span>';
     return;
   }
 
+  var detected = res.items.map(function (it) { return it.label + " (" + it.qtyLabel + ")"; });
   analysisEl.innerHTML =
-    '<span style="color:var(--accent2)">Détectés : ' + detected.join(', ') + '</span>' +
-    ' — <b>' + Math.round(kcal) + ' kcal</b> · ' +
-    '<span style="color:var(--run)">' + totalG + 'g glucides</span> · ' +
-    '<span style="color:var(--nat)">' + totalP + 'g protéines</span> · ' +
-    '<span style="color:var(--velo)">' + totalL + 'g lipides</span>';
+    '<span style="color:var(--accent2)">Détectés : ' + detected.join(", ") + '</span>' +
+    ' — <b>' + Math.round(res.kcal) + ' kcal</b> · ' +
+    '<span style="color:var(--run)">' + res.g + 'g glucides</span> · ' +
+    '<span style="color:var(--nat)">' + res.p + 'g protéines</span> · ' +
+    '<span style="color:var(--velo)">' + res.l + 'g lipides</span>';
 
-  // Pre-fill the fields (only if empty or previously auto-filled)
-  const fields = { m_glucides: totalG, m_proteines: totalP, m_lipides: totalL, m_kcal: Math.round(kcal) };
-  for (const [id, val] of Object.entries(fields)) {
-    const el = document.getElementById(id);
-    if (el && (el.dataset.manual !== 'true')) {
-      el.value = val || '';
+  // Pre-remplit les champs (sauf ceux modifies a la main)
+  var fields = { m_glucides: res.g, m_proteines: res.p, m_lipides: res.l, m_kcal: Math.round(res.kcal) };
+  Object.keys(fields).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el && el.dataset.manual !== "true") {
+      el.value = fields[id] || "";
     }
-  }
+  });
 }
 
 function calcKcal() {

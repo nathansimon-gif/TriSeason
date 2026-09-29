@@ -89,6 +89,7 @@
       <h1>Records personnels</h1>
       <p>Vos meilleures performances — natation, vélo, course et triathlon</p>
     </div>
+    <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison : affiche les records réalisés cette année-là"></select>
   </div>
 
   <!-- Natation -->
@@ -221,6 +222,7 @@ const DIST_OPTIONS = {
 const SPORT_COLORS = { nat:'var(--nat)', velo:'var(--velo)', run:'var(--run)', tri:'var(--accent)' };
 
 document.addEventListener('DOMContentLoaded', () => {
+  populateSeasonFilter();
   updateDistOptions();
   renderAllRecords();
   document.getElementById('r_date').value = new Date().toISOString().split('T')[0];
@@ -237,6 +239,26 @@ function getRecords() {
   return TS.getData().records || [];
 }
 
+function getFilteredRecords() {
+  const range = TS.getSeasonRange(TS.getSeasonFilter());
+  const records = getRecords();
+  if (!range) return records;
+  return records.filter(r => r.date && r.date >= range.from && r.date <= range.to);
+}
+
+function populateSeasonFilter() {
+  const sel = document.getElementById('filterSeason');
+  const seasons = TS.getSeasonsAvailable();
+  sel.innerHTML = '<option value="all">Toutes les saisons</option>'
+    + seasons.map(y => `<option value="${y}">Saison ${y}</option>`).join('');
+  sel.value = TS.getSeasonFilter();
+}
+
+function onSeasonChange() {
+  TS.setSeasonFilter(document.getElementById('filterSeason').value);
+  renderAllRecords();
+}
+
 function saveRecordData(records) {
   const data = TS.getData();
   data.records = records;
@@ -250,7 +272,7 @@ function renderAllRecords() {
 }
 
 function renderSportRecords(sport) {
-  const records = getRecords().filter(r => r.sport === sport);
+  const records = getFilteredRecords().filter(r => r.sport === sport);
   const el = document.getElementById('records-' + sport);
   const color = SPORT_COLORS[sport];
 

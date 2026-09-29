@@ -86,12 +86,14 @@ function parseGPX(xmlText) {
     .filter(v => !isNaN(v));
   const elevationGain = calcElevationGain(elevations);
 
-  // Detect sport from name/type
-  const sport = detectSport(name + ' ' + typeEl);
+  // Detect sport from name/type (or flag walking / strength to be ignored)
+  const cls   = classifyText(name + ' ' + typeEl);
+  const sport = cls.sport || 'run';
 
   return {
     date, sport, duration: durationH, distance: distKm,
     fc_avg, fc_max, power_avg, elevation: elevationGain, notes: name || 'Import GPX',
+    _skip: cls.skip || null,
     _source: 'gpx'
   };
 }
@@ -166,9 +168,10 @@ function parseFIT(buffer) {
           : (session?.total_ascent ? Math.round(session.total_ascent) : null);
 
         // Sport detection
-        const fitSport = session?.sport || data.activity?.sessions?.[0]?.sport || '';
-        const fitName  = data.activity?.sessions?.[0]?.trigger || '';
-        const sport    = detectSportFromFIT(fitSport) || detectSport(fitName);
+        const fitSport = session?.sport     || data.activity?.sessions?.[0]?.sport     || '';
+        const fitSub   = session?.sub_sport || data.activity?.sessions?.[0]?.sub_sport || '';
+        const cls      = classifyFit(fitSport, fitSub);
+        const sport    = cls.sport || 'run';
 
         // Calories / notes
         const calories = session?.total_calories || null;
@@ -185,6 +188,7 @@ function parseFIT(buffer) {
           kcal: calories,
           elevation,
           notes,
+          _skip: cls.skip || null,
           _source: 'fit'
         });
       } catch (e) {
@@ -195,21 +199,63 @@ function parseFIT(buffer) {
 }
 
 // ── Sport detection ───────────────────────────────────────────────────────────
-function detectSport(text) {
-  const t = (text || '').toLowerCase();
-  if (/swim|natation|pool|open.water|nata/.test(t)) return 'nat';
-  if (/ride|cycling|velo|vélo|bike|cycle|indoor|zwift|trainer/.test(t)) return 'velo';
-  if (/run|course|jogging|trail|marathon|semi|10k|5k|treadmill/.test(t)) return 'run';
-  if (/triathlon|tri/.test(t)) return 'run'; // default to run for tri
-  return 'run'; // default
+// ── Classification des activités ──────────────────────────────────────────────
+// Seules la natation, le vélo et la course sont suivies. La marche / randonnée et
+// la musculation / fitness sont reconnues pour être IGNORÉES à l'import, au lieu
+// d'être rangées par erreur dans "course". Résultat : { sport } ou { skip }.
+
+// FIT : noms de sport normalisés du décodeur (session.sport / session.sub_sport)
+function classifyFit(sportRaw, subRaw) {
+  const s   = String(sportRaw || '').toLowerCase();
+  const sub = String(subRaw   || '').toLowerCase();
+
+  // Musculation, fitness, cardio en salle... ("training" = catégorie générique FIT)
+  if (s === 'training' || /strength|weight/.test(sub)) return { skip: 'musculation' };
+  // Marche, randonnée
+  if (s === 'walking' || s === 'hiking' || /walk|hik/.test(sub)) return { skip: 'marche' };
+
+  // Appareils de salle : vélo d'appartement et tapis restent suivis, le reste est ignoré
+  if (s === 'fitness_equipment') {
+    if (/cycling|spin/.test(sub)) return { sport: 'velo' };
+    if (sub === 'treadmill')      return { sport: 'run' };
+    return { skip: 'musculation' };
+  }
+
+  if (s.indexOf('swim') !== -1)                                  return { sport: 'nat' };
+  if (s.indexOf('cycling') !== -1 || s.indexOf('biking') !== -1) return { sport: 'velo' }; // inclut e_biking
+  if (s.indexOf('running') !== -1 || s.indexOf('trail') !== -1)  return { sport: 'run' };
+
+  // Sport générique ou absent : le sous-sport peut trancher
+  if (!s || s === 'generic' || s === 'all') {
+    if (/swim|open_water/.test(sub))              return { sport: 'nat' };
+    if (/cycling|mountain|gravel|road/.test(sub)) return { sport: 'velo' };
+    if (/treadmill|trail|track|street/.test(sub)) return { sport: 'run' };
+  }
+  return { sport: null };
 }
 
-function detectSportFromFIT(fitSport) {
-  const s = (fitSport || '').toLowerCase();
-  if (s.includes('swim')) return 'nat';
-  if (s.includes('cycling') || s.includes('biking') || s.includes('e_biking')) return 'velo';
-  if (s.includes('running') || s.includes('trail')) return 'run';
-  return null;
+// GPX / TCX : classification par mots-clés (nom de l'activité, type, sport déclaré)
+function classifyText(text) {
+  const t = String(text || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\-]+/g, ' ');
+
+  // 1) Mots-clés sportifs sans ambiguïté
+  if (/swim|natation|pool|open.water|nata|piscine/.test(t))        return { sport: 'nat' };
+  if (/ride|cycling|velo|bik(e|ing)|cycle|zwift|vtt|mtb|gravel/.test(t)) return { sport: 'velo' };
+  if (/run|course|jogging|trail|marathon|10k|5k/.test(t))          return { sport: 'run' };
+  // 2) Activités non suivies
+  if (/strength|weight ?training|weights|muscu|renforcement|\bgym\b/.test(t)) return { skip: 'musculation' };
+  if (/walk|marche|hik(e|ing)|randonnee|\brando\b/.test(t))                   return { skip: 'marche' };
+  // 3) Mots-clés plus faibles
+  if (/indoor|trainer/.test(t))   return { sport: 'velo' };
+  if (/semi|treadmill/.test(t))   return { sport: 'run' };
+  return { sport: null };
+}
+
+// Compatibilité : renvoie toujours un sport ("course" par défaut si inconnu)
+function detectSport(text) {
+  return classifyText(text).sport || 'run';
 }
 
 // ── Haversine distance ────────────────────────────────────────────────────────
@@ -250,7 +296,8 @@ function parseTCX(xmlText) {
   const act    = doc.querySelector('Activity');
   if (!act) throw new Error('Fichier TCX invalide');
 
-  const sport    = detectSport(act.getAttribute('Sport') || '');
+  const cls      = classifyText((act.getAttribute('Sport') || '') + ' ' + (doc.querySelector('Notes')?.textContent || ''));
+  const sport    = cls.sport || 'run';
   const laps     = [...doc.querySelectorAll('Lap')];
   const firstLap = laps[0];
 
@@ -284,9 +331,10 @@ function parseTCX(xmlText) {
     fc_max:   maxHR || null,
     elevation: elevationGain,
     notes:    `Import TCX${totalCal ? ' · ' + totalCal + ' kcal' : ''}`,
+    _skip: cls.skip || null,
     _source: 'tcx'
   };
 }
 
 // ── Expose ────────────────────────────────────────────────────────────────────
-window.TriImport = { parseActivityFile, detectSport };
+window.TriImport = { parseActivityFile, detectSport, classifyFit, classifyText };

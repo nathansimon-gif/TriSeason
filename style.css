@@ -310,7 +310,7 @@ input, select, textarea { font-family: var(--font); }
   position: fixed; z-index: 300;
   background: var(--surface3); border: 1px solid var(--border2);
   border-radius: var(--r-sm); padding: 7px 11px;
-  font-size: 12px; color: var(--text); max-width: 220px; line-height: 1.5;
+  font-size: 12px; color: var(--text); max-width: 280px; line-height: 1.5;
   box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none;
 }
 .tip-icon {

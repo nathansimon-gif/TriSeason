@@ -94,6 +94,7 @@
   <!-- ── Filter bar ── -->
   <div class="card" style="margin-bottom:16px;padding:14px 20px">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison (année)"></select>
       <select class="form-select" id="filterSport" onchange="renderSessions()" style="width:auto">
         <option value="">Tous les sports</option>
         <option value="nat">🏊 Natation</option>
@@ -334,7 +335,30 @@ function makeChart(id, config) {
 
 let editId = null;
 
+function populateSeasonFilter() {
+  const sel = document.getElementById('filterSeason');
+  const seasons = TS.getSeasonsAvailable();
+  sel.innerHTML = '<option value="all">Toutes les saisons</option>'
+    + seasons.map(y => `<option value="${y}">Saison ${y}</option>`).join('');
+  sel.value = TS.getSeasonFilter();
+  applySeasonToDateFields(sel.value);
+}
+
+function applySeasonToDateFields(value) {
+  const range = TS.getSeasonRange(value);
+  document.getElementById('filterFrom').value = range ? range.from : '';
+  document.getElementById('filterTo').value   = range ? range.to   : '';
+}
+
+function onSeasonChange() {
+  const value = document.getElementById('filterSeason').value;
+  TS.setSeasonFilter(value);
+  applySeasonToDateFields(value);
+  renderSessions();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  populateSeasonFilter();
   renderSessions();
   renderWkgTable();
   renderSportAvgs();
@@ -596,7 +620,6 @@ function updateCalc() {
   const date  = document.getElementById('s_date').value;
   const parts = [];
   if (dur && dist) { const p = TS.calcPace(dur,dist,sport); if(p) parts.push(p); }
-  if (dur && rpe)  parts.push(`TSS: ${TS.calcTSS(dur,rpe)}`);
   if (pow)         { const w = TS.calcWkg(pow,date); if(w) { const l=TS.wkgLevel(w); parts.push(`W/kg: ${w} (${l.label})`); } }
   document.getElementById('s_calculated').textContent = parts.join('  ·  ') || 'Entrez les données pour voir les calculs';
 }
@@ -721,6 +744,36 @@ function formatSessionSummary(s) {
   return parts.join(' \u00b7 ') || '\u2014';
 }
 
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+var IGNORED_LABELS = { marche: 'marche / randonn\u00e9e', musculation: 'musculation / fitness' };
+
+function buildImportSummary(imported, similar, ignored) {
+  const parts = [];
+  if (imported) parts.push('\u2705 ' + imported + ' fichier(s) pr\u00eat(s) \u00e0 importer');
+  if (similar)  parts.push('\u26a0\ufe0f ' + similar + ' ressemble(nt) \u00e0 une s\u00e9ance existante');
+  if (ignored)  parts.push('\ud83d\udeab ' + ignored + ' ignor\u00e9(s) (marche / musculation)');
+  if (!parts.length) parts.push('\u274c \u00c9chec de l\u2019import');
+  return parts.join(' \u2014 ');
+}
+
+function renderIgnoredNotice(ignored, container) {
+  const box = document.createElement('div');
+  box.style.cssText = 'margin-top:12px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;color:var(--text-2)';
+  const rows = ignored.map(function (it) {
+    const details = [IGNORED_LABELS[it.reason] || it.reason];
+    if (it.date)     details.push(it.date);
+    if (it.distance) details.push(it.distance + ' km');
+    return '<div style="margin-top:3px">\u2022 ' + escHtml(it.name) + ' \u2014 ' + details.join(' \u00b7 ') + '</div>';
+  }).join('');
+  box.innerHTML = '<div style="font-weight:700;color:var(--text)">\ud83d\udeab ' + ignored.length + ' fichier(s) ignor\u00e9(s)</div>'
+    + '<div style="margin-top:2px">La marche et la musculation ne sont pas suivies par l\u2019appli : ces fichiers n\u2019ont pas \u00e9t\u00e9 import\u00e9s.</div>'
+    + rows;
+  container.appendChild(box);
+}
+
 async function processImportFiles(files) {
   const zone     = document.getElementById('importZone');
   const progress = document.getElementById('importProgress');
@@ -732,11 +785,16 @@ async function processImportFiles(files) {
   results.innerHTML     = '';
   simResults.innerHTML  = '';
   let imported = 0, similar = 0, errors = 0;
+  const ignored = [];
 
   for (const file of files) {
     progress.innerHTML = '<span style="color:var(--accent2)">\u23f3 Lecture de ' + file.name + '\u2026</span>';
     try {
       const session = await window.TriImport.parseActivityFile(file);
+      if (session._skip) {           // marche / musculation : jamais importées
+        ignored.push({ name: file.name, reason: session._skip, date: session.date, distance: session.distance });
+        continue;
+      }
       const match = findSimilarSession(session);
       if (match) {
         renderSimilarCard(session, match, simResults);
@@ -754,11 +812,7 @@ async function processImportFiles(files) {
     }
   }
 
-  const parts = [];
-  if (imported) parts.push('\u2705 ' + imported + ' fichier(s) pr\u00eat(s) \u00e0 importer');
-  if (similar)  parts.push('\u26a0\ufe0f ' + similar + ' ressemble(nt) \u00e0 une s\u00e9ance existante');
-  if (!imported && !similar) parts.push('\u274c \u00c9chec de l\u2019import');
-  progress.innerHTML = parts.join(' \u2014 ');
+  progress.innerHTML = buildImportSummary(imported, similar, ignored.length);
 
   if (imported > 0) {
     const bulkBtn = document.createElement('div');
@@ -766,6 +820,15 @@ async function processImportFiles(files) {
     bulkBtn.innerHTML = '<button class="btn btn--primary" onclick="importAll()">\u2713 Tout importer (' + imported + ' s\u00e9ance' + (imported>1?'s':'') + ')</button>'
       + '<button class="btn btn--ghost btn--sm" onclick="document.getElementById(\'importZone\').style.display=\'none\'">Annuler</button>';
     results.appendChild(bulkBtn);
+  }
+
+  if (ignored.length) renderIgnoredNotice(ignored, results);
+
+  if (!imported && !similar) {       // rien à valider : on propose de fermer la zone
+    const closeDiv = document.createElement('div');
+    closeDiv.style.cssText = 'margin-top:12px';
+    closeDiv.innerHTML = '<button class="btn btn--ghost btn--sm" onclick="document.getElementById(\'importZone\').style.display=\'none\'">Fermer</button>';
+    results.appendChild(closeDiv);
   }
 
   if (similar > 0) simZone.style.display = 'block';
@@ -842,7 +905,7 @@ function importSimilarAnyway(btn) {
   const card = btn.closest('[data-session]');
   try {
     const session = JSON.parse(decodeURIComponent(card.dataset.session));
-    delete session._source;
+    delete session._source; delete session._skip;
     TS.saveSession(session);
     renderSessions();
     TS.toast('S\u00e9ance import\u00e9e');
@@ -866,7 +929,7 @@ function importAll() {
       const session = JSON.parse(decodeURIComponent(card.dataset.session));
       const sportSel = card.querySelector('select');
       if (sportSel) session.sport = sportSel.value;
-      delete session._source;
+      delete session._source; delete session._skip;
       TS.saveSession(session);
       count++;
     } catch(e) {}
@@ -880,7 +943,7 @@ function confirmImport(btn, sessionData) {
   const card = btn.closest('div[style]').parentElement;
   const sportOverride = card.querySelector('select')?.value;
   const session = { ...sessionData, sport: sportOverride || sessionData.sport };
-  delete session._source;
+  delete session._source; delete session._skip;
   TS.saveSession(session);
   card.style.opacity = '0.4';
   card.style.pointerEvents = 'none';
@@ -950,6 +1013,8 @@ function confirmDeleteAllSessions() {
 
 function clearFilters() {
   document.getElementById('filterSport').value = '';
+  document.getElementById('filterSeason').value = 'all';
+  TS.setSeasonFilter('all');
   document.getElementById('filterFrom').value  = '';
   document.getElementById('filterTo').value    = '';
   ['filterDistMin','filterDistMax','filterDurMin','filterDurMax','filterEleMin','filterEleMax','filterRpeMin','filterRpeMax']

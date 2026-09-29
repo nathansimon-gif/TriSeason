@@ -65,7 +65,7 @@
     .hero-sport:hover .hero-sport__hint { opacity: 1; }
 
     .total-strip {
-      display: grid; grid-template-columns: repeat(3, 1fr);
+      display: grid; grid-template-columns: repeat(2, 1fr);
       gap: 10px; margin-bottom: 20px;
     }
     .total-tile {
@@ -127,8 +127,11 @@
           <div id="weekNavLabel" style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
           <div id="weekNavDates" style="font-size:11px;color:var(--text-2)"></div>
         </div>
-        <button class="btn btn--ghost btn--sm btn--icon" id="dayPickerBtn" onclick="openDayPicker()" style="display:none;font-size:14px;flex-shrink:0" title="Choisir une date">📅</button>
-        <input type="date" id="dayPicker" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0" onchange="onDayPicked(this.value)">
+        <span id="dayPickerWrap" style="display:none;position:relative;flex-shrink:0;width:26px;height:26px">
+          <button class="btn btn--ghost btn--sm btn--icon" tabindex="-1" aria-hidden="true" style="font-size:14px;width:100%;height:100%;pointer-events:none">📅</button>
+          <input type="date" id="dayPicker" title="Choisir une date" onchange="onDayPicked(this.value)"
+                 style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;-webkit-appearance:none;cursor:pointer">
+        </span>
       </div>
       <button class="btn btn--ghost btn--sm btn--icon" onclick="changeWeek(1)" style="font-size:18px;line-height:1;flex-shrink:0">›</button>
     </div>
@@ -158,10 +161,6 @@
       <div class="total-tile__label" id="totalSesLabel">Séances semaine</div>
       <div class="total-tile__val" id="totalSes">—</div>
     </div>
-    <div class="total-tile">
-      <div class="total-tile__label" id="totalTSSLabel">TSS semaine</div>
-      <div class="total-tile__val" id="totalTSS">—</div>
-    </div>
   </div>
 
   <!-- ── Charts row 1 ── -->
@@ -182,7 +181,7 @@
     </div>
   </div>
 
-  <!-- ── Charts row 2 ── -->
+  <!-- ── Répartition du volume + Régularité ── -->
   <div class="grid-2" style="margin-bottom:12px">
     <div class="card">
       <div class="card__title">
@@ -190,16 +189,16 @@
         <span class="tip-icon" data-tip="Part de chaque discipline dans le volume total d'heures de la saison.">?</span>
       </div>
       <div style="display:flex;align-items:center;gap:20px">
-        <div style="position:relative;height:160px;width:160px;flex-shrink:0;overflow:hidden"><canvas id="chartDonut"></canvas></div>
+        <div style="position:relative;height:190px;width:190px;flex-shrink:0;overflow:hidden"><canvas id="chartDonut"></canvas></div>
         <div id="donutLegend" style="flex:1"></div>
       </div>
     </div>
     <div class="card">
       <div class="card__title">
-        Charge hebdo (TSS)
-        <span class="tip-icon" data-tip="Training Stress Score simplifié : Durée × RPE² / 100. Mesure la charge d'entraînement. Vert < 50 · Jaune 50-150 · Orange 150-300 · Rouge > 300.">?</span>
+        Régularité (séances / semaine)
+        <span class="tip-icon" data-tip="Nombre de séances par discipline sur les 12 dernières semaines. La régularité compte souvent plus que le volume pour progresser.">?</span>
       </div>
-      <div style="position:relative;height:160px;overflow:hidden"><canvas id="chartTSS"></canvas></div>
+      <div style="position:relative;height:190px;overflow:hidden"><canvas id="chartFrequency"></canvas></div>
     </div>
   </div>
 
@@ -387,6 +386,8 @@ function updateWeekNav() {
       date.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'}) +
       (isNow ? badge('Aujourd\'hui') : '');
     document.getElementById('weekNavDates').textContent = '';
+    const dp = document.getElementById('dayPicker');
+    if (dp) dp.value = currentDay;
 
   } else { // month
     const [y, m] = currentMonth.split('-');
@@ -403,18 +404,11 @@ function setViewMode(mode) {
   viewMode = mode;
   document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('mode-'+mode)?.classList.add('active');
-  const pickerBtn = document.getElementById('dayPickerBtn');
-  if (pickerBtn) pickerBtn.style.display = mode === 'day' ? '' : 'none';
+  const pickerBtn = document.getElementById('dayPickerWrap');
+  if (pickerBtn) pickerBtn.style.display = mode === 'day' ? 'inline-block' : 'none';
   updateWeekNav();
   renderHeroStrip();
   renderTotals();
-}
-
-function openDayPicker() {
-  const input = document.getElementById('dayPicker');
-  input.value = currentDay;
-  if (input.showPicker) input.showPicker();
-  else input.click();
 }
 
 function onDayPicked(value) {
@@ -499,7 +493,6 @@ function renderHeroStrip() {
     const d    = aggregateSessions(getSessionsForPeriod(s));
     const pace = (d.dur && d.dist) ? TS.calcPace(d.dur, d.dist, s) : '—';
     const paceLabel = s === 'velo' ? 'Vitesse' : 'Allure';
-    const tss  = TS.calcTSS(d.dur || 0, d.rpe || 0);
     return `
     <div class="hero-sport hero-sport--${s}" onclick="goToSport('${s}')" title="Voir détails ${sp.label}">
       <div class="hero-sport__data">
@@ -511,7 +504,7 @@ function renderHeroStrip() {
         </div>
         <div class="hero-sport__meta">
           ${(d.dur || 0).toFixed(1)} h · ${d.sessions} séance${d.sessions > 1 ? 's' : ''}<br>
-          ${paceLabel} : ${pace}${tss > 0 ? ' · TSS ' + tss.toFixed(0) : ''}
+          ${paceLabel} : ${pace}
         </div>
         <div class="hero-sport__hint">Cliquer pour le détail →</div>
       </div>
@@ -525,20 +518,17 @@ function goToSport(sport) {
 
 // ── Totals ────────────────────────────────────────────────────────────────────
 function renderTotals() {
-  let totalH = 0, totalSes = 0, totalTSS = 0;
+  let totalH = 0, totalSes = 0;
   for (const sport of ['nat', 'velo', 'run']) {
     const d = aggregateSessions(getSessionsForPeriod(sport));
     totalH   += d.dur;
     totalSes += d.sessions;
-    totalTSS += TS.calcTSS(d.dur, d.rpe);
   }
   document.getElementById('totalH').textContent   = totalH.toFixed(1) + ' h';
   document.getElementById('totalSes').textContent = totalSes;
-  document.getElementById('totalTSS').textContent = Math.round(totalTSS);
   const w = viewMode === 'day' ? 'du jour' : viewMode === 'month' ? 'du mois' : 'de la semaine';
   document.getElementById('totalHLabel').textContent   = 'Heures ' + w;
   document.getElementById('totalSesLabel').textContent = 'Séances ' + w;
-  document.getElementById('totalTSSLabel').textContent = 'TSS ' + w;
 }
 
 // ── Charts ────────────────────────────────────────────────────────────────────
@@ -555,7 +545,7 @@ function renderCharts() {
   renderWeeklyChart();
   renderMonthlyChart();
   renderDonutChart();
-  renderTSSChart();
+  renderFrequencyChart();
 }
 
 function renderWeeklyChart() {
@@ -569,6 +559,24 @@ function renderWeeklyChart() {
       { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#f4613a', backgroundColor:'rgba(244,97,58,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
     ]},
     options:{ ...CO, onClick:(e,el)=>{ if(el.length){ const ds=['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } } }
+  });
+}
+
+function renderFrequencyChart() {
+  const weeks  = TS.getLast12Weeks();
+  const labels = weeks.map(w => `S${w.split('-W')[1]}`);
+  charts['chartFrequency'] = makeChart('chartFrequency', {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#0bbfcd' },
+      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#f59e42' },
+      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#f4613a' },
+    ]},
+    options: {
+      ...CO,
+      scales: { ...CO.scales, x: { ...CO.scales.x, stacked: true }, y: { ...CO.scales.y, stacked: true, ticks: { ...CO.scales.y.ticks, stepSize: 1 } } },
+      onClick: (e, el) => { if (el.length) { const ds = ['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } }
+    }
   });
 }
 
@@ -620,16 +628,70 @@ function renderDonutChart() {
     </div>`).join('');
 }
 
-function renderTSSChart() {
-  const weeks=TS.getLast12Weeks();
-  const labels=weeks.map(w=>`S${w.split('-W')[1]}`);
-  const values=weeks.map(w=>{const wk=TS.getWeek(w);return['nat','velo','run'].reduce((a,s)=>a+TS.calcTSS(wk[s]?.dur||0,wk[s]?.rpe||0),0);});
-  const colors=values.map(v=>v<50?'rgba(34,212,114,.7)':v<150?'rgba(245,200,74,.7)':v<300?'rgba(245,158,66,.7)':'rgba(240,72,74,.7)');
-  charts['chartTSS'] = makeChart('chartTSS', {
-    type:'bar',
-    data:{labels,datasets:[{label:'TSS',data:values,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
-    options:{...CO,plugins:{...CO.plugins,legend:{display:false}}}
-  });
+
+// ── Widget nutrition (résumé du jour) ──────────────────────────────────────────
+function renderNutriWidget() {
+  const el = document.getElementById('nutriWidget');
+  if (!el) return;
+  const data  = TS.getData();
+  const nutri = data.nutrition || { meals: [], hydration: {} };
+  const now   = new Date();
+  const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const meals = (nutri.meals || []).filter(m => m.date === today);
+  const hydro = (nutri.hydration || {})[today] || 0;
+
+  if (!meals.length && !hydro) {
+    el.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-3)">Aucune donnée nutrition aujourd\u2019hui. <a href="nutrition.html" style="color:var(--accent2)">Ajouter \u2192</a></div>';
+    return;
+  }
+
+  const kcal = meals.reduce((a, m) => a + (m.kcal || (m.glucides||0)*4 + (m.proteines||0)*4 + (m.lipides||0)*9), 0);
+  const g    = meals.reduce((a, m) => a + (m.glucides||0), 0);
+  const p    = meals.reduce((a, m) => a + (m.proteines||0), 0);
+  const l    = meals.reduce((a, m) => a + (m.lipides||0), 0);
+
+  const tile = (val, label, color) =>
+    '<div style="text-align:center;padding:10px;background:var(--surface2);border-radius:var(--r-sm)">'
+    + '<div style="font-size:18px;font-weight:800;color:' + color + '">' + val + '</div>'
+    + '<div style="font-size:10px;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">' + label + '</div>'
+    + '</div>';
+
+  el.innerHTML =
+      tile(meals.length, 'Repas', 'var(--text)')
+    + tile(Math.round(kcal) || '\u2014', 'Kcal', 'var(--accent2)')
+    + tile(g || '\u2014', 'Glucides (g)', 'var(--run)')
+    + tile(hydro ? (hydro >= 1000 ? (hydro/1000).toFixed(1)+'L' : hydro+'ml') : '\u2014', 'Hydratation', 'var(--nat)');
+}
+
+// ── Widget records (derniers records personnels) ───────────────────────────────
+function renderRecordsWidget() {
+  const el = document.getElementById('recordsWidget');
+  if (!el) return;
+  const records = (TS.getData().records || [])
+    .slice()
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, 4);
+
+  if (!records.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-3)">Aucun record enregistré. <a href="records.html" style="color:var(--accent2)">Ajouter \u2192</a></div>';
+    return;
+  }
+
+  const colors = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)', tri: 'var(--accent)' };
+  const emojis = { nat: '\ud83c\udfca', velo: '\ud83d\udeb4', run: '\ud83c\udfc3', tri: '\ud83c\udfc6' };
+
+  el.innerHTML = records.map(r => {
+    const dateStr = r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="font-size:16px">' + (emojis[r.sport] || '\ud83c\udfc5') + '</div>'
+      + '<div style="flex:1">'
+      + '<div style="font-size:12px;font-weight:700;color:' + (colors[r.sport] || 'var(--text)') + '">' + (r.dist || '') + '</div>'
+      + '<div style="font-size:10px;color:var(--text-2)">' + (r.location || '') + '</div>'
+      + '</div>'
+      + '<div style="font-family:var(--mono);font-size:13px;font-weight:800">' + (r.time || '') + '</div>'
+      + '<div style="font-size:10px;color:var(--text-3);min-width:38px;text-align:right">' + dateStr + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 // ── Weight ────────────────────────────────────────────────────────────────────
@@ -751,12 +813,11 @@ function renderMetrics(){
     {label:'Vitesse vélo moy.',val:avg(veloV).toFixed(1)||'—',unit:'km/h',tip:'Référence : <25=débutant · 30=amateur · 35+=confirmé'},
     {label:'Allure course moy.',val:ps(avg(runP)),unit:'/km',tip:'Référence : <4\'=excellent · <5\'=bon · <6\'=amateur'},
     {label:'RPE moyen',val:stats.total.rpe||'—',unit:'/10',tip:'RPE > 7 sur plusieurs semaines consécutives = risque de surmenage'},
-    {label:'TSS saison',val:Math.round(stats.total.tss),unit:'pts',tip:'Charge cumulative de la saison. TrainingPeaks : 800-1200/mois = bonne charge'},
     {label:'Semaines actives',val:actives,unit:'',tip:'Semaines comportant au moins une saisie'},
   ];
 
   document.getElementById('metricsGrid').innerHTML=items.map(m=>`
-    <div class="metric-box" data-tip="${m.tip}" style="border-right:1px solid var(--border);border-bottom:1px solid var(--border)">
+    <div class="metric-box" data-tip="${m.tip.replace(/"/g, '&quot;')}" style="border-right:1px solid var(--border);border-bottom:1px solid var(--border)">
       <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">${m.label}</div>
       <div style="font-size:18px;font-weight:800;font-family:var(--mono);letter-spacing:-.02em">${m.val}<span style="font-size:11px;color:var(--text-2);font-family:var(--font);font-weight:400"> ${m.unit}</span></div>
     </div>`).join('');

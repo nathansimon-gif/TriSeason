@@ -75,18 +75,9 @@
     </div>
   </div>
 
-  <div class="grid-2" style="margin-bottom:12px">
-    <div class="card">
-      <div class="card__title">Volume mensuel (km)</div>
-      <div style="position:relative;height:200px;overflow:hidden"><canvas id="chartMonthly"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card__title">
-        TSS par semaine
-        <span class="tip-icon" data-tip="Charge hebdo : Durée × RPE² / 100. Vert < 50 · Jaune 50-150 · Orange 150-300 · Rouge > 300.">?</span>
-      </div>
-      <div style="position:relative;height:200px;overflow:hidden"><canvas id="chartTSS"></canvas></div>
-    </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card__title">Volume mensuel (km)</div>
+    <div style="position:relative;height:200px;overflow:hidden"><canvas id="chartMonthly"></canvas></div>
   </div>
 
   <!-- Zones + Objectifs -->
@@ -209,7 +200,6 @@ function renderSport() {
   renderDistChart(s, weekData, weeks52, sp);
   renderPaceChart(s, weekData, weeks52, sp);
   renderMonthlyChart(s);
-  renderTSSChart(s, weekData, weeks52);
   renderBestWeeks(s, weekData, weeks52);
   renderMonthlyProgress(s);
   renderZones(s);
@@ -224,7 +214,6 @@ function renderSportKPIs(s, weekData) {
   const totalKm  = sessions.reduce((a,x)=>a+(x.distance||0),0);
   const totalH   = sessions.reduce((a,x)=>a+(x.duration||0),0);
   const totalSes = sessions.length;
-  const totalTSS = sessions.reduce((a,x)=>a+TS.calcTSS(x.duration||0,x.rpe||0),0);
   const totalElevation = sessions.reduce((a,x)=>a+(x.elevation||0),0);
   const withPace = sessions.filter(x=>x.duration&&x.distance);
   const avgPace  = withPace.length
@@ -255,10 +244,6 @@ function renderSportKPIs(s, weekData) {
       <div><span class="kpi__value" style="font-size:18px">${avgPace||'—'}</span></div>
     </div>
     ${elevationTile}
-    <div class="kpi" style="border-top:2px solid ${color}">
-      <div class="kpi__label">TSS total</div>
-      <div><span class="kpi__value">${Math.round(totalTSS)}</span><span class="kpi__unit">pts</span></div>
-    </div>
     <div class="kpi" style="border-top:2px solid ${color}">
       <div class="kpi__label">Meilleure semaine</div>
       <div><span class="kpi__value">${maxWeek.toFixed(0)}</span><span class="kpi__unit">km</span></div>
@@ -353,16 +338,6 @@ function renderMonthlyChart(s) {
       labels: sorted.map(k=>{ const[y,m]=k.split('-'); return new Date(y,m-1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}); }),
       datasets:[{ data:sorted.map(k=>+months[k].toFixed(1)), backgroundColor:color+'bb', borderRadius:4 }]
     },
-    options: GOPTS()
-  });
-}
-
-function renderTSSChart(s, weekData, weeks) {
-  const values = weekData.map(w=>TS.calcTSS(w.dur||0,w.rpe||0));
-  const colors = values.map(v=>v<50?'rgba(34,212,114,.7)':v<150?'rgba(245,200,74,.7)':v<300?'rgba(245,158,66,.7)':'rgba(240,72,74,.7)');
-  makeChart('chartTSS', {
-    type:'bar',
-    data:{ labels:weeks.map(w=>`S${w.split('-W')[1]}`), datasets:[{data:values,backgroundColor:colors,borderRadius:3}] },
     options: GOPTS()
   });
 }
