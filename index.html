@@ -76,6 +76,37 @@
     }
     .total-tile__label { font-size: 11px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
     .total-tile__val   { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; }
+
+    .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .cal-nav__label { font-size:13px; font-weight:700; text-transform:capitalize; }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; max-width:380px; margin:0 auto; }
+    .cal-dow { text-align:center; font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:.05em; padding-bottom:4px; }
+    .cal-cell {
+      aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+      border-radius:var(--r-sm); background:var(--surface2); position:relative;
+    }
+    .cal-cell--pad { background:transparent; }
+    .cal-cell--today { box-shadow:inset 0 0 0 1px var(--accent2); }
+    .cal-cell__num { position:absolute; top:2px; left:4px; font-size:8px; color:var(--text-3); }
+    .cal-dot { border-radius:50%; transition:width .2s,height .2s; }
+    .cal-legend { display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap; font-size:11px; color:var(--text-2); }
+    .cal-legend__dot { display:inline-flex; align-items:center; gap:5px; }
+
+    .month-stat-tile {
+      text-align:center; padding:10px 6px; background:var(--surface2);
+      border-radius:var(--r-sm);
+    }
+    .month-stat-tile__val { font-size:19px; font-weight:800; letter-spacing:-.02em; }
+    .month-stat-tile__label { font-size:9px; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+    .month-sport-row {
+      display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border);
+      font-size:12px;
+    }
+    .month-sport-row:last-child { border-bottom:none; }
+    .month-best-day {
+      margin-top:10px; padding:10px 12px; background:rgba(91,115,245,.08);
+      border:1px solid rgba(91,115,245,.2); border-radius:var(--r-sm); font-size:12px;
+    }
   </style>
 </head>
 <body>
@@ -200,6 +231,47 @@
       </div>
       <div style="position:relative;height:190px;overflow:hidden"><canvas id="chartFrequency"></canvas></div>
     </div>
+  </div>
+
+  <!-- ── Calendrier d'activité + Résumé du mois ── -->
+  <div class="grid-2" style="margin-bottom:12px">
+  <div class="card">
+    <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>
+        Calendrier d'activité
+        <span class="tip-icon" data-tip="Un point par jour d'entraînement. Plus le point est grand et coloré, plus le volume de ce jour-là est important. La couleur indique le sport dominant du jour.">?</span>
+      </span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn btn--ghost btn--sm btn--icon" onclick="changeCalMonth(-1)" style="font-size:16px;line-height:1">‹</button>
+        <button class="btn btn--ghost btn--sm" onclick="goToCalCurrentMonth()">Aujourd'hui</button>
+        <button class="btn btn--ghost btn--sm btn--icon" onclick="changeCalMonth(1)" style="font-size:16px;line-height:1">›</button>
+      </div>
+    </div>
+    <div class="cal-nav"><div class="cal-nav__label" id="calMonthLabel"></div></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--nat);display:inline-block"></span> Natation</span>
+      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--velo);display:inline-block"></span> Vélo</span>
+      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--run);display:inline-block"></span> Course</span>
+      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2);display:inline-block"></span> Plusieurs sports</span>
+      <span style="margin-left:auto">Taille du point = volume du jour</span>
+    </div>
+  </div>
+
+  <!-- ── Résumé du mois affiché ── -->
+  <div class="card">
+    <div class="card__title">
+      Résumé du mois
+      <span class="tip-icon" data-tip="Statistiques du mois actuellement affiché dans le calendrier ci-contre. Change de mois avec les flèches pour voir le résumé correspondant.">?</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div class="month-stat-tile"><div class="month-stat-tile__val" id="msJoursActifs">—</div><div class="month-stat-tile__label">Jours actifs</div></div>
+      <div class="month-stat-tile"><div class="month-stat-tile__val" id="msSeances">—</div><div class="month-stat-tile__label">Séances</div></div>
+      <div class="month-stat-tile"><div class="month-stat-tile__val" id="msHeures">—</div><div class="month-stat-tile__label">Heures</div></div>
+    </div>
+    <div id="msSportBreakdown"></div>
+    <div id="msBestDay"></div>
+  </div>
   </div>
 
   <!-- ── Poids + Prochaine course ── -->
@@ -334,6 +406,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMetrics();
   renderNutriWidget();
   renderRecordsWidget();
+  renderActivityCalendar();
+  renderMonthSummary();
   loadProfileForm();
   TS.initTooltips();
 });
@@ -347,6 +421,8 @@ window.addEventListener('triseason:update', () => {
   renderWeight();
   renderNextRace();
   renderMetrics();
+  renderActivityCalendar();
+  renderMonthSummary();
 });
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
@@ -510,6 +586,154 @@ function renderHeroStrip() {
       </div>
     </div>`;
   }).join('');
+}
+
+
+// ── Calendrier d'activité ────────────────────────────────────────────────────
+let calYear     = _initNow.getFullYear();
+let calMonthIdx = _initNow.getMonth(); // 0-11
+
+function calFormatDur(h) {
+  const hrs = Math.floor(h), mins = Math.round((h - hrs) * 60);
+  if (hrs === 0) return mins + 'min';
+  if (mins === 0) return hrs + 'h';
+  return hrs + 'h' + String(mins).padStart(2, '0');
+}
+
+function changeCalMonth(dir) {
+  calMonthIdx += dir;
+  if (calMonthIdx < 0)  { calMonthIdx = 11; calYear--; }
+  if (calMonthIdx > 11) { calMonthIdx = 0;  calYear++; }
+  renderActivityCalendar();
+  renderMonthSummary();
+}
+
+function goToCalCurrentMonth() {
+  const n = new Date();
+  calYear = n.getFullYear();
+  calMonthIdx = n.getMonth();
+  renderActivityCalendar();
+  renderMonthSummary();
+}
+
+
+function renderMonthSummary() {
+  const jEl = document.getElementById('msJoursActifs');
+  if (!jEl) return;
+
+  const daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
+  const from = calYear + '-' + String(calMonthIdx+1).padStart(2,'0') + '-01';
+  const to   = calYear + '-' + String(calMonthIdx+1).padStart(2,'0') + '-' + String(daysInMonth).padStart(2,'0');
+
+  const sessions = TS.getSessions().filter(s => s.date >= from && s.date <= to);
+  const activeDays = new Set(sessions.map(s => s.date)).size;
+  const totalH = sessions.reduce((a, s) => a + (s.duration || 0), 0);
+
+  document.getElementById('msJoursActifs').textContent = activeDays + '/' + daysInMonth;
+  document.getElementById('msSeances').textContent = sessions.length;
+  document.getElementById('msHeures').textContent = calFormatDur(totalH);
+
+  // Répartition par sport
+  const bySport = { nat: { km: 0, h: 0, n: 0 }, velo: { km: 0, h: 0, n: 0 }, run: { km: 0, h: 0, n: 0 } };
+  sessions.forEach(s => {
+    if (!bySport[s.sport]) return;
+    bySport[s.sport].km += s.distance || 0;
+    bySport[s.sport].h  += s.duration || 0;
+    bySport[s.sport].n  += 1;
+  });
+  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)' };
+  const breakdown = Object.keys(bySport)
+    .filter(k => bySport[k].n > 0)
+    .map(k => `<div class="month-sport-row">
+      <span style="width:8px;height:8px;border-radius:50%;background:${SPORT_COLOR[k]};flex-shrink:0"></span>
+      <span style="flex:1">${TS.SPORTS[k]?.label || k}</span>
+      <span style="color:var(--text-2)">${bySport[k].n} séance${bySport[k].n>1?'s':''}</span>
+      <span style="font-weight:700;min-width:60px;text-align:right">${bySport[k].km.toFixed(0)} km</span>
+    </div>`).join('');
+  document.getElementById('msSportBreakdown').innerHTML = breakdown
+    || '<div style="font-size:12px;color:var(--text-3);padding:8px 0">Aucune séance ce mois-ci.</div>';
+
+  // Meilleure journée (plus gros volume)
+  const byDate = {};
+  sessions.forEach(s => {
+    if (!byDate[s.date]) byDate[s.date] = { h: 0, km: 0, n: 0 };
+    byDate[s.date].h  += s.duration || 0;
+    byDate[s.date].km += s.distance || 0;
+    byDate[s.date].n  += 1;
+  });
+  const dates = Object.keys(byDate);
+  const bestEl = document.getElementById('msBestDay');
+  if (dates.length) {
+    const bestDate = dates.reduce((a, b) => byDate[b].h > byDate[a].h ? b : a);
+    const best = byDate[bestDate];
+    const d = new Date(bestDate + 'T00:00:00');
+    bestEl.innerHTML = `<div class="month-best-day">
+      🏆 <b>Meilleure journée</b> : ${d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})}
+      — ${calFormatDur(best.h)}${best.km ? ' · ' + best.km.toFixed(1) + ' km' : ''} · ${best.n} séance${best.n>1?'s':''}
+    </div>`;
+  } else {
+    bestEl.innerHTML = '';
+  }
+}
+
+function renderActivityCalendar() {
+  const grid  = document.getElementById('calGrid');
+  const label = document.getElementById('calMonthLabel');
+  if (!grid || !label) return;
+
+  const monthDate = new Date(calYear, calMonthIdx, 1);
+  label.textContent = monthDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+  const daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
+  const firstWeekday = (monthDate.getDay() + 6) % 7; // lundi = 0
+
+  const sessions = TS.getSessions();
+  const byDate = {};
+  sessions.forEach(s => {
+    if (!s.date) return;
+    if (!byDate[s.date]) byDate[s.date] = { dur: 0, dist: 0, count: 0, sports: {} };
+    const d = byDate[s.date];
+    d.dur   += s.duration || 0;
+    d.dist  += s.distance || 0;
+    d.count += 1;
+    d.sports[s.sport] = (d.sports[s.sport] || 0) + (s.duration || 0);
+  });
+
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+  const dowLabels = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  let html = dowLabels.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  for (let i = 0; i < firstWeekday; i++) html += '<div class="cal-cell cal-cell--pad"></div>';
+
+  const MAX_H = 3;
+  const MIN_PX = 6, MAX_PX = 18;
+  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)' };
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = calYear + '-' + String(calMonthIdx+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const d = byDate[dateStr];
+    const isToday = dateStr === todayStr;
+    let dot = '';
+    let tip = '';
+
+    if (d) {
+      const sportKeys = Object.keys(d.sports);
+      const color = sportKeys.length === 1 ? (SPORT_COLOR[sportKeys[0]] || 'var(--accent2)') : 'var(--accent2)';
+      const ratio = Math.min(1, d.dur / MAX_H);
+      const px = Math.round(MIN_PX + ratio * (MAX_PX - MIN_PX));
+      dot = `<div class="cal-dot" style="width:${px}px;height:${px}px;background:${color}"></div>`;
+      const sportLabels = sportKeys.map(k => (TS.SPORTS[k]?.label || k)).join(', ');
+      tip = `${day} ${monthDate.toLocaleDateString('fr-FR',{month:'long'})} — ${calFormatDur(d.dur)}${d.dist ? ' · ' + d.dist.toFixed(1) + ' km' : ''} · ${d.count} séance${d.count>1?'s':''} (${sportLabels})`;
+    }
+
+    html += `<div class="cal-cell${isToday ? ' cal-cell--today' : ''}"${tip ? ` data-tip="${tip.replace(/"/g,'&quot;')}"` : ''}>`
+      + `<span class="cal-cell__num">${day}</span>${dot}</div>`;
+  }
+
+  grid.innerHTML = html;
+  TS.initTooltips();
 }
 
 function goToSport(sport) {
