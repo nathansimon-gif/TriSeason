@@ -233,7 +233,7 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" data-tip="Format accepté : 1h30, 1:30, ou 1.5">Durée</label>
-          <input class="form-input" type="number" step="0.1" id="s_dur" placeholder="ex: 1h30 ou 1.5">
+          <input class="form-input" type="text" id="s_dur" placeholder="ex: 1h30, 1:30 ou 1.5">
         </div>
         <div class="form-group">
           <label class="form-label">Distance (km)</label>
@@ -581,7 +581,13 @@ function openSessionModal(session = null) {
   document.getElementById('deleteBtn').style.display = session ? 'inline-flex' : 'none';
   document.getElementById('s_date').value     = session?.date     || new Date().toISOString().split('T')[0];
   document.getElementById('s_sport').value    = session?.sport    || 'velo';
-  document.getElementById('s_dur').value      = session?.duration || '';
+  if (session?.duration) {
+    const hrs  = Math.floor(session.duration);
+    const mins = Math.round((session.duration - hrs) * 60);
+    document.getElementById('s_dur').value = hrs + 'h' + (mins ? String(mins).padStart(2,'0') : '');
+  } else {
+    document.getElementById('s_dur').value = '';
+  }
   document.getElementById('s_dist').value     = session?.distance || '';
   document.getElementById('s_rpe').value      = session?.rpe      || '';
   document.getElementById('s_fc_avg').value   = session?.fc_avg   || '';
@@ -612,7 +618,7 @@ function editSession(id) {
 }
 
 function updateCalc() {
-  const dur   = parseFloat(document.getElementById('s_dur').value);
+  const dur   = parseDurInput(document.getElementById('s_dur').value);
   const dist  = parseFloat(document.getElementById('s_dist').value);
   const sport = document.getElementById('s_sport').value;
   const rpe   = parseFloat(document.getElementById('s_rpe').value);
