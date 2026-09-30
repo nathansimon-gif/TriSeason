@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
+  <script src="auth-guard.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#080c14">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -119,6 +123,19 @@
     <div id="fcZones"></div>
   </div>
 
+  <!-- ── Compte ── -->
+  <div class="section-card">
+    <div class="section-card__title">👤 Compte</div>
+    <div class="stack">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text-2)">Connecté en tant que <span id="accountEmail" style="color:var(--text);font-weight:600">—</span></div>
+        <button class="data-export-btn" style="width:auto;padding:8px 16px;color:var(--red);border-color:rgba(240,72,74,.25)" onclick="TS_logout()">
+          <span>🚪</span><div>Se déconnecter</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Données & Confidentialité ── -->
   <div class="section-card">
     <div class="section-card__title">💾 Données</div>
@@ -223,6 +240,13 @@
 
 <script src="app.js"></script>
 <script>
+function showAccountEmail(user) {
+  const el = document.getElementById('accountEmail');
+  if (el && user) el.textContent = user.email || user.displayName || 'compte connecté';
+}
+document.addEventListener('triseason:auth-ready', (e) => showAccountEmail(e.detail));
+if (window.TS_USER) showAccountEmail(window.TS_USER); // au cas où l'événement serait déjà passé
+
 document.addEventListener('DOMContentLoaded', () => {
   renderProfile();
   renderPBs();
