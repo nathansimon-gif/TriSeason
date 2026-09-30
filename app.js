@@ -69,9 +69,65 @@ function migrateWeeksToSessions() {
   }
 }
 
+// ── Synchronisation cloud (Firestore) par compte ────────────────────────────────
+// Le localStorage reste la copie locale rapide et synchrone que tout le reste de
+// l'appli continue de lire/écrire sans aucun changement. Cette section ajoute :
+//  - un envoi vers Firestore à chaque sauvegarde (saveData), en tâche de fond
+//  - une récupération unique depuis Firestore juste après la connexion
+let cloudSyncing = false;
+
+function getUserDocRef(uid) {
+  if (!window.firebase || !firebase.firestore) return null;
+  return firebase.firestore().collection('users').doc(uid);
+}
+
+function pushToCloud(data) {
+  const user = window.TS_USER;
+  if (!user) return; // pas connecté (ou pas encore su) : rien à envoyer
+  const ref = getUserDocRef(user.uid);
+  if (!ref) return;
+  ref.set({ data: data, updatedAt: Date.now() })
+    .catch(err => {
+      console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
+    });
+}
+
+function syncFromCloud(uid) {
+  if (cloudSyncing) return;
+  cloudSyncing = true;
+  const ref = getUserDocRef(uid);
+  if (!ref) { cloudSyncing = false; return; }
+
+  ref.get().then(doc => {
+    if (doc.exists && doc.data() && doc.data().data) {
+      // Un compte cloud existe déjà : ses données font foi sur cet appareil.
+      const cloudData = doc.data().data;
+      localStorage.setItem(DB_KEY, JSON.stringify(cloudData));
+      window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
+    } else {
+      // Premier login : on envoie ce qu'il y avait déjà en local (saison déjà
+      // saisie avant la mise en place des comptes) pour l'attacher au compte.
+      const localData = getData();
+      pushToCloud(localData);
+    }
+  }).catch(err => {
+    console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);
+  }).finally(() => {
+    cloudSyncing = false;
+  });
+}
+
+// Déclenché par auth-guard.js une fois la connexion confirmée. On gère aussi
+// le cas où cet événement serait déjà passé avant que ce script ne s'exécute.
+document.addEventListener('triseason:auth-ready', e => {
+  if (e.detail) syncFromCloud(e.detail.uid);
+});
+if (window.TS_USER) syncFromCloud(window.TS_USER.uid);
+
 function saveData(data) {
   localStorage.setItem(DB_KEY, JSON.stringify(data));
   window.dispatchEvent(new CustomEvent('triseason:update', { detail: data }));
+  pushToCloud(data);
 }
 
 function getData() { return loadData(); }
