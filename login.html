@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
+  <script src="auth-guard.js"></script>
+  <title>TriSeason — Connexion</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .auth-box {
+      width: 100%; max-width: 380px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--r);
+      padding: 32px 28px;
+    }
+    .auth-logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 24px; }
+    .auth-logo__icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--nat), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: #fff; font-weight: 800;
+    }
+    .auth-logo__text { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+    .auth-title { font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+    .auth-sub { font-size: 12px; color: var(--text-2); text-align: center; margin-bottom: 22px; }
+    .auth-error {
+      display: none; background: rgba(240,72,74,.1); border: 1px solid rgba(240,72,74,.3);
+      color: #ff8a8c; font-size: 12px; padding: 9px 12px; border-radius: var(--r-sm);
+      margin-bottom: 14px; line-height: 1.5;
+    }
+    .auth-divider {
+      display: flex; align-items: center; gap: 10px; margin: 18px 0;
+      font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em;
+    }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .btn--google {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: #fff; color: #1f1f1f; border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn--google:hover { opacity: .9; }
+    .auth-switch { text-align: center; font-size: 12px; color: var(--text-2); margin-top: 18px; }
+    .auth-switch a { color: var(--accent2); font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo__icon">◈</div>
+      <div class="auth-logo__text">TriSeason</div>
+    </div>
+
+    <div class="auth-title" id="authTitle">Connexion</div>
+    <div class="auth-sub" id="authSub">Accède à ton suivi de saison</div>
+
+    <div class="auth-error" id="authError"></div>
+
+    <button class="btn--google" onclick="signInGoogle()">
+      <svg width="17" height="17" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.8 2.73v2.27h2.92c1.71-1.57 2.68-3.88 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.29-1.11-.29-1.71s.11-1.17.29-1.71V4.95H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.05l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      Continuer avec Google
+    </button>
+
+    <div class="auth-divider">ou</div>
+
+    <form id="authForm" onsubmit="return false">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="authEmail" placeholder="toi@exemple.com" autocomplete="email" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input class="form-input" type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn--primary" style="width:100%;margin-top:6px" onclick="submitEmailAuth()" id="authSubmitBtn">Se connecter</button>
+    </form>
+
+    <div class="auth-switch" id="authSwitch">
+      Pas encore de compte ? <a onclick="toggleMode()">Créer un compte</a>
+    </div>
+  </div>
+
+<script>
+let mode = 'signin'; // 'signin' | 'signup'
+
+function toggleMode() {
+  mode = mode === 'signin' ? 'signup' : 'signin';
+  const isSignup = mode === 'signup';
+  document.getElementById('authTitle').textContent = isSignup ? 'Créer un compte' : 'Connexion';
+  document.getElementById('authSub').textContent = isSignup ? 'Rejoins TriSeason en quelques secondes' : 'Accède à ton suivi de saison';
+  document.getElementById('authSubmitBtn').textContent = isSignup ? 'Créer mon compte' : 'Se connecter';
+  document.getElementById('authForm').querySelector('input[type=password]').autocomplete = isSignup ? 'new-password' : 'current-password';
+  document.getElementById('authSwitch').innerHTML = isSignup
+    ? 'Déjà un compte ? <a onclick="toggleMode()">Se connecter</a>'
+    : 'Pas encore de compte ? <a onclick="toggleMode()">Créer un compte</a>';
+  hideError();
+}
+
+function showError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('authError').style.display = 'none';
+}
+
+function friendlyError(err) {
+  const map = {
+    'auth/invalid-email':            'Adresse email invalide.',
+    'auth/user-not-found':           'Aucun compte ne correspond à cet email.',
+    'auth/wrong-password':           'Mot de passe incorrect.',
+    'auth/invalid-credential':       'Email ou mot de passe incorrect.',
+    'auth/email-already-in-use':     'Un compte existe déjà avec cet email.',
+    'auth/weak-password':            'Le mot de passe doit faire au moins 6 caractères.',
+    'auth/too-many-requests':        'Trop de tentatives — réessaie dans quelques minutes.',
+    'auth/popup-closed-by-user':     'Fenêtre Google fermée avant la fin de connexion.',
+    'auth/network-request-failed':   'Problème de connexion internet.',
+  };
+  return map[err.code] || ('Une erreur est survenue (' + (err.code || err.message) + ').');
+}
+
+function submitEmailAuth() {
+  hideError();
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if (!email || !password) { showError('Renseigne un email et un mot de passe.'); return; }
+
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = mode === 'signup' ? 'Création…' : 'Connexion…';
+
+  const action = mode === 'signup'
+    ? firebase.auth().createUserWithEmailAndPassword(email, password)
+    : firebase.auth().signInWithEmailAndPassword(email, password);
+
+  action
+    .then(() => { /* auth-guard.js gère la redirection */ })
+    .catch(err => {
+      showError(friendlyError(err));
+      btn.disabled = false;
+      btn.textContent = mode === 'signup' ? 'Créer mon compte' : 'Se connecter';
+    });
+}
+
+function signInGoogle() {
+  hideError();
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider)
+    .then(() => { /* auth-guard.js gère la redirection */ })
+    .catch(err => {
+      if (err.code !== 'auth/popup-closed-by-user') showError(friendlyError(err));
+    });
+}
+
+// Valider avec la touche Entrée
+document.getElementById('authForm').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitEmailAuth();
+});
+</script>
+</body>
+</html>
