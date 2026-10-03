@@ -52,9 +52,12 @@
 
 <div class="page"><div class="container">
 
-  <div class="page-header">
-    <h1>Analyse par sport</h1>
-    <p>Évolution, tendances, objectifs et répartition de l'entraînement</p>
+  <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1>Analyse par sport</h1>
+      <p>Évolution, tendances, objectifs et répartition de l'entraînement</p>
+    </div>
+    <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer les totaux par saison (année)"></select>
   </div>
 
   <div class="sport-tabs">
@@ -181,6 +184,7 @@ function makeChart(id, config) {
 document.addEventListener('DOMContentLoaded', () => {
   const sp = new URLSearchParams(window.location.search).get('sport');
   if (sp && ['nat','velo','run'].includes(sp)) currentSport = sp;
+  populateSeasonFilter();
   selectSport(currentSport);
   TS.initTooltips();
 });
@@ -192,6 +196,19 @@ function selectSport(sport) {
   document.querySelectorAll('.sport-tab').forEach(t =>
     t.classList.remove('active--nat','active--velo','active--run'));
   document.getElementById(`tab-${sport}`).classList.add(`active--${sport}`);
+  renderSport();
+}
+
+function populateSeasonFilter() {
+  const sel = document.getElementById('filterSeason');
+  const seasons = TS.getSeasonsAvailable();
+  sel.innerHTML = '<option value="all">Toutes les saisons</option>'
+    + seasons.map(y => `<option value="${y}">Saison ${y}</option>`).join('');
+  sel.value = TS.getSeasonFilter();
+}
+
+function onSeasonChange() {
+  TS.setSeasonFilter(document.getElementById('filterSeason').value);
   renderSport();
 }
 
@@ -214,7 +231,10 @@ function renderSport() {
 function renderSportKPIs(s, weekData) {
   const color = s==='nat'?'#0bbfcd':s==='velo'?'#f59e42':'#f4613a';
   const sp = TS.SPORTS[s];
-  const sessions = TS.getSessions({sport:s});
+  const seasonValue = TS.getSeasonFilter();
+  const seasonRange = TS.getSeasonRange(seasonValue);
+  const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to });
+  const totalLabel = seasonRange ? ('Total saison ' + seasonValue) : 'Total';
   const totalKm  = sessions.reduce((a,x)=>a+(x.distance||0),0);
   const totalH   = sessions.reduce((a,x)=>a+(x.duration||0),0);
   const totalSes = sessions.length;
@@ -232,7 +252,7 @@ function renderSportKPIs(s, weekData) {
 
   document.getElementById('sportKPIs').innerHTML = `
     <div class="kpi" style="border-top:2px solid ${color}">
-      <div class="kpi__label">Total saison</div>
+      <div class="kpi__label">${totalLabel}</div>
       <div><span class="kpi__value">${totalKm.toFixed(0)}</span><span class="kpi__unit">km</span></div>
     </div>
     <div class="kpi" style="border-top:2px solid ${color}">
