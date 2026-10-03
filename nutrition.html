@@ -277,6 +277,7 @@
             <option value="dîner">🌙 Dîner</option>
             <option value="avant-effort">⚡ Avant l'effort</option>
             <option value="après-effort">💪 Après l'effort</option>
+            <option value="journée">📋 Journée (sans détailler par repas)</option>
           </select>
         </div>
         <div class="form-group">
@@ -539,7 +540,8 @@ function renderDayKPIs() {
 
 const MEAL_ICONS = {
   'petit-déjeuner':'☀️','collation-matin':'🍎','déjeuner':'🌞',
-  'collation-après-midi':'🍌','dîner':'🌙','avant-effort':'⚡','après-effort':'💪'
+  'collation-après-midi':'🍌','dîner':'🌙','avant-effort':'⚡','après-effort':'💪',
+  'journée':'📋'
 };
 
 function renderMealsList() {
@@ -851,6 +853,44 @@ const FOODS = [
   { keys:["salade composée","salade niçoise"],                        g:15, p:15,  l:10,  portion:300, unit:"g" },
   { keys:["bolognaise","sauce bolognaise"],                           g:8,  p:12,  l:8,   portion:150, unit:"g" },
   { keys:["wok","sauté de légumes"],                                  g:12, p:10,  l:5,   portion:300, unit:"g" },
+  // ── VIANDES — variétés supplémentaires + cru/cuit ─────────────────────────
+  { keys:["poulet cru","blanc de poulet cru"],                        g:0,  p:22,  l:2,   portion:120, unit:"g" },
+  { keys:["boeuf cru","tartare","carpaccio de boeuf","viande hachée crue"], g:0, p:21, l:11, portion:120, unit:"g" },
+  { keys:["canard","magret de canard"],                               g:0,  p:19,  l:12,  portion:150, unit:"g" },
+  { keys:["confit de canard"],                                        g:0,  p:24,  l:22,  portion:120, unit:"g" },
+  { keys:["lapin"],                                                   g:0,  p:21,  l:5,   portion:120, unit:"g" },
+  { keys:["gibier","chevreuil","sanglier"],                           g:0,  p:23,  l:4,   portion:120, unit:"g" },
+  { keys:["entrecôte","côte de boeuf","côte de bœuf"],                g:0,  p:24,  l:18,  portion:200, unit:"g" },
+  { keys:["filet mignon"],                                            g:0,  p:27,  l:5,   portion:150, unit:"g" },
+  { keys:["rôti de boeuf","rosbif","roti de boeuf"],                  g:0,  p:28,  l:8,   portion:120, unit:"g" },
+  { keys:["foie gras"],                                               g:2,  p:8,   l:44,  portion:30,  unit:"g" },
+  { keys:["abats","foie de volaille","foie de veau"],                 g:3,  p:20,  l:5,   portion:100, unit:"g" },
+  // ── PÂTES & PLATS — variétés supplémentaires ──────────────────────────────
+  { keys:["pâtes aux légumes","pâtes primavera"],                     g:20, p:4,   l:3,   portion:250, unit:"g" },
+  { keys:["nouilles chinoises","nouilles sautées","chow mein"],       g:25, p:5,   l:4,   portion:200, unit:"g" },
+  { keys:["udon"],                                                    g:21, p:4,   l:0.5, portion:200, unit:"g" },
+  { keys:["soba"],                                                    g:24, p:6,   l:1,   portion:180, unit:"g" },
+  { keys:["vermicelles de riz","vermicelle de riz"],                  g:25, p:2,   l:0.2, portion:150, unit:"g" },
+  { keys:["gnocchis","gnocchi"],                                      g:20, p:3,   l:1,   portion:250, unit:"g" },
+  { keys:["ravioles","raviolis"],                                     g:22, p:8,   l:5,   portion:250, unit:"g" },
+  // ── PÂTISSERIES — gamme élargie ───────────────────────────────────────────
+  { keys:["pain au chocolat","pain aux raisins"],                     g:40, p:7,   l:20,  portion:65,  unit:"g" },
+  { keys:["chausson aux pommes"],                                     g:35, p:4,   l:14,  portion:100, unit:"g" },
+  { keys:["éclair","eclair au chocolat"],                             g:35, p:5,   l:18,  portion:90,  unit:"g" },
+  { keys:["tarte aux pommes","tarte aux fruits"],                     g:30, p:3,   l:10,  portion:120, unit:"g" },
+  { keys:["tarte au citron"],                                         g:38, p:4,   l:16,  portion:110, unit:"g" },
+  { keys:["mille-feuille","millefeuille"],                            g:32, p:5,   l:22,  portion:100, unit:"g" },
+  { keys:["religieuse"],                                              g:30, p:5,   l:20,  portion:90,  unit:"g" },
+  { keys:["paris-brest"],                                             g:28, p:6,   l:26,  portion:110, unit:"g" },
+  { keys:["macaron"],                                                 g:50, p:5,   l:22,  portion:25,  unit:"g" },
+  { keys:["madeleine"],                                               g:50, p:6,   l:22,  portion:40,  unit:"g" },
+  { keys:["financier"],                                               g:45, p:6,   l:24,  portion:35,  unit:"g" },
+  { keys:["far breton"],                                              g:28, p:5,   l:6,   portion:120, unit:"g" },
+  { keys:["clafoutis"],                                               g:25, p:5,   l:7,   portion:150, unit:"g" },
+  { keys:["gaufre"],                                                  g:35, p:6,   l:13,  portion:80,  unit:"g" },
+  { keys:["beignet"],                                                 g:40, p:5,   l:18,  portion:60,  unit:"g" },
+  { keys:["chouquette","chouquettes"],                                g:45, p:7,   l:20,  portion:40,  unit:"g" },
+  { keys:["kouign-amann","kouign amann"],                             g:40, p:5,   l:25,  portion:80,  unit:"g" },
 ];
 
 // ── Analyse de la description : la quantite placee devant un aliment lui est associee ──
@@ -1174,19 +1214,67 @@ function renderEnergyBalance() {
     if (m.kcal) return a+m.kcal;
     return a + (m.glucides||0)*4 + (m.proteines||0)*4 + (m.lipides||0)*9;
   }, 0);
-  var total   = tdee + kcalBurned;
+
+  var autoTotal   = tdee + kcalBurned;
+  var customGoal  = (nutri.kcalGoals || {})[currentDay];
+  var hasCustom   = customGoal != null && !isNaN(customGoal);
+  var total       = hasCustom ? customGoal : autoTotal;
+
   var balance = kcalEaten ? kcalEaten - total : null;
   var balColor = balance===null ? 'var(--text-2)' : Math.abs(balance)<=200 ? 'var(--green)' : balance<-500 ? 'var(--red)' : 'var(--yellow)';
   var balLabel = balance===null ? '--' : balance>200 ? 'Excedent' : balance<-200 ? 'Deficit' : 'Equilibre';
+
   el.innerHTML =
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">'
     + tile(bmr,       'Metabolisme de base', 'var(--text)')
-    + tile(total,     'Besoin total du jour', 'var(--text)')
+    + tile(total,     hasCustom ? 'Objectif (personnalise)' : 'Besoin total du jour', hasCustom ? 'var(--accent2)' : 'var(--text)')
     + tile(kcalBurned||'--', 'Kcal brulees', 'var(--run)')
     + tile(kcalEaten||'--',  'Kcal consommees', 'var(--nat)')
     + tile(balance!==null?(balance>0?'+':'')+balance:'--', balLabel, balColor)
     + '</div>'
-    + '<div style="font-size:11px;color:var(--text-3)">Besoin total = MB x 1.55 + kcal seances. Formule estimative.</div>';
+    + '<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">'
+    + (hasCustom
+        ? 'Objectif defini manuellement pour cette journee (automatique : ' + autoTotal + ' kcal).'
+        : 'Besoin total = Metabolisme de base x 1.55 + kcal seances. Formule estimative.')
+    + '</div>'
+    + '<div id="kcalGoalEditor">'
+    + (hasCustom
+        ? '<button class="btn btn--ghost btn--sm" onclick="editKcalGoal()">Modifier l\'objectif</button> '
+          + '<button class="btn btn--ghost btn--sm" onclick="clearKcalGoal()">Revenir a l\'automatique</button>'
+        : '<button class="btn btn--ghost btn--sm" onclick="editKcalGoal()">Definir un objectif manuel pour cette journee</button>')
+    + '</div>';
+}
+
+function editKcalGoal() {
+  var nutri = getNutrition();
+  var current = (nutri.kcalGoals || {})[currentDay];
+  var editor = document.getElementById('kcalGoalEditor');
+  editor.innerHTML =
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<input class="form-input" type="number" id="kcalGoalInput" style="width:110px" placeholder="kcal" value="' + (current != null ? current : '') + '">'
+    + '<button class="btn btn--primary btn--sm" onclick="saveKcalGoal()">Enregistrer</button>'
+    + '<button class="btn btn--ghost btn--sm" onclick="renderEnergyBalance()">Annuler</button>'
+    + '</div>';
+  document.getElementById('kcalGoalInput').focus();
+}
+
+function saveKcalGoal() {
+  var val = parseInt(document.getElementById('kcalGoalInput').value);
+  if (!val || val <= 0) { TS.toast('Entrez une valeur valide', 'error'); return; }
+  var nutri = getNutrition();
+  if (!nutri.kcalGoals) nutri.kcalGoals = {};
+  nutri.kcalGoals[currentDay] = val;
+  saveNutrition(nutri);
+  renderEnergyBalance();
+  TS.toast('Objectif enregistre pour cette journee');
+}
+
+function clearKcalGoal() {
+  var nutri = getNutrition();
+  if (nutri.kcalGoals) delete nutri.kcalGoals[currentDay];
+  saveNutrition(nutri);
+  renderEnergyBalance();
+  TS.toast('Retour a l\'objectif automatique');
 }
 
 function tile(val, label, color) {
