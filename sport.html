@@ -212,19 +212,34 @@ function onSeasonChange() {
   renderSport();
 }
 
+function getWeeksInYear(year) {
+  const weeks = new Set();
+  const start = new Date(year, 0, 1);
+  const end   = new Date(year, 11, 31);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const wk = TS.getISOWeek(d);
+    if (wk.startsWith(String(year))) weeks.add(wk);
+  }
+  return Array.from(weeks).sort();
+}
+
 function renderSport() {
   const s = currentSport;
   const sp = TS.SPORTS[s];
-  const weeks52  = TS.getLast52Weeks();
-  const weekData = weeks52.map(w => TS.getWeek(w)[s] || {});
+  const seasonValue = TS.getSeasonFilter();
+  const seasonRange = TS.getSeasonRange(seasonValue);
+  // Toutes les saisons -> fenêtre glissante habituelle (52 dernières semaines).
+  // Une saison précise -> uniquement les semaines de cette année civile.
+  const weeksView = seasonRange ? getWeeksInYear(parseInt(seasonValue, 10)) : TS.getLast52Weeks();
+  const weekData  = weeksView.map(w => TS.getWeek(w)[s] || {});
   renderSportKPIs(s, weekData);
-  renderDistChart(s, weekData, weeks52, sp);
-  renderPaceChart(s, weekData, weeks52, sp);
-  renderMonthlyChart(s);
-  renderBestWeeks(s, weekData, weeks52);
-  renderMonthlyProgress(s);
-  renderZones(s);
-  renderGoals(s);
+  renderDistChart(s, weekData, weeksView, sp);
+  renderPaceChart(s, weekData, weeksView, sp);
+  renderMonthlyChart(s, seasonRange);
+  renderBestWeeks(s, weekData, weeksView);
+  renderMonthlyProgress(s, seasonRange);
+  renderZones(s, seasonRange);
+  renderGoals(s); // objectifs : toujours la semaine/mois/année EN COURS, indépendamment du filtre
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
@@ -345,9 +360,9 @@ function renderPaceChart(s, weekData, weeks, sp) {
   });
 }
 
-function renderMonthlyChart(s) {
+function renderMonthlyChart(s, seasonRange) {
   const color = s==='nat'?'#0bbfcd':s==='velo'?'#f59e42':'#f4613a';
-  const sessions = TS.getSessions({sport:s});
+  const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to });
   const months = {};
   for (const sess of sessions) {
     if (!sess.date||!sess.distance) continue;
@@ -387,8 +402,8 @@ function renderBestWeeks(s, weekData, weeks) {
     : '<div class="empty"><div class="empty__text">Aucune donnée</div></div>';
 }
 
-function renderMonthlyProgress(s) {
-  const sessions = TS.getSessions({sport:s});
+function renderMonthlyProgress(s, seasonRange) {
+  const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to });
   const months = {};
   for (const sess of sessions) {
     if (!sess.date||!sess.distance) continue;
@@ -396,7 +411,7 @@ function renderMonthlyProgress(s) {
     const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     months[mk] = (months[mk]||0) + sess.distance;
   }
-  const sorted = Object.keys(months).sort().slice(-6);
+  const sorted = (seasonRange ? Object.keys(months).sort() : Object.keys(months).sort().slice(-6));
   const max = Math.max(...sorted.map(k=>months[k]),1);
   const color = s==='nat'?'var(--nat)':s==='velo'?'var(--velo)':'var(--run)';
   document.getElementById('monthlyProgress').innerHTML = sorted.length
@@ -442,8 +457,8 @@ const ZONE_RECOMMENDATIONS = {
   ],
 };
 
-function renderZones(s) {
-  const sessions = TS.getSessions({sport:s}).filter(x=>x.rpe);
+function renderZones(s, seasonRange) {
+  const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to }).filter(x=>x.rpe);
   if (!sessions.length) {
     document.getElementById('zonesContent').innerHTML =
       '<div class="empty"><div class="empty__text">Saisissez des séances avec RPE pour voir la répartition</div></div>';
