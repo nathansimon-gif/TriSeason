@@ -411,6 +411,10 @@ tbody tr:hover td { background: var(--surface2); }
   .kpi__value { font-size: 22px; }
   .modal { padding: 18px; }
   .sport-tabs .tab-label { display: none; }
+  /* Les champs en duo (ex: date + sport) passent sur une seule colonne :
+     certains champs natifs (type="date" notamment) peuvent déborder de leur
+     colonne sur petit écran et chevaucher le champ voisin. */
+  .form-row { grid-template-columns: 1fr !important; }
 }
 
 /* ── Mobile bottom navigation ─────────────────────────────────────────────── */
