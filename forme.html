@@ -108,7 +108,7 @@
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
       <span>📈 Charge d'entraînement & Forme</span>
       <span class="confidence-badge confidence-badge--high">Méthode établie</span>
-      <span class="tip-icon" data-tip="CTL (fitness) = charge moyenne sur 42 jours. ATL (fatigue) = charge moyenne sur 7 jours. TSB (forme) = CTL - ATL. Un TSB positif avant une course indique une bonne fraîcheur.">?</span>
+      <span class="tip-icon" data-tip="Trois indicateurs pour suivre ta forme : ta condition de fond (CTL), ta fatigue récente (ATL), et ton niveau de fraîcheur du moment (TSB). Survole chaque case pour le détail.">?</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px" id="tsbTiles"></div>
     <div style="position:relative;height:220px;overflow:hidden">
@@ -255,9 +255,9 @@ function renderPrediction() {
 // ── Performance Management Chart (CTL/ATL/TSB) ───────────────────────────────
 // Explications des trois indicateurs (affichées en infobulle dans chaque case)
 var TILE_TIPS = {
-  ctl: "Charge chronique : moyenne pondérée de ta charge quotidienne sur ~42 jours (les jours récents pèsent plus). Charge d’une séance = durée (h) × RPE² ÷ 100 ; un jour de repos compte 0 ; les séances sans durée ou sans RPE sont ignorées. Formule : CTL = CTL veille + (charge du jour − CTL veille) × (1 − e^(−1/42)). Représente ta condition de fond : elle monte avec la régularité et baisse lentement à l’arrêt.",
-  atl: "Charge aiguë : même calcul que le CTL, mais sur ~7 jours. Formule : ATL = ATL veille + (charge du jour − ATL veille) × (1 − e^(−1/7)). Elle réagit vite : elle grimpe après des séances dures ou rapprochées et retombe en quelques jours de repos. Représente ta fatigue récente.",
-  tsb: "Balance de forme = CTL − ATL (condition de fond moins fatigue récente). Positif : tu es frais (repère courant : +5 à +25 avant une course). Proche de 0 : charge équilibrée. Sous −25 : fatigue accumulée élevée, risque de surentraînement si cela dure. Ce n’est pas un niveau de performance, mais un état de fraîcheur."
+  ctl: "Ta condition de fond. Elle reflète ton entraînement des dernières semaines : plus tu t’entraînes régulièrement, plus elle monte. Elle évolue lentement, à la hausse comme à la baisse.",
+  atl: "Ta fatigue récente. Elle reflète surtout tes derniers jours : elle grimpe vite après des séances dures ou rapprochées, et redescend vite avec du repos.",
+  tsb: "Ton niveau de fraîcheur du moment (condition de fond moins fatigue récente). Positif : tu es reposé, un bon signe avant une course. Proche de 0 : charge équilibrée. Très négatif et installé dans la durée : fatigue qui s’accumule, pense à lever le pied."
 };
 
 function tipAttr(text) {
