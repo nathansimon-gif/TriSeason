@@ -220,7 +220,22 @@ const DIST_OPTIONS = {
   nat:  ['50m','100m','200m','400m','800m','1500m','1km','3,8km (Ironman)','Personnalisée'],
   velo: ['10km','20km','40km','50km','100km','180km (Ironman)','Personnalisée'],
   run:  ['1km','1 mile','3km','5km','10km','Semi-marathon (21,1km)','Marathon (42,2km)','Personnalisée'],
-  tri:  ['Sprint (750m/20km/5km)','Olympique (1,5km/40km/10km)','70.3 / Half (1,9km/90km/21km)','Ironman (3,8km/180km/42km)','Personnalisée'],
+  tri:  [].concat(
+    TS.COMP_FORMATS.TRI.map(f => f.rec),
+    TS.COMP_FORMATS.DUATH.map(f => f.rec),
+    TS.COMP_FORMATS.AQUA.map(f => f.rec),
+    ['Personnalisée']
+  ),
+};
+
+// Regroupement visuel de la liste "tri" (mêmes libellés que ceux créés automatiquement
+// par la page Compétitions : ils sont définis une seule fois, dans app.js)
+const DIST_GROUPS = {
+  tri: [
+    { label: 'Triathlon', items: TS.COMP_FORMATS.TRI.map(f => f.rec) },
+    { label: 'Duathlon',  items: TS.COMP_FORMATS.DUATH.map(f => f.rec) },
+    { label: 'Aquathlon', items: TS.COMP_FORMATS.AQUA.map(f => f.rec) },
+  ],
 };
 
 const SPORT_COLORS = { nat:'var(--nat)', velo:'var(--velo)', run:'var(--run)', tri:'var(--accent)' };
@@ -469,8 +484,15 @@ function secToTime(sec) {
 function updateDistOptions() {
   const sport = document.getElementById('r_sport').value;
   const sel   = document.getElementById('r_dist');
-  const opts  = DIST_OPTIONS[sport] || [];
-  sel.innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join('');
+  const groups = DIST_GROUPS[sport];
+  if (groups) {
+    sel.innerHTML = groups.map(g =>
+      `<optgroup label="${g.label}">${g.items.map(o => `<option value="${o}">${o}</option>`).join('')}</optgroup>`
+    ).join('') + '<option value="Personnalisée">Personnalisée</option>';
+  } else {
+    const opts = DIST_OPTIONS[sport] || [];
+    sel.innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join('');
+  }
   toggleCustomDist();
 }
 
@@ -486,7 +508,15 @@ function openRecordModal(record=null, defaultSport=null) {
   document.getElementById('deleteRecordBtn').style.display = record ? 'inline-flex' : 'none';
   document.getElementById('r_sport').value    = record?.sport || defaultSport || 'run';
   updateDistOptions();
-  document.getElementById('r_dist').value     = record?.dist     || '';
+  // Un record dont la distance n'est pas dans la liste (ex : "20,4 km" créé automatiquement
+  // depuis une séance) garde sa distance au lieu d'afficher un champ vide
+  const distSel = document.getElementById('r_dist');
+  if (record?.dist && ![...distSel.options].some(o => o.value === record.dist)) {
+    const opt = document.createElement('option');
+    opt.value = record.dist; opt.textContent = record.dist;
+    distSel.insertBefore(opt, distSel.firstChild);
+  }
+  distSel.value = record?.dist || '';
   document.getElementById('r_time').value     = record?.time     || '';
   document.getElementById('r_date').value     = record?.date     || new Date().toISOString().split('T')[0];
   document.getElementById('r_location').value = record?.location || '';

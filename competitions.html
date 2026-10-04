@@ -111,6 +111,7 @@
         <div class="form-group">
           <label class="form-label">Distance (km)</label>
           <input class="form-input" type="number" step="0.1" id="c_dist" placeholder="">
+          <div id="c_dist_hint" style="font-size:11px;color:var(--text-3);margin-top:4px"></div>
         </div>
         <div class="form-group">
           <label class="form-label">Priorité</label>
@@ -141,6 +142,25 @@
         <button class="btn btn--ghost" onclick="closeModal()">Annuler</button>
         <button class="btn btn--danger btn--sm" id="deleteCompBtn" onclick="deleteCurrentComp()" style="display:none">Supprimer</button>
         <button class="btn btn--primary" onclick="saveCompForm()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Association de séances à une course ── -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal__header">
+      <div class="modal__title" id="linkModalTitle">Séances de la course</div>
+      <button class="modal__close" onclick="closeLinkModal()">×</button>
+    </div>
+    <div class="stack">
+      <div id="linkHint" style="font-size:12px;color:var(--text-2);line-height:1.5"></div>
+      <div id="linkList"></div>
+      <div id="linkStatus" style="font-size:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--surface2);line-height:1.5"></div>
+      <div class="form-actions">
+        <button class="btn btn--ghost" onclick="closeLinkModal()">Annuler</button>
+        <button class="btn btn--primary" onclick="saveLinks()">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -317,6 +337,7 @@ function renderCompPrep(c) {
       +(sp.emoji||'')
       +' '+s.date.slice(5)
       +(durStr?' · '+durStr:'')
+      +(s.distance?' · '+s.distance+' km':'')
       +(s.rpe?' · RPE '+s.rpe:'')
       +(linked?' <span style="color:var(--accent2);font-size:9px">lié</span>':'')
       +'</span>';
@@ -358,13 +379,15 @@ function renderList() {
     const ecart     = hasDone && c.goal_time ? timeGap(c.actual_time, c.goal_time) : null;
     const prioColor = c.priority==='A' ? 'var(--red)' : c.priority==='B' ? 'var(--yellow)' : 'var(--text-3)';
     const typeColor = c.type==='TRI'?'--accent':c.type==='RUN'?'--run':c.type==='BIKE'?'--velo':'--nat';
+    const isMulti   = ['TRI','DUATH','AQUA'].includes(c.type);
+    const fmtKey    = isMulti ? (c.format || (c.distance ? (TS.compClosestFormat(c.type, c.distance) || {}).key : null)) : null;
 
     return `<div class="comp-card" style="position:relative;overflow:hidden">
       <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(${typeColor})"></div>
       <div style="padding-left:8px;flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
           <span style="font-size:10px;font-weight:700;color:${prioColor};letter-spacing:.08em">${c.priority||'B'}</span>
-          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(${typeColor})">${c.type}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(${typeColor})">${c.type}${fmtKey ? ' ' + fmtKey : ''}</span>
           <span style="font-size:12px;color:var(--text-2)">${new Date(c.date+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</span>
           ${!isPast ? `<span style="font-size:11px;color:var(--accent-light);background:rgba(99,102,241,0.12);padding:2px 8px;border-radius:20px">J-${daysLeft}</span>` : ''}
         </div>
@@ -381,6 +404,7 @@ function renderList() {
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
         ${hasDone ? `<div style="font-size:22px">${goalOk ? '✅' : '❌'}</div>` : `<div style="font-size:22px">🔜</div>`}
         <button class="btn btn--ghost btn--sm" onclick="editComp('${c.id}')">Modifier</button>
+        <button class="btn btn--ghost btn--sm" onclick="openLinkModal('${c.id}')">🔗 Séances</button>
       </div>
     </div>`;
   }).join('');
@@ -411,12 +435,17 @@ function updateCompCalc() {
       parts.push(`Écart : ${sign}${secToTime(Math.abs(diff))} ${diff<=0?'✅':'❌'}`);
     }
   }
-  if (actual && dist) {
+  const sport = type==='RUN'?'run':type==='BIKE'?'velo':type==='NAT'?'nat':null;
+  if (actual && dist && sport) {
     const secs = timeToSec(actual);
-    const h = secs/3600;
-    const sport = type==='RUN'?'run':type==='BIKE'?'velo':'nat';
-    const pace = TS.calcPace(h, dist, sport);
+    const pace = TS.calcPace(secs/3600, dist, sport);
     if (pace) parts.push(`Allure/Vitesse : ${pace}`);
+  }
+  const fmt = dist ? TS.compClosestFormat(type, dist) : null;
+  if (fmt) parts.push(`Format : ${fmt.key}`);
+  const hint = document.getElementById('c_dist_hint');
+  if (hint && !document.getElementById('c_dist').readOnly) {
+    hint.textContent = ['TRI','DUATH','AQUA'].includes(type) ? 'Se remplit toute seule quand tu associes tes séances (bouton 🔗 Séances).' : '';
   }
   document.getElementById('c_calc').textContent = parts.join('  ·  ') || '';
 }
@@ -470,6 +499,13 @@ function openCompModal(comp=null) {
   document.getElementById('c_actual').value   = comp?.actual_time || '';
   document.getElementById('c_notes').value    = comp?.notes    || '';
   document.getElementById('c_calc').textContent = '';
+  // Course multisport avec séances reliées : la distance est la somme de leurs distances
+  const multi    = ['TRI','DUATH','AQUA'].includes(comp?.type || 'TRI');
+  const distAuto = !!comp && multi && comp.auto_distance != null && comp.distance === comp.auto_distance;
+  document.getElementById('c_dist').readOnly = distAuto;
+  document.getElementById('c_dist_hint').textContent = distAuto
+    ? 'Somme des séances associées — non modifiable ici.'
+    : (multi ? 'Se remplit toute seule quand tu associes tes séances (bouton 🔗 Séances).' : '');
   document.getElementById('compModal').classList.add('open');
 }
 
@@ -479,7 +515,10 @@ function editComp(id) {
 }
 
 function saveCompForm() {
+  // On repart de la course existante pour ne pas perdre ses champs internes (auto_time)
+  const existing = editId ? TS.getCompetitions().find(c => c.id === editId) : null;
   const comp = {
+    ...(existing || {}),
     id:          editId,
     date:        document.getElementById('c_date').value,
     type:        document.getElementById('c_type').value,
@@ -491,11 +530,21 @@ function saveCompForm() {
     notes:       document.getElementById('c_notes').value,
   };
   if (!comp.date || !comp.name) { TS.toast('Date et nom obligatoires', 'error'); return; }
-  TS.saveCompetition(comp);
+  const wasNew = !editId;
+  const saved  = TS.saveCompetition(comp);
+  // Recalcule temps total, distance, format et records à partir des séances reliées
+  const res    = TS.syncCompetition(saved.id);
   closeModal();
   // Force re-render immédiat (l'event triseason:update peut être asynchrone)
   setTimeout(renderAll, 50);
-  TS.toast('Course enregistrée');
+  const recMsg = TS.describeCompRecords(res);
+  TS.toast('Course enregistrée' + (recMsg ? ' · ' + recMsg : ''));
+
+  // Nouvelle course multisport déjà courue : on propose tout de suite d'associer ses séances
+  const today = new Date().toISOString().split('T')[0];
+  if (wasNew && ['TRI','DUATH','AQUA'].includes(saved.type) && saved.date <= today && linkCandidates(saved).length) {
+    setTimeout(() => openLinkModal(saved.id), 200);
+  }
 }
 
 function deleteCurrentComp() {
@@ -504,6 +553,120 @@ function deleteCurrentComp() {
   closeModal();
   setTimeout(renderAll, 50);
   TS.toast('Course supprimée');
+}
+
+// ── Association de plusieurs séances à une course ────────────────────────────
+let linkCompId = null;
+let linkSelection = new Set();
+
+const LINK_HINTS = {
+  TRI:   'Triathlon : coche tes 3 séances (natation, vélo, course). Temps total = somme des 3 (transitions non comprises). La somme des distances donne le format (XS, S, M, L, Ironman).',
+  AQUA:  'Aquathlon : coche tes 2 séances (natation, course). Temps total = somme des 2 (transition non comprise). La somme des distances donne le format.',
+  DUATH: 'Duathlon : coche tes 3 séances (course, vélo, course). Temps total = somme des 3 (transitions non comprises). La somme des distances donne le format.',
+  RUN:   'Coche la séance de cette course : son temps devient le temps de la course.',
+  BIKE:  'Coche la séance de cette course : son temps devient le temps de la course.',
+  NAT:   'Coche la séance de cette course : son temps devient le temps de la course.',
+};
+
+function fmtLinkDur(h) {
+  if (!h) return '—';
+  const hrs = Math.floor(h), mins = Math.round((h - hrs) * 60);
+  if (hrs === 0) return mins + 'min';
+  return mins === 0 ? hrs + 'h' : hrs + 'h' + String(mins).padStart(2, '0');
+}
+
+// Séances proposées : celles des 2 jours autour de la course, plus celles déjà reliées
+// à cette course. Celles reliées à une AUTRE course ne sont pas proposées.
+function linkCandidates(comp) {
+  const DAY = 86400000;
+  const t = new Date(comp.date + 'T00:00:00').getTime();
+  const order = { nat: 0, velo: 1, run: 2 };
+  return TS.getSessions().filter(s => {
+    if (s.comp_id === comp.id) return true;
+    if (s.comp_id) return false;
+    const d = new Date(s.date + 'T00:00:00').getTime();
+    return Math.abs(d - t) <= 2 * DAY;
+  }).sort((a, b) => a.date.localeCompare(b.date) || (order[a.sport] - order[b.sport]));
+}
+
+function openLinkModal(compId) {
+  const comp = TS.getCompetitions().find(c => c.id === compId);
+  if (!comp) return;
+  linkCompId = compId;
+  linkSelection = new Set(TS.getSessions().filter(s => s.comp_id === compId).map(s => s.id));
+  document.getElementById('linkModalTitle').textContent = 'Séances de « ' + comp.name + ' »';
+  document.getElementById('linkHint').textContent = LINK_HINTS[comp.type] || '';
+  renderLinkList();
+  document.getElementById('linkModal').classList.add('open');
+}
+
+function renderLinkList() {
+  const comp = TS.getCompetitions().find(c => c.id === linkCompId);
+  if (!comp) return;
+  const list = linkCandidates(comp);
+  const el = document.getElementById('linkList');
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:6px 0">Aucune séance trouvée dans les 2 jours autour de la date de la course. Importe ou saisis tes activités dans la page Séances, puis reviens ici.</div>';
+  } else {
+    el.innerHTML = list.map(s => {
+      const sp = TS.SPORTS[s.sport] || {};
+      const d = new Date(s.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+      return `<label class="link-row">
+        <input type="checkbox" ${linkSelection.has(s.id) ? 'checked' : ''} onchange="toggleLinkSession('${s.id}', this.checked)">
+        <span class="badge-sport badge-sport--${s.sport}">${sp.emoji || ''} ${sp.label || s.sport}</span>
+        <span class="link-row__main">${d}</span>
+        <span class="link-row__meta">${fmtLinkDur(s.duration)}${s.distance ? ' · ' + s.distance + ' km' : ''}</span>
+      </label>`;
+    }).join('');
+  }
+  updateLinkStatus();
+}
+
+function toggleLinkSession(id, checked) {
+  if (checked) linkSelection.add(id); else linkSelection.delete(id);
+  updateLinkStatus();
+}
+
+// Aperçu en direct de ce que donnera la sélection
+function updateLinkStatus() {
+  const comp = TS.getCompetitions().find(c => c.id === linkCompId);
+  const el = document.getElementById('linkStatus');
+  if (!comp || !el) return;
+  const chosen = TS.getSessions().filter(s => linkSelection.has(s.id));
+  const chk = TS.checkCompetitionLegs(comp.type, chosen);
+  let html;
+  if (!chosen.length) {
+    html = 'Aucune séance sélectionnée.';
+  } else if (chk.multisport) {
+    if (chk.complete) {
+      const km = String(chk.totalKm).replace('.', ',');
+      const dist = chk.format
+        ? ' · distance : <b>' + km + ' km</b> → format <b>' + chk.format + '</b>'
+        : (chk.missingDist.length ? ' · distance manquante pour : ' + chk.missingDist.join(', ') + ' (format non calculé)' : '');
+      html = '✅ Complet — temps total : <b>' + fmtLinkDur(chk.totalSec / 3600) + '</b> (somme des séances)' + dist;
+    } else {
+      html = 'Il manque encore : <b>' + chk.missing.join(', ') + '</b> pour calculer le temps total.';
+    }
+  } else if (chosen.length === 1) {
+    html = '✅ Le temps de la course sera celui de cette séance (<b>' + fmtLinkDur(chosen[0].duration) + '</b>).';
+  } else {
+    html = 'Plusieurs séances sélectionnées : le temps de la course ne sera pas recalculé automatiquement.';
+  }
+  el.innerHTML = html;
+}
+
+function saveLinks() {
+  if (!linkCompId) return;
+  const res = TS.linkSessionsToCompetition(linkCompId, Array.from(linkSelection));
+  const msg = TS.describeCompSync(res);
+  closeLinkModal();
+  setTimeout(renderAll, 50);
+  TS.toast(msg || 'Associations enregistrées');
+}
+
+function closeLinkModal() {
+  document.getElementById('linkModal').classList.remove('open');
+  linkCompId = null;
 }
 
 function closeModal() { document.getElementById('compModal').classList.remove('open'); editId = null; }

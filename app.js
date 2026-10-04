@@ -309,7 +309,397 @@ function saveCompetition(comp) {
 function deleteCompetition(id) {
   const data = getData();
   data.competitions = data.competitions.filter(c => c.id !== id);
+  // Les records créés automatiquement par cette course disparaissent avec elle,
+  // et ses séances redeviennent libres (records saisis à la main : jamais touchés).
+  data.records = (data.records || []).filter(r => !(r.auto && r.comp_id === id));
+  (data.sessions || []).forEach(s => { if (s.comp_id === id) s.comp_id = null; });
   saveData(data);
+}
+
+// ── Compétitions : temps total multisport + records automatiques ─────────────
+// Une compétition multisport (triathlon, duathlon, aquathlon) peut être reliée à
+// plusieurs séances (une par discipline, via leur champ comp_id).
+//  - Son temps total = somme des séances reliées, calculé quand toutes les
+//    disciplines requises sont présentes. Un temps saisi à la main n'est jamais
+//    écrasé (la somme ne contient pas les transitions) : voir auto_time.
+//  - Les records sont DÉDUITS de la course et de ses séances : ils sont
+//    recalculés à chaque changement (marqués auto + comp_id, donc sans doublon).
+//    Un record n'est ajouté que s'il bat le meilleur temps de la saison pour la
+//    même discipline et la même distance (ce qui inclut le cas d'un PB).
+const COMP_MULTISPORT_LEGS = {
+  TRI:   { nat: 1, velo: 1, run: 1 },
+  AQUA:  { nat: 1, run: 1 },
+  DUATH: { velo: 1, run: 2 },   // course à pied / vélo / course à pied
+};
+const COMP_SINGLE_SPORT = { RUN: 'run', BIKE: 'velo', VELO: 'velo', NAT: 'nat' };
+const COMP_LEG_LABELS   = { nat: 'Natation', velo: 'Vélo', run: 'Course' };
+const COMP_MULTI_NAMES  = { TRI: 'Triathlon', AQUA: 'Aquathlon', DUATH: 'Duathlon' };
+
+// Mêmes libellés de distance que ceux proposés sur la page Records, pour que les
+// records créés automatiquement se regroupent avec ceux saisis à la main.
+const COMP_STD_DISTANCES = {
+  nat:  [['50m', 0.05], ['100m', 0.1], ['200m', 0.2], ['400m', 0.4], ['800m', 0.8], ['1500m', 1.5], ['1km', 1], ['3,8km (Ironman)', 3.8]],
+  velo: [['10km', 10], ['20km', 20], ['40km', 40], ['50km', 50], ['100km', 100], ['180km (Ironman)', 180]],
+  run:  [['1km', 1], ['1 mile', 1.609], ['3km', 3], ['5km', 5], ['10km', 10], ['Semi-marathon (21,1km)', 21.1], ['Marathon (42,2km)', 42.195]],
+  tri:  [['Sprint (750m/20km/5km)', 25.75], ['Olympique (1,5km/40km/10km)', 51.5], ['70.3 / Half (1,9km/90km/21km)', 113], ['Ironman (3,8km/180km/42km)', 226]],
+};
+
+// Formats officiels FFTri des courses multisports. La distance totale est la somme
+// des disciplines (ex : sprint = 0,75 + 20 + 5 = 25,75 km). 'rec' est le libellé de
+// distance utilisé sur la page Records (les anciens libellés sont conservés pour que
+// les records déjà saisis à la main restent regroupés avec ceux créés automatiquement).
+const COMP_FORMATS = {
+  TRI: [
+    { key: 'XS',      km: 12.9,  rec: 'XS - Découverte (400m/10km/2,5km)' },
+    { key: 'S',       km: 25.75, rec: 'Sprint (750m/20km/5km)' },
+    { key: 'M',       km: 51.5,  rec: 'Olympique (1,5km/40km/10km)' },
+    { key: 'L',       km: 113,   rec: '70.3 / Half (1,9km/90km/21km)' },
+    { key: 'Ironman', km: 226,   rec: 'Ironman (3,8km/180km/42km)' },
+  ],
+  DUATH: [
+    { key: 'XS',  km: 13.75, rec: 'Duathlon XS (2,5km/10km/1,25km)' },
+    { key: 'S',   km: 27.5,  rec: 'Duathlon S (5km/20km/2,5km)' },
+    { key: 'M',   km: 55,    rec: 'Duathlon M (10km/40km/5km)' },
+    { key: 'L',   km: 100,   rec: 'Duathlon L (10km/80km/10km)' },
+    { key: 'XL',  km: 150,   rec: 'Duathlon XL (20km/120km/10km)' },
+    { key: 'XXL', km: 220,   rec: 'Duathlon XXL (20km/180km/20km)' },
+  ],
+  AQUA: [
+    { key: 'XS', km: 3,  rec: 'Aquathlon XS (500m/2,5km)' },
+    { key: 'S',  km: 6,  rec: 'Aquathlon S (1km/5km)' },
+    { key: 'M',  km: 12, rec: 'Aquathlon M (2km/10km)' },
+    { key: 'L',  km: 18, rec: 'Aquathlon L (3km/15km)' },
+    { key: 'XL', km: 24, rec: 'Aquathlon XL (4km/20km)' },
+  ],
+};
+COMP_STD_DISTANCES.tri = COMP_FORMATS.TRI.map(function (f) { return [f.rec, f.km]; });
+
+// Format dont la distance totale est la plus proche de km (pas de tolérance : la somme
+// des séances n'a pas besoin d'être exacte). Renvoie null si le type n'est pas multisport.
+function compClosestFormat(type, km) {
+  var list = COMP_FORMATS[type];
+  km = parseFloat(km);
+  if (!list || !(km > 0)) return null;
+  var best = list[0], bestDiff = Math.abs(km - list[0].km);
+  for (var i = 1; i < list.length; i++) {
+    var d = Math.abs(km - list[i].km);
+    if (d < bestDiff) { bestDiff = d; best = list[i]; }
+  }
+  return best;
+}
+
+function compFmtKm(km) {
+  return String(Math.round(km * 10) / 10).replace('.', ',') + ' km';
+}
+
+// Même lecture des temps que les pages Compétitions et Records :
+// "1:57:30" = h:mm:ss ; "45:10" = mm:ss ; "2:05" = 2h05.
+function compTimeToSec(str) {
+  if (!str) return 0;
+  var parts = String(str).trim().split(':').map(Number);
+  if (parts.some(isNaN)) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] >= 10 ? parts[0] * 60 + parts[1] : parts[0] * 3600 + parts[1] * 60;
+  return 0;
+}
+
+// Écrit toujours un temps sans ambiguïté : moins de 10 min => "0:08:30" (jamais "8:30").
+function compSecToTime(sec) {
+  sec = Math.round(sec);
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = sec % 60;
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
+  if (m >= 10) return m + ':' + pad(s);
+  return '0:' + pad(m) + ':' + pad(s);
+}
+
+function compFormatHM(sec) {
+  var h = Math.floor(sec / 3600);
+  var m = Math.round((sec % 3600) / 60);
+  if (m === 60) { h += 1; m = 0; }
+  if (h === 0) return m + 'min';
+  return m === 0 ? h + 'h' : h + 'h' + String(m).padStart(2, '0');
+}
+
+function compUnique(arr) {
+  return arr.filter(function (v, i) { return arr.indexOf(v) === i; });
+}
+
+// kind : 'nat' | 'velo' | 'run' | 'tri'. Rapproche une distance (km) d'un libellé
+// standard de la page Records si l'écart est faible, sinon construit un libellé libre.
+function compDistanceLabel(kind, km, multiType) {
+  var canSnap = kind !== 'tri' || multiType === 'TRI'; // un duathlon/aquathlon n'est jamais un "Sprint" de triathlon
+  if (canSnap) {
+    var tol = kind === 'tri' ? 0.08 : 0.06;
+    var list = COMP_STD_DISTANCES[kind] || [];
+    var best = null, bestDiff = Infinity;
+    list.forEach(function (it) {
+      var diff = Math.abs(km - it[1]) / it[1];
+      if (diff < bestDiff) { bestDiff = diff; best = it; }
+    });
+    if (best && bestDiff <= tol) return best[0];
+  }
+  var rounded = Math.round(km * 10) / 10;
+  if (kind === 'tri') return (COMP_MULTI_NAMES[multiType] || 'Triathlon') + ' ' + rounded + ' km';
+  if (kind === 'nat' && km < 1) return Math.round(km * 1000) + ' m';
+  return rounded + ' km';
+}
+
+// Vérifie que les séances reliées couvrent toutes les disciplines requises.
+function compCheckLegs(linked, needs) {
+  var counts = {};
+  linked.forEach(function (s) {
+    if (s.duration > 0) counts[s.sport] = (counts[s.sport] || 0) + 1;
+  });
+  var missing = [];
+  Object.keys(needs).forEach(function (sp) {
+    var have = counts[sp] || 0;
+    if (have < needs[sp]) {
+      var label = COMP_LEG_LABELS[sp];
+      if (needs[sp] > 1) label += have === 0 ? ' (×' + needs[sp] + ')' : ' (' + (have + 1) + 'e)';
+      missing.push(label);
+    }
+  });
+  return { complete: missing.length === 0, missing: missing };
+}
+
+// Pour l'interface (aperçu en direct dans la fenêtre d'association).
+function checkCompetitionLegs(type, sessions) {
+  var total = Math.round(sessions.reduce(function (a, s) { return a + (s.duration || 0) * 3600; }, 0));
+  var km = Math.round(sessions.reduce(function (a, s) { return a + (parseFloat(s.distance) || 0); }, 0) * 10) / 10;
+  var missingDist = compUnique(sessions
+    .filter(function (s) { return s.duration > 0 && !(s.distance > 0); })
+    .map(function (s) { return COMP_LEG_LABELS[s.sport] || s.sport; }));
+  var needs = COMP_MULTISPORT_LEGS[type];
+  if (!needs) return { multisport: false, complete: sessions.length > 0, missing: [], totalSec: total, totalKm: km, missingDist: missingDist, format: null };
+  var c = compCheckLegs(sessions, needs);
+  var fmt = (c.complete && missingDist.length === 0 && km > 0) ? compClosestFormat(type, km) : null;
+  return { multisport: true, complete: c.complete, missing: c.missing, totalSec: total, totalKm: km, missingDist: missingDist, format: fmt ? fmt.key : null };
+}
+
+// Records "candidats" déduits d'une course : un pour la course entière (distance et
+// temps de la course) + un par discipline pour les courses multisports (distance
+// et temps de chaque séance reliée).
+function compBuildRecordCandidates(comp, linked) {
+  var out = [], notes = [];
+  var multi = COMP_MULTISPORT_LEGS[comp.type];
+  var compSec = compTimeToSec(comp.actual_time);
+  var compKm = parseFloat(comp.distance) || 0;
+
+  if (multi) {
+    if (compSec > 0) {
+      var fmt = compKm > 0 ? compClosestFormat(comp.type, compKm) : null;
+      if (fmt) {
+        out.push({ sport: 'tri', label: COMP_MULTI_NAMES[comp.type] + ' ' + fmt.key, dist: fmt.rec, sec: compSec });
+      } else {
+        notes.push('Renseigne la distance de la course pour créer son record.');
+      }
+    }
+    var noDist = [];
+    linked.forEach(function (s) {
+      var sec = Math.round((s.duration || 0) * 3600);
+      if (!COMP_LEG_LABELS[s.sport] || sec <= 0) return;
+      if (!(s.distance > 0)) { noDist.push(COMP_LEG_LABELS[s.sport]); return; }
+      out.push({ sport: s.sport, label: COMP_LEG_LABELS[s.sport], dist: compDistanceLabel(s.sport, s.distance), sec: sec });
+    });
+    if (noDist.length) notes.push('Distance manquante (pas de record) : ' + compUnique(noDist).join(', ') + '.');
+  } else if (COMP_SINGLE_SPORT[comp.type] && compSec > 0) {
+    var sport = COMP_SINGLE_SPORT[comp.type];
+    if (compKm > 0) out.push({ sport: sport, label: COMP_LEG_LABELS[sport], dist: compDistanceLabel(sport, compKm), sec: compSec });
+    else notes.push('Renseigne la distance de la course pour créer son record.');
+  }
+  return { candidates: out, notes: notes };
+}
+
+// Retire les anciens records automatiques de la course, puis recrée ceux qui battent
+// le meilleur temps de la saison (même discipline, même distance, même année).
+function compRefreshRecordsInData(data, comp, linked) {
+  if (!data.records) data.records = [];
+  var records = data.records;
+  var before = records.length;
+  for (var i = records.length - 1; i >= 0; i--) {
+    if (records[i].auto && records[i].comp_id === comp.id) records.splice(i, 1);
+  }
+  var removed = before - records.length;
+
+  var built = compBuildRecordCandidates(comp, linked);
+  var year = (comp.date || '').slice(0, 4);
+  var added = [];
+  built.candidates.forEach(function (c) {
+    if (!(c.sec > 0)) return;
+    var bestSeason = Infinity, bestAll = Infinity;
+    records.forEach(function (r) {
+      if (r.sport !== c.sport || r.dist !== c.dist) return;
+      var rs = compTimeToSec(r.time);
+      if (!(rs > 0)) return;
+      if (rs < bestAll) bestAll = rs;
+      if ((r.date || '').slice(0, 4) === year && rs < bestSeason) bestSeason = rs;
+    });
+    if (c.sec < bestSeason) {
+      // Battre le meilleur temps de toute l'histoire = PB (ce qui bat forcément aussi la saison)
+      var isPB = c.sec < bestAll;
+      records.push({
+        id: 'auto-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        sport: c.sport,
+        dist: c.dist,
+        time: compSecToTime(c.sec),
+        date: comp.date,
+        location: comp.name || '',
+        notes: (isPB ? 'Nouveau record personnel (PB)' : 'Record de la saison') + ' · ajouté automatiquement depuis la course',
+        auto: true,
+        comp_id: comp.id,
+      });
+      added.push({ sport: c.sport, dist: c.dist, label: c.label, pb: isPB });
+    }
+  });
+  return { added: added, notes: built.notes, changed: removed > 0 || added.length > 0 };
+}
+
+// Cœur de la synchronisation : met à jour le temps de la course, puis ses records.
+// opts.session : séance qui vient d'être enregistrée (course à une seule discipline).
+function compSyncInData(data, compId, opts) {
+  opts = opts || {};
+  var res = { status: 'none', missing: [], notes: [], recordsAdded: [], changed: false, totalSec: 0 };
+  var distNotes = [];
+  var comp = (data.competitions || []).filter(function (c) { return c.id === compId; })[0];
+  if (!comp) return res;
+
+  var linked = (data.sessions || []).filter(function (s) { return s.comp_id === compId; });
+  var needs = COMP_MULTISPORT_LEGS[comp.type];
+
+  if (needs) {
+    var check = compCheckLegs(linked, needs);
+    var sum = Math.round(linked.reduce(function (a, s) { return a + (s.duration || 0) * 3600; }, 0));
+    // Un temps vide, ou égal à celui calculé précédemment, peut être recalculé.
+    // Un temps différent a été saisi à la main : on le conserve.
+    var isAuto = !comp.actual_time || comp.actual_time === comp.auto_time;
+    if (check.complete) {
+      res.totalSec = sum;
+      var t = compSecToTime(sum);
+      if (isAuto) {
+        res.status = 'complete';
+        if (comp.actual_time !== t || comp.auto_time !== t) { comp.actual_time = t; comp.auto_time = t; res.changed = true; }
+      } else {
+        res.status = 'manual';
+        if (comp.auto_time !== t) { comp.auto_time = t; res.changed = true; }
+      }
+    } else {
+      res.missing = check.missing;
+      if (isAuto) {
+        res.status = 'incomplete';
+        if (comp.actual_time) { comp.actual_time = null; comp.auto_time = null; res.changed = true; }
+      } else {
+        res.status = 'manual';
+      }
+    }
+
+    // Distance de la course = somme des distances des séances reliées (quand toutes les
+    // disciplines sont là et ont une distance), puis format FFTri le plus proche.
+    var sumKm = linked.reduce(function (a, s) { return a + (parseFloat(s.distance) || 0); }, 0);
+    var missingDist = linked
+      .filter(function (s) { return s.duration > 0 && !(s.distance > 0); })
+      .map(function (s) { return COMP_LEG_LABELS[s.sport] || s.sport; });
+    var distIsAuto = comp.auto_distance != null && comp.distance === comp.auto_distance;
+    if (check.complete && missingDist.length === 0 && sumKm > 0) {
+      var km = Math.round(sumKm * 10) / 10;
+      if (comp.distance !== km || comp.auto_distance !== km) { comp.distance = km; comp.auto_distance = km; res.changed = true; }
+    } else {
+      if (check.complete && missingDist.length) {
+        distNotes.push('Distance manquante : ' + compUnique(missingDist).join(', ') + ' — le format et le record de la course ne peuvent pas être calculés.');
+      }
+      // La somme n'est plus valable : on retire la distance qu'elle avait remplie.
+      // Une distance saisie à la main n'est jamais touchée.
+      if (distIsAuto) { comp.distance = null; comp.auto_distance = null; res.changed = true; }
+    }
+    var fmtNow = comp.distance > 0 ? compClosestFormat(comp.type, comp.distance) : null;
+    var fmtKey = fmtNow ? fmtNow.key : null;
+    if ((comp.format || null) !== fmtKey) { comp.format = fmtKey; res.changed = true; }
+    res.format = fmtKey;
+    res.totalKm = comp.distance > 0 ? comp.distance : 0;
+  } else {
+    var withDur = linked.filter(function (s) { return s.duration > 0; });
+    var src = (opts.session && opts.session.duration > 0) ? opts.session : (withDur.length === 1 ? withDur[0] : null);
+    if (src) {
+      var t2 = compSecToTime(Math.round(src.duration * 3600));
+      if (comp.actual_time !== t2) { comp.actual_time = t2; res.changed = true; }
+      res.status = 'single';
+    }
+    // Le format XS/S/M/L ne concerne que les courses multisports (ex : type changé depuis TRI)
+    if (comp.format) { comp.format = null; res.changed = true; }
+    if (comp.auto_distance != null) { comp.auto_distance = null; res.changed = true; }
+  }
+
+  var rr = compRefreshRecordsInData(data, comp, linked);
+  res.recordsAdded = rr.added;
+  // Si la distance manquante explique déjà l'absence de record, on n'empile pas deux notes redondantes
+  var recNotes = rr.notes;
+  if (distNotes.length) {
+    recNotes = recNotes.filter(function (t) {
+      return t.indexOf('Renseigne la distance de la course') !== 0 && t.indexOf('Distance manquante (pas de record)') !== 0;
+    });
+  }
+  res.notes = distNotes.concat(recNotes);
+  if (rr.changed) res.changed = true;
+  return res;
+}
+
+function syncCompetition(compId, opts) {
+  var data = getData();
+  var res = compSyncInData(data, compId, opts);
+  if (res.changed) saveData(data);
+  return res;
+}
+
+// Recalcule uniquement les records (ex : après modification manuelle de la course).
+function refreshCompetitionRecords(compId) {
+  var data = getData();
+  var comp = (data.competitions || []).filter(function (c) { return c.id === compId; })[0];
+  if (!comp) return null;
+  var linked = (data.sessions || []).filter(function (s) { return s.comp_id === compId; });
+  var rr = compRefreshRecordsInData(data, comp, linked);
+  if (rr.changed) saveData(data);
+  return { recordsAdded: rr.added, notes: rr.notes };
+}
+
+// Associe exactement ces séances à la course (les autres séances qui lui étaient
+// reliées sont détachées), puis resynchronise le tout en une seule sauvegarde.
+function linkSessionsToCompetition(compId, sessionIds) {
+  var data = getData();
+  var chosen = {};
+  (sessionIds || []).forEach(function (id) { chosen[id] = true; });
+  (data.sessions || []).forEach(function (s) {
+    if (chosen[s.id]) s.comp_id = compId;
+    else if (s.comp_id === compId) s.comp_id = null;
+  });
+  var res = compSyncInData(data, compId, {});
+  saveData(data);
+  return res;
+}
+
+// Partie "records" du message : "2 records ajoutés (Triathlon S, Course) dont un PB 🏆".
+function describeCompRecords(res) {
+  if (!res || !res.recordsAdded || !res.recordsAdded.length) return '';
+  var n = res.recordsAdded.length;
+  var names = compUnique(res.recordsAdded.map(function (r) { return r.label; }));
+  var hasPB = res.recordsAdded.some(function (r) { return r.pb; });
+  return n + ' record' + (n > 1 ? 's' : '') + ' ajouté' + (n > 1 ? 's' : '') + ' (' + names.join(', ') + ')' + (hasPB ? ' dont un PB 🏆' : '');
+}
+
+// Phrase de retour pour l'utilisateur à partir du résultat d'une synchronisation.
+function describeCompSync(res) {
+  if (!res) return '';
+  var parts = [];
+  if (res.status === 'complete')        parts.push('Temps total : ' + compFormatHM(res.totalSec));
+  else if (res.status === 'manual')     parts.push('Temps saisi à la main conservé');
+  else if (res.status === 'incomplete') parts.push('Il manque encore : ' + res.missing.join(', ') + ' pour calculer le temps total');
+  else if (res.status === 'single')     parts.push('Temps de la course mis à jour');
+  if (res.format && res.totalKm) parts.push('Format ' + res.format + ' (' + compFmtKm(res.totalKm) + ')');
+  var rm = describeCompRecords(res);
+  if (rm) parts.push(rm);
+  (res.notes || []).forEach(function (t) { parts.push(t); });
+  return parts.join(' · ');
 }
 
 // ── Weight ────────────────────────────────────────────────────────────────────
@@ -466,7 +856,8 @@ function toast(msg, type = 'success') {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.classList.add('toast--show'), 10);
-  setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 300); }, 2800);
+  const duration = Math.min(9000, 2800 + Math.max(0, msg.length - 40) * 60); // phrase longue = plus de temps de lecture
+  setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 300); }, duration);
 }
 
 // ── Tooltip helper ────────────────────────────────────────────────────────────
@@ -562,6 +953,8 @@ window.TS = {
   getWeekMonday, formatDate, formatDateInput, getISOWeek,
   getSessions, saveSession, deleteSession,
   getCompetitions, saveCompetition, deleteCompetition,
+  syncCompetition, refreshCompetitionRecords, linkSessionsToCompetition,
+  checkCompetitionLegs, describeCompSync, describeCompRecords, compClosestFormat, COMP_FORMATS,
   getSeasonsAvailable, getSeasonFilter, setSeasonFilter, getSeasonRange,
   getWeight, saveWeight, deleteWeight, getLatestWeight,
   getProfile, saveProfile,
