@@ -85,7 +85,7 @@
 
   <!-- ── Avertissement nombre de fichiers ── -->
   <div style="font-size:12px;color:var(--text-2);margin-bottom:10px;text-align:center">
-    Importer maximum <b>50 fichiers</b> à la fois pour limiter le temps de traitement et les soucis de téléchargement des activités.
+    Importer maximum <b>100 fichiers</b> à la fois pour limiter le temps de traitement et les soucis de téléchargement des activités.
   </div>
 
   <!-- ── Drop zone ── -->
@@ -159,15 +159,17 @@
   <div class="grid-2" style="margin-bottom:16px">
     <div class="card">
       <div class="card__title">FC moyenne par séance
-        <span class="tip-icon" data-tip="FC moyenne enregistrée pour chaque séance. Permet de suivre l'évolution de l'effort cardiaque.">?</span>
+        <span id="chartFCRange" style="font-weight:500;color:var(--text-3);text-transform:none;letter-spacing:0;font-size:11px"></span>
+        <span class="tip-icon" data-tip="FC moyenne enregistrée pour chaque séance, sur les 6 derniers mois. Si tu choisis une saison, le graphique couvre toute la saison.">?</span>
       </div>
-      <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartFC"></canvas></div>
+      <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartFC"></canvas><div id="chartFCEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--text-3);padding:0 16px">Aucune donnée de fréquence cardiaque sur cette période.</div></div>
     </div>
     <div class="card">
       <div class="card__title">Puissance & W/kg
-        <span class="tip-icon" data-tip="Puissance moyenne (W) et ratio W/kg calculé avec le poids le plus proche de la date de séance.">?</span>
+        <span id="chartPowerRange" style="font-weight:500;color:var(--text-3);text-transform:none;letter-spacing:0;font-size:11px"></span>
+        <span class="tip-icon" data-tip="Puissance moyenne (W) de chaque séance, sur les 6 derniers mois. Si tu choisis une saison, le graphique couvre toute la saison.">?</span>
       </div>
-      <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartPower"></canvas></div>
+      <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartPower"></canvas><div id="chartPowerEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--text-3);padding:0 16px">Aucune donnée de puissance sur cette période.</div></div>
     </div>
   </div>
 
@@ -430,8 +432,9 @@ function renderSessions() {
 
   document.getElementById('sessionCount').textContent = `${sessions.length} séance${sessions.length>1?'s':''}`;
   renderSessionStats(sessions);
-  renderFCChart(sessions);
-  renderPowerChart(sessions);
+  const chartWin = getChartWindow(sessions);
+  renderFCChart(chartWin.list, chartWin.label);
+  renderPowerChart(chartWin.list, chartWin.label);
 
   const tbody = document.getElementById('sessionTable');
   const empty = document.getElementById('sessionEmpty');
@@ -501,45 +504,107 @@ function renderSessionStats(sessions) {
   }
 }
 
-function renderFCChart(sessions) {
-  const withFC = sessions.filter(s=>s.fc_avg&&s.date).slice(-20).reverse();
-  if (!withFC.length) return;
+// ── Graphiques FC / puissance : fenêtre de temps ─────────────────────────────────
+// - une saison (ou des dates) choisie : toute la période choisie
+// - sinon : les 6 derniers mois
+function localISODate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function sixMonthsAgoISO() {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(now.getDate(), lastDay)); // évite le débordement (ex : 31 août - 6 mois)
+  return localISODate(target);
+}
+
+function getChartWindow(sessions) {
+  const from = document.getElementById('filterFrom').value;
+  const to   = document.getElementById('filterTo').value;
+  if (from || to) {
+    const season = TS.getSeasonFilter();
+    const range  = TS.getSeasonRange(season);
+    const label  = (range && from === range.from && to === range.to) ? 'Saison ' + season : 'Période choisie';
+    return { list: sessions, label: label };
+  }
+  const cutoff = sixMonthsAgoISO();
+  return { list: sessions.filter(s => s.date >= cutoff), label: '6 derniers mois' };
+}
+
+// Séances qui ont la valeur demandée, de la plus ancienne à la plus récente
+// (l'historique est trié du plus récent au plus ancien : un graphique doit suivre le temps).
+function chartPoints(sessions, key) {
+  return sessions.filter(s => s[key] && s.date).slice().sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function chartDateLabels(points) {
+  const multiYear = points.length > 0 && points[0].date.slice(0, 4) !== points[points.length - 1].date.slice(0, 4);
+  const opts = multiYear ? { day: '2-digit', month: '2-digit', year: '2-digit' } : { day: '2-digit', month: '2-digit' };
+  return points.map(s => new Date(s.date + 'T00:00:00').toLocaleDateString('fr-FR', opts));
+}
+
+// Indique la période dans le titre ; s'il n'y a rien à afficher, retire l'ancien graphique
+// (sinon il resterait affiché avec les données de la période précédente) et affiche un message.
+function showChartOrEmpty(id, points, label) {
+  const canvas = document.getElementById(id);
+  const empty  = document.getElementById(id + 'Empty');
+  const range  = document.getElementById(id + 'Range');
+  if (range) range.textContent = '· ' + label;
+  if (!points.length) {
+    if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+    if (canvas) canvas.style.display = 'none';
+    if (empty)  empty.style.display = 'flex';
+    return false;
+  }
+  if (empty) empty.style.display = 'none';
+  return true;
+}
+
+const CHART_SCALES = {
+  x: { grid:{display:false}, ticks:{ color:'#475569', font:{size:10}, maxTicksLimit:10, maxRotation:0, autoSkip:true } },
+  y: { grid:{color:'#1e2d47'}, ticks:{ color:'#475569', font:{size:10} } },
+};
+
+function renderFCChart(sessions, label) {
+  const pts = chartPoints(sessions, 'fc_avg');
+  if (!showChartOrEmpty('chartFC', pts, label)) return;
   charts['chartFC'] = makeChart('chartFC', {
     type: 'line',
     data: {
-      labels: withFC.map(s=>new Date(s.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
+      labels: chartDateLabels(pts),
       datasets: [{
-        label:'FC moy (bpm)', data: withFC.map(s=>s.fc_avg),
+        label:'FC moy (bpm)', data: pts.map(s=>s.fc_avg),
         borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.08)',
-        tension:0.4, fill:true, pointRadius:3,
-        pointBackgroundColor: withFC.map(s=>s.sport==='nat'?'#0D7377':s.sport==='velo'?'#F4A261':'#E76F51')
+        tension:0.4, fill:true, pointRadius: pts.length > 80 ? 2 : 3,
+        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#0D7377':s.sport==='velo'?'#F4A261':'#E76F51')
       }]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
-      scales:{ x:{grid:{display:false},ticks:{color:'#475569',font:{size:10}}}, y:{grid:{color:'#1e2d47'},ticks:{color:'#475569',font:{size:10}}} }
+      scales: CHART_SCALES
     }
   });
 }
 
-function renderPowerChart(sessions) {
-  const withP = sessions.filter(s=>s.power_avg&&s.date).slice(-20).reverse();
-  if (!withP.length) return;
+function renderPowerChart(sessions, label) {
+  const pts = chartPoints(sessions, 'power_avg');
+  if (!showChartOrEmpty('chartPower', pts, label)) return;
   charts['chartPower'] = makeChart('chartPower', {
     type: 'bar',
     data: {
-      labels: withP.map(s=>new Date(s.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
+      labels: chartDateLabels(pts),
       datasets: [{
-        label:'Puissance (W)', data: withP.map(s=>s.power_avg),
-        backgroundColor: withP.map(s=>s.sport==='nat'?'rgba(13,115,119,0.7)':s.sport==='velo'?'rgba(244,162,97,0.7)':'rgba(231,111,81,0.7)'),
+        label:'Puissance (W)', data: pts.map(s=>s.power_avg),
+        backgroundColor: pts.map(s=>s.sport==='nat'?'rgba(13,115,119,0.7)':s.sport==='velo'?'rgba(244,162,97,0.7)':'rgba(231,111,81,0.7)'),
         borderRadius:4
       }]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
-      scales:{ x:{grid:{display:false},ticks:{color:'#475569',font:{size:10}}}, y:{grid:{color:'#1e2d47'},ticks:{color:'#475569',font:{size:10}}} }
+      scales: CHART_SCALES
     }
   });
 }
@@ -665,33 +730,38 @@ function saveSessionForm() {
     comp_id:   document.getElementById('s_comp_id')?.value || null,
   };
   if (!session.date || !session.sport) { TS.toast('Date et sport obligatoires', 'error'); return; }
+  // Course à laquelle la séance était reliée avant cette modification (si on édite)
+  const previous = editId ? TS.getSessions().find(s => s.id === editId) : null;
+  const previousCompId = previous ? previous.comp_id : null;
+
   TS.saveSession(session);
-  if (session.comp_id && session.duration) {
-    updateCompActualTime(session.comp_id, session.duration);
+
+  // Course reliée : temps total (multisport) ou temps de la course, puis records
+  let compMsg = '';
+  if (session.comp_id) {
+    compMsg = TS.describeCompSync(TS.syncCompetition(session.comp_id, { session: session }));
+  }
+  // Si la séance a changé de course (ou été détachée), l'ancienne course est recalculée
+  if (previousCompId && previousCompId !== session.comp_id) {
+    TS.syncCompetition(previousCompId);
   }
   closeModal();
   renderSessions();
-  TS.toast('Séance enregistrée');
+  TS.toast('Séance enregistrée' + (compMsg ? ' · ' + compMsg : ''));
 }
 
-function updateCompActualTime(compId, durationHours) {
-  const comps = TS.getCompetitions();
-  const comp  = comps.find(c => c.id === compId);
-  if (!comp) return;
-  const totalSec = Math.round(durationHours * 3600);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  comp.actual_time = h > 0
-    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-    : `${m}:${String(s).padStart(2,'0')}`;
-  TS.saveCompetition(comp);
+// Supprime une séance, puis recalcule la course à laquelle elle était reliée
+function deleteSessionAndResync(id) {
+  const s = TS.getSessions().find(x => x.id === id);
+  const compId = s ? s.comp_id : null;
+  TS.deleteSession(id);
+  if (compId) TS.syncCompetition(compId);
 }
 
 function deleteCurrentSession() {
   if (!editId) return;
   if (!confirm('Supprimer cette séance ?')) return;
-  TS.deleteSession(editId);
+  deleteSessionAndResync(editId);
   closeModal();
   renderSessions();
   TS.toast('Séance supprimée');
@@ -987,7 +1057,7 @@ function formatDuration(h) {
 
 function quickDeleteSession(id) {
   if (!confirm('Supprimer cette séance ?')) return;
-  TS.deleteSession(id);
+  deleteSessionAndResync(id);
   renderSessions();
   TS.toast('Séance supprimée');
 }
@@ -1017,7 +1087,7 @@ function formatDur(h) {
 
 function quickDelete(id) {
   if (!confirm('Supprimer cette séance ?')) return;
-  TS.deleteSession(id);
+  deleteSessionAndResync(id);
   renderSessions();
   TS.toast('Séance supprimée');
 }
@@ -1028,8 +1098,10 @@ function confirmDeleteAllSessions() {
   if (!confirm(`Supprimer les ${total} séance${total>1?'s':''} enregistrée${total>1?'s':''} ? Cette action est irréversible.`)) return;
   if (!confirm('Dernière confirmation — toutes vos séances seront définitivement supprimées.')) return;
   const data = TS.getData();
+  const affectedComps = Array.from(new Set(data.sessions.map(s => s.comp_id).filter(Boolean)));
   data.sessions = [];
   TS.saveData(data);
+  affectedComps.forEach(id => TS.syncCompetition(id));
   renderSessions();
   TS.toast('Toutes les séances ont été supprimées');
 }
