@@ -236,7 +236,7 @@
   <!-- Besoins énergétiques -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title">Besoins énergétiques et balance du jour
-      <span class="tip-icon" data-tip="Formule Mifflin-St Jeor. Complétez votre profil pour des résultats précis.">?</span>
+      <span class="tip-icon" data-tip="Métabolisme de base (formule Mifflin-St Jeor) × facteur de vie quotidienne hors sport, plus une part des calories brûlées en séance. Les deux réglages sont modifiables. Complétez votre profil pour des résultats précis.">?</span>
     </div>
     <div id="energyBalance"></div>
   </div>
@@ -1298,7 +1298,7 @@ function renderEnergyBalance() {
     return;
   }
   var bmr  = Math.round(10*w + 6.25*h - 5*age + 5);
-  var tdee = Math.round(bmr * 1.55);
+  var cfg  = getEnergySettings();
   var sessions   = TS.getSessions().filter(function(s){ return s.date === currentDay && s.kcal; });
   var kcalBurned = sessions.reduce(function(a,s){ return a+(s.kcal||0); }, 0);
   var nutri  = getNutrition();
@@ -1308,7 +1308,8 @@ function renderEnergyBalance() {
     return a + (m.glucides||0)*4 + (m.proteines||0)*4 + (m.lipides||0)*9;
   }, 0);
 
-  var autoTotal   = tdee + kcalBurned;
+  var need        = energyNeeds(bmr, kcalBurned, cfg);
+  var autoTotal   = need.total;
   var customGoal  = (nutri.kcalGoals || {})[currentDay];
   var hasCustom   = customGoal != null && !isNaN(customGoal);
   var total       = hasCustom ? customGoal : autoTotal;
@@ -1325,10 +1326,19 @@ function renderEnergyBalance() {
     + tile(kcalEaten||'--',  'Kcal consommees', 'var(--nat)')
     + tile(balance!==null?(balance>0?'+':'')+balance:'--', balLabel, balColor)
     + '</div>'
-    + '<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">'
+    + '<div style="font-size:11px;color:var(--text-3);margin-bottom:8px;line-height:1.6">'
     + (hasCustom
-        ? 'Objectif defini manuellement pour cette journee (automatique : ' + autoTotal + ' kcal).'
-        : 'Besoin total = Metabolisme de base x 1.55 + kcal seances. Formule estimative.')
+        ? 'Objectif défini manuellement pour cette journée (calcul automatique : ' + autoTotal + ' kcal).'
+        : 'Détail : ' + bmr + ' (métabolisme de base) + ' + need.daily + ' (vie quotidienne hors sport, ×' + String(cfg.activity).replace('.', ',') + ')'
+          + (kcalBurned
+              ? ' + ' + need.sessionPart + ' (' + cfg.compensation + ' % des ' + kcalBurned + ' kcal brûlées en séance).'
+              : ' — journée sans séance.'))
+    + ' Estimation indicative.</div>'
+    + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:11px;color:var(--text-2)">'
+    + '<label style="display:flex;align-items:center;gap:6px">Activité hors sport '
+    + '<select class="form-select" style="width:auto;font-size:12px" onchange="setEnergySetting(\'activity\', this.value)">' + energyOptions(ENERGY_ACTIVITY_OPTS, cfg.activity) + '</select></label>'
+    + '<label style="display:flex;align-items:center;gap:6px">Calories de séance comptées '
+    + '<select class="form-select" style="width:auto;font-size:12px" onchange="setEnergySetting(\'compensation\', this.value)">' + energyOptions(ENERGY_COMP_OPTS, cfg.compensation) + '</select></label>'
     + '</div>'
     + '<div id="kcalGoalEditor">'
     + (hasCustom
@@ -1336,6 +1346,45 @@ function renderEnergyBalance() {
           + '<button class="btn btn--ghost btn--sm" onclick="clearKcalGoal()">Revenir a l\'automatique</button>'
         : '<button class="btn btn--ghost btn--sm" onclick="editKcalGoal()">Definir un objectif manuel pour cette journee</button>')
     + '</div>';
+}
+
+// ── Réglages du calcul des besoins ───────────────────────────────────────────────
+// Le besoin du jour = métabolisme de base × facteur de VIE QUOTIDIENNE hors sport
+// + une part des calories brûlées pendant les séances du jour.
+// (L'ancien facteur 1,55 contenait déjà une activité sportive moyenne : l'ajouter
+//  aux calories de la séance comptait l'entraînement deux fois.)
+var ENERGY_DEFAULTS      = { activity: 1.3, compensation: 80 };
+var ENERGY_ACTIVITY_OPTS = [[1.2, 'Sédentaire (×1,2)'], [1.3, 'Légère (×1,3)'], [1.4, 'Active (×1,4)']];
+var ENERGY_COMP_OPTS     = [[100, '100 %'], [80, '80 %'], [60, '60 %'], [50, '50 %']];
+
+function energyOptions(list, current) {
+  return list.map(function (o) {
+    return '<option value="' + o[0] + '"' + (o[0] === current ? ' selected' : '') + '>' + o[1] + '</option>';
+  }).join('');
+}
+
+function getEnergySettings() {
+  var st  = getNutrition().energySettings || {};
+  var act = parseFloat(st.activity), comp = parseFloat(st.compensation);
+  return {
+    activity:     ENERGY_ACTIVITY_OPTS.some(function (o) { return o[0] === act; })  ? act  : ENERGY_DEFAULTS.activity,
+    compensation: ENERGY_COMP_OPTS.some(function (o) { return o[0] === comp; })     ? comp : ENERGY_DEFAULTS.compensation,
+  };
+}
+
+function energyNeeds(bmr, kcalBurned, cfg) {
+  var tdee        = Math.round(bmr * cfg.activity);
+  var sessionPart = Math.round((kcalBurned || 0) * cfg.compensation / 100);
+  return { tdee: tdee, daily: tdee - bmr, sessionPart: sessionPart, total: tdee + sessionPart };
+}
+
+function setEnergySetting(key, value) {
+  var nutri = getNutrition();
+  var st = nutri.energySettings || {};
+  st[key] = parseFloat(value);
+  nutri.energySettings = st;
+  saveNutrition(nutri);
+  renderEnergyBalance();
 }
 
 function editKcalGoal() {
