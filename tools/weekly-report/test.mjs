@@ -1,6 +1,6 @@
 // Tests du calcul du rapport, sans accès à Firebase : node test.mjs
 import assert from 'node:assert/strict';
-import { computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay } from './report.mjs';
+import { computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail } from './report.mjs';
 
 // Dates
 assert.equal(lastFullWeekMonday(new Date('2026-10-12T08:00:00Z')), '2026-10-05'); // lundi → lundi précédent
@@ -54,6 +54,23 @@ const r2 = computeReport({ weekStart, users, docs: [{ uid: 'a', data: {} }], met
 const md2 = toMarkdown(r2);
 assert.match(md2, /pas encore de données/);
 assert.match(md2, /Chiffres indisponibles/);
+
+// E-mail : conversion HTML et appel à l'API (simulé)
+const html = markdownToHtml(md);
+assert.match(html, /<h1[^>]*>TriSeason — rapport du lun\. 5 oct\./);
+assert.match(html, /<li>Nouveaux inscrits : <b>2<\/b>/);
+assert.match(html, /<table[^>]*><tr><th[^>]*>Jour<\/th>/);
+assert.doesNotMatch(markdownToHtml('- a <script>'), /<script>/);
+let sent;
+await sendReportEmail({ subject: 'Sujet', markdown: md, to: 'moi@exemple.fr', apiKey: 'cle-test',
+  fetchImpl: async (url, opts) => { sent = { url, opts }; return { ok: true, json: async () => ({ id: 'x' }) }; } });
+assert.equal(sent.url, 'https://api.resend.com/emails');
+assert.equal(sent.opts.headers.Authorization, 'Bearer cle-test');
+const payload = JSON.parse(sent.opts.body);
+assert.deepEqual(payload.to, ['moi@exemple.fr']);
+assert.equal(payload.from, 'TriSeason <onboarding@resend.dev>');
+await assert.rejects(sendReportEmail({ subject: 's', markdown: 'x', to: 't', apiKey: 'k',
+  fetchImpl: async () => ({ ok: false, status: 403, text: async () => 'interdit' }) }), /Resend 403/);
 
 console.log('Tous les tests passent.\n');
 console.log(md);

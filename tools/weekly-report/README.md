@@ -23,12 +23,28 @@ compte. Il n'est jamais servi par le site.
 Pour couper l'accès à tout moment : supprimer la clé (ou le compte de service)
 dans la console Google Cloud.
 
+## Recevoir le rapport par e-mail (facultatif)
+
+L'environnement Claude ne peut pas envoyer d'e-mail directement (le port d'envoi
+de Gmail est bloqué) : le script passe par **Resend**, un service d'envoi gratuit
+qui fonctionne par le web.
+
+1. Créer un compte sur resend.com **avec l'adresse qui doit recevoir le
+   rapport** (ex. tri.season.tracker@gmail.com). Sans domaine à soi, Resend
+   n'envoie qu'à l'adresse du compte : c'est exactement ce qu'on veut.
+2. Dans Resend : *API Keys → Create API Key*, permission **Sending access**.
+3. Dans les réglages de l'environnement Claude Code :
+   - *Accès réseau* : ajouter `api.resend.com` aux domaines autorisés ;
+   - variables : `RESEND_API_KEY` = la clé, `REPORT_EMAIL_TO` = l'adresse.
+4. Le rapport part alors avec `node report.mjs --email`.
+
 ## Lancer à la main
 
 ```bash
 cd tools/weekly-report
 npm install
 node report.mjs                 # dernière semaine complète
+node report.mjs --email         # idem + envoi par e-mail
 node report.mjs --week 2026-10-05   # semaine commençant ce lundi
 npm test                        # tests du calcul, sans accès à Firebase
 ```

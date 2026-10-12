@@ -6,10 +6,12 @@
 // Rôles nécessaires (lecture seule) : Firebase Authentication Viewer,
 // Cloud Datastore Viewer, Monitoring Viewer.
 //
-// Usage : node report.mjs [--week AAAA-MM-JJ]   (lundi de la semaine voulue ;
+// Usage : node report.mjs [--week AAAA-MM-JJ] [--email]   (lundi de la semaine voulue ;
 // par défaut la dernière semaine complète, du lundi au dimanche, heure de Paris)
 // Écrit le rapport en Markdown sur la sortie standard et le détail dans
 // report-<lundi>.json.
+// --email : envoie aussi le rapport par e-mail via l'API Resend, à l'adresse
+// REPORT_EMAIL_TO, avec la clé RESEND_API_KEY (voir README).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -166,6 +168,47 @@ export function toMarkdown(r) {
   return L.join('\n');
 }
 
+// ── E-mail (API Resend, en HTTPS) ───────────────────────────────────────────
+const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/_(.+?)_/g, '<i>$1</i>');
+
+// Markdown du rapport → HTML simple (titres, listes, tableaux, gras).
+export function markdownToHtml(md) {
+  const out = [];
+  let list = false, table = null;
+  const flush = () => {
+    if (list) { out.push('</ul>'); list = false; }
+    if (table) {
+      const [head, , ...rows] = table;
+      const cells = (r, tag) => r.split('|').slice(1, -1).map((c, i) => `<${tag} style="padding:4px 10px;border-bottom:1px solid #ddd;text-align:${i === 0 ? 'left' : 'right'}">${inline(c.trim())}</${tag}>`).join('');
+      out.push('<table style="border-collapse:collapse;font-size:14px;margin:8px 0">'
+        + `<tr>${cells(head, 'th')}</tr>` + rows.map(r => `<tr>${cells(r, 'td')}</tr>`).join('') + '</table>');
+      table = null;
+    }
+  };
+  md.split('\n').forEach(line => {
+    if (line.startsWith('|')) { if (list) { out.push('</ul>'); list = false; } (table = table || []).push(line); return; }
+    if (table) flush();
+    if (line.startsWith('# ')) { flush(); out.push(`<h1 style="font-size:20px">${inline(line.slice(2))}</h1>`); }
+    else if (line.startsWith('## ')) { flush(); out.push(`<h2 style="font-size:16px;margin-top:20px">${inline(line.slice(3))}</h2>`); }
+    else if (line.startsWith('- ')) { if (!list) { out.push('<ul>'); list = true; } out.push(`<li>${inline(line.slice(2))}</li>`); }
+    else if (line.trim()) { flush(); out.push(`<p>${inline(line)}</p>`); }
+    else flush();
+  });
+  flush();
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1b1f27;max-width:640px;line-height:1.5">${out.join('\n')}</div>`;
+}
+
+export async function sendReportEmail({ subject, markdown, to, apiKey, from = 'TriSeason <onboarding@resend.dev>', fetchImpl = fetch }) {
+  const res = await fetchImpl('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to: [to], subject, html: markdownToHtml(markdown), text: markdown }),
+  });
+  if (!res.ok) throw new Error(`Resend ${res.status} : ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+
 // ── Accès Firebase (lecture seule) ──────────────────────────────────────────
 function loadServiceAccount() {
   if (process.env.FIREBASE_SA_KEY) return JSON.parse(process.env.FIREBASE_SA_KEY);
@@ -254,6 +297,19 @@ async function main() {
   let md = toMarkdown(report);
   if (metricsError) md += `\n\n_Lectures/écritures indisponibles : ${metricsError}_`;
   console.log(md);
+  if (process.argv.includes('--email')) {
+    const to = process.env.REPORT_EMAIL_TO, apiKey = process.env.RESEND_API_KEY;
+    if (!to || !apiKey) {
+      console.error('\nE-mail non envoyé : il manque REPORT_EMAIL_TO ou RESEND_API_KEY dans les réglages de l’environnement.');
+    } else {
+      try {
+        await sendReportEmail({ subject: `TriSeason — rapport de la semaine du ${fmtDay(weekStart)}`, markdown: md, to, apiKey, from: process.env.REPORT_EMAIL_FROM });
+        console.error(`\nE-mail envoyé à ${to}.`);
+      } catch (e) {
+        console.error(`\nE-mail non envoyé : ${e.message}`);
+      }
+    }
+  }
   writeFileSync(`report-${weekStart}.json`, JSON.stringify(report, null, 2));
 }
 
