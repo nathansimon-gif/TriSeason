@@ -8,7 +8,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
   <script src="auth-guard.js"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#080c14">
+  <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
@@ -19,10 +19,8 @@
     .record-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r); padding: 16px 18px;
-      transition: border-color .2s, transform .2s;
       position: relative; overflow: hidden;
     }
-    .record-card:hover { border-color: var(--border2); transform: translateY(-2px); }
     .record-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
     }
@@ -31,25 +29,23 @@
     .record-card--run::before  { background: var(--run); }
     .record-card--tri::before  { background: var(--accent); }
     .record-val {
-      font-size: 32px; font-weight: 800; letter-spacing: -.04em; line-height: 1;
+      font-size: 28px; font-weight: 600; letter-spacing: -.025em; line-height: 1;
     }
     .record-meta { font-size: 12px; color: var(--text-2); margin-top: 6px; }
-    .record-label { font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .08em; color: var(--text-3); margin-bottom: 6px; }
+    .record-label { font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 8px; }
     .pb-badge {
       display: inline-flex; align-items: center; gap: 4px;
       font-size: 10px; font-weight: 700; padding: 2px 8px;
-      border-radius: 20px; background: rgba(245,200,74,.15); color: var(--yellow);
+      border-radius: 20px; background: rgba(212,178,76,.15); color: var(--yellow);
     }
     .record-section { margin-bottom: 28px; }
     .record-section__title {
-      font-size: 13px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .1em; color: var(--text-2);
+      font-size: 15px; font-weight: 600; color: var(--text);
       display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
     }
     .record-section__title::before {
-      content: ''; display: block; width: 3px; height: 14px;
-      border-radius: 2px;
+      content: ''; display: block; width: 8px; height: 8px;
+      border-radius: 1px;
     }
     .record-section--nat  .record-section__title::before { background: var(--nat); }
     .record-section--velo .record-section__title::before { background: var(--velo); }
@@ -58,7 +54,7 @@
     .record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     .progress-label { font-size: 11px; color: var(--text-2); margin-bottom: 3px; }
     .edit-overlay {
-      position: absolute; inset: 0; background: rgba(8,12,20,.85);
+      position: absolute; inset: 0; background: rgba(14,15,17,.85);
       display: flex; align-items: center; justify-content: center; gap: 10px;
       opacity: 0; transition: opacity .2s; border-radius: var(--r);
     }
@@ -69,7 +65,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><div class="nav__logo-icon">◈</div> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
     <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link ">Dashboard</a>
     <a href="sport.html"        class="nav__link ">Sports</a>
@@ -81,8 +77,8 @@
   </div>
   <div class="nav__actions">
     <button class="btn btn--primary" onclick="openRecordModal()">+ Ajouter un record</button>
-    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil">👤</a>
-    <button class="nav__menu-btn" onclick="toggleMenu()">☰</button>
+    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
+    <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
 </nav>
 
@@ -99,7 +95,7 @@
   <!-- Natation -->
   <div class="record-section record-section--nat">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="record-section__title" style="margin-bottom:0">🏊 Natation</div>
+      <div class="record-section__title" style="margin-bottom:0">Natation</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'nat')" style="font-size:12px">+ Ajouter</button>
     </div>
     <div class="record-grid" id="records-nat"></div>
@@ -108,7 +104,7 @@
   <!-- Vélo -->
   <div class="record-section record-section--velo">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="record-section__title" style="margin-bottom:0">🚴 Vélo</div>
+      <div class="record-section__title" style="margin-bottom:0">Vélo</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'velo')" style="font-size:12px">+ Ajouter</button>
     </div>
     <div class="record-grid" id="records-velo"></div>
@@ -117,7 +113,7 @@
   <!-- Course -->
   <div class="record-section record-section--run">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="record-section__title" style="margin-bottom:0">🏃 Course à pied</div>
+      <div class="record-section__title" style="margin-bottom:0">Course à pied</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'run')" style="font-size:12px">+ Ajouter</button>
     </div>
     <div class="record-grid" id="records-run"></div>
@@ -126,7 +122,7 @@
   <!-- Triathlon -->
   <div class="record-section record-section--tri">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="record-section__title" style="margin-bottom:0">🏆 Triathlon</div>
+      <div class="record-section__title" style="margin-bottom:0">Triathlon</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'tri')" style="font-size:12px">+ Ajouter</button>
     </div>
     <div class="record-grid" id="records-tri"></div>
@@ -135,13 +131,13 @@
   <!-- Progression card -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span>📈 Évolution des records</span>
+      <span>Évolution des records</span>
       <div style="display:flex;gap:4px">
         <button class="btn btn--sm timeline-sport-btn active" id="tl-all"  onclick="setTimelineSport('all')">Tous</button>
-        <button class="btn btn--sm timeline-sport-btn" id="tl-nat"  onclick="setTimelineSport('nat')"  style="color:var(--nat)">🏊</button>
-        <button class="btn btn--sm timeline-sport-btn" id="tl-velo" onclick="setTimelineSport('velo')" style="color:var(--velo)">🚴</button>
-        <button class="btn btn--sm timeline-sport-btn" id="tl-run"  onclick="setTimelineSport('run')"  style="color:var(--run)">🏃</button>
-        <button class="btn btn--sm timeline-sport-btn" id="tl-tri"  onclick="setTimelineSport('tri')"  style="color:var(--accent2)">🏆</button>
+        <button class="btn btn--sm timeline-sport-btn" id="tl-nat"  onclick="setTimelineSport('nat')"  ><span class="sport-dot sport-dot--nat"></span>Nat.</button>
+        <button class="btn btn--sm timeline-sport-btn" id="tl-velo" onclick="setTimelineSport('velo')" ><span class="sport-dot sport-dot--velo"></span>Vélo</button>
+        <button class="btn btn--sm timeline-sport-btn" id="tl-run"  onclick="setTimelineSport('run')"  ><span class="sport-dot sport-dot--run"></span>CAP</button>
+        <button class="btn btn--sm timeline-sport-btn" id="tl-tri"  onclick="setTimelineSport('tri')"  ><span class="sport-dot sport-dot--tri"></span>Tri</button>
       </div>
     </div>
     <div id="recordTimeline" style="font-size:13px;color:var(--text-2)">
@@ -163,10 +159,10 @@
         <div class="form-group">
           <label class="form-label">Sport</label>
           <select class="form-select" id="r_sport" onchange="updateDistOptions()">
-            <option value="nat">🏊 Natation</option>
-            <option value="velo">🚴 Vélo</option>
-            <option value="run">🏃 Course</option>
-            <option value="tri">🏆 Triathlon</option>
+            <option value="nat">Natation</option>
+            <option value="velo">Vélo</option>
+            <option value="run">Course</option>
+            <option value="tri">Triathlon</option>
           </select>
         </div>
         <div class="form-group">
@@ -317,11 +313,11 @@ function renderSportRecords(sport) {
         <div class="record-val" style="color:${color}">${r.time || '—'}</div>
         ${pace ? `<div style="font-family:var(--mono);font-size:12px;color:var(--text-2);margin-top:4px">${pace}</div>` : ''}
         <div class="record-meta">
-          ${r.date ? `📅 ${new Date(r.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}` : ''}
-          ${r.location ? `<br>📍 ${r.location}` : ''}
+          ${r.date ? `${new Date(r.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}` : ''}
+          ${r.location ? `<br>${r.location}` : ''}
           ${r.notes ? `<br><span style="font-style:italic">${r.notes}</span>` : ''}
         </div>
-        ${isPB ? '<div style="margin-top:8px"><span class="pb-badge">🏆 Record perso</span></div>' : ''}
+        ${isPB ? '<div style="margin-top:8px"><span class="pb-badge">Record perso</span></div>' : ''}
         <div class="edit-overlay">
           <button class="btn btn--ghost btn--sm" onclick="editRecord('${r.id}')">✏️ Modifier</button>
           <button class="btn btn--danger btn--sm" onclick="quickDelete('${r.id}')">Supprimer</button>
@@ -397,10 +393,10 @@ function renderTimelineForSport(sport, color) {
 function renderTimeline() {
   const el = document.getElementById('recordTimeline');
   const allSections = [
-    { sport:'nat',  color:'var(--nat)',    label:'🏊 Natation' },
-    { sport:'velo', color:'var(--velo)',   label:'🚴 Vélo' },
-    { sport:'run',  color:'var(--run)',    label:'🏃 Course à pied' },
-    { sport:'tri',  color:'var(--accent)', label:'🏆 Triathlon' },
+    { sport:'nat',  color:'var(--nat)',    label:'Natation' },
+    { sport:'velo', color:'var(--velo)',   label:'Vélo' },
+    { sport:'run',  color:'var(--run)',    label:'Course à pied' },
+    { sport:'tri',  color:'var(--accent)', label:'Triathlon' },
   ];
   const sections = currentTimelineSport === 'all'
     ? allSections
@@ -552,7 +548,7 @@ function saveRecord() {
   saveRecordData(records);
   closeModal();
   renderAllRecords();
-  TS.toast('Record enregistré 🏆');
+  TS.toast('Record enregistré');
 }
 
 function deleteCurrentRecord() {
@@ -592,11 +588,11 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
-  <a href="index.html" class="mobile-nav__item"><span class="mobile-nav__icon">⊞</span>Dashboard</a>
-  <a href="sessions.html" class="mobile-nav__item"><span class="mobile-nav__icon">▷</span>Séances</a>
-  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon">◎</span>Sports</a>
-  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon">🥗</span>Nutrition</a>
-  <a href="profile.html" class="mobile-nav__item active"><span class="mobile-nav__icon">👤</span>Profil</a>
+  <a href="index.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>Dashboard</a>
+  <a href="sessions.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>Séances</a>
+  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>Sports</a>
+  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8M7 3v5M11 3v5M9 3v5"/><path d="M17 21V3c-2 1-3 4-3 8h3"/></svg></span>Nutrition</a>
+  <a href="profile.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 </body>
 </html>

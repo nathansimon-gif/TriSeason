@@ -8,7 +8,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
   <script src="auth-guard.js"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#080c14">
+  <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
@@ -18,12 +18,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
-      font-size:24px; background:var(--surface2); border:2px solid var(--border);
+      font-size:22px; background:var(--surface2); border:1px solid var(--border);
       border-radius:var(--r-sm); padding:6px 10px; cursor:pointer;
       transition:all .15s; line-height:1;
     }
-    .sensation-btn:hover { background:var(--surface3); transform:scale(1.1); }
-    .sensation-btn.active { border-color:var(--accent); background:rgba(91,115,245,.15); transform:scale(1.15); }
+    .sensation-btn:hover { background:var(--surface3); }
+    .sensation-btn.active { border-color:var(--text-2); background:var(--surface3); }
     .sensation-chip {
       font-size:16px; display:inline-flex; align-items:center; gap:4px;
       padding:2px 6px; border-radius:20px; background:var(--surface2);
@@ -32,7 +32,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><div class="nav__logo-icon">◈</div> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
     <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link ">Dashboard</a>
     <a href="sport.html"        class="nav__link ">Sports</a>
@@ -48,8 +48,8 @@
       <input type="file" accept=".gpx,.fit,.tcx" multiple style="display:none" onchange="handleImportFiles(event)">
     </label>
     <button class="btn btn--primary" onclick="openSessionModal()">+ Saisie manuelle</button>
-    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil">👤</a>
-    <button class="nav__menu-btn" onclick="toggleMenu()">☰</button>
+    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
+    <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
 </nav>
 
@@ -65,7 +65,7 @@
 
   <!-- ── Import zone ── -->
   <div id="importZone" style="display:none;margin-bottom:16px">
-    <div class="card" style="border-color:var(--accent);background:rgba(91,115,245,.06)">
+    <div class="card" style="border-color:var(--accent);background:rgba(235,234,230,.06)">
       <div id="importProgress" style="font-size:13px;color:var(--text)"></div>
       <div id="importResults" style="margin-top:10px"></div>
     </div>
@@ -73,9 +73,9 @@
 
   <!-- ── Similar sessions warning zone (only shown if matches found) ── -->
   <div id="similarZone" style="display:none;margin-bottom:16px">
-    <div class="card" style="border-color:var(--yellow);background:rgba(245,200,74,.06)">
+    <div class="card" style="border-color:var(--yellow);background:rgba(212,178,76,.06)">
       <div class="card__title" style="color:var(--yellow);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <span>⚠️ Séances similaires déjà enregistrées</span>
+        <span>Séances similaires déjà enregistrées</span>
         <button class="btn btn--ghost btn--sm" onclick="ignoreAllSimilar()">✕ Ignorer tous les doublons</button>
       </div>
       <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Ces fichiers ressemblent à des séances déjà présentes dans votre historique (même date, distance et durée proches). Vérifiez avant d'importer pour éviter les doublons.</div>
@@ -93,7 +93,7 @@
     ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
     ondragleave="this.style.borderColor='var(--border)'"
     ondrop="handleDrop(event)">
-    <div style="font-size:28px;margin-bottom:8px">📁</div>
+    
     <div style="font-size:14px;font-weight:600;color:var(--text)">Glissez vos fichiers ici</div>
     <div style="font-size:12px;color:var(--text-2);margin-top:4px">Formats supportés : .fit (Garmin, Coros, Polar) · .gpx · .tcx</div>
     <div style="font-size:11px;color:var(--text-3);margin-top:8px">Compatible Garmin Connect · Coros · Polar Flow · Suunto · Wahoo · Strava export</div>
@@ -109,9 +109,9 @@
       <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison (année)"></select>
       <select class="form-select" id="filterSport" onchange="renderSessions()" style="width:auto">
         <option value="">Tous les sports</option>
-        <option value="nat">🏊 Natation</option>
-        <option value="velo">🚴 Vélo</option>
-        <option value="run">🏃 Course</option>
+        <option value="nat">Natation</option>
+        <option value="velo">Vélo</option>
+        <option value="run">Course</option>
       </select>
       <input class="form-input" type="date" id="filterFrom" onchange="renderSessions()" style="width:auto" placeholder="Du">
       <input class="form-input" type="date" id="filterTo"   onchange="renderSessions()" style="width:auto" placeholder="Au">
@@ -176,13 +176,13 @@
   <!-- ── W/kg reference ── -->
   <div class="grid-2" style="margin-bottom:16px">
     <div class="card">
-      <div class="card__title">⚡ Mon W/kg actuel (vélo)</div>
+      <div class="card__title">Mon W/kg actuel (vélo)</div>
       <div id="wkgCurrent" style="margin-bottom:12px"></div>
       <div class="card__title" style="margin-top:12px">Référentiel W/kg</div>
       <div id="wkgTable"></div>
     </div>
     <div class="card">
-      <div class="card__title">📊 Moyennes par discipline</div>
+      <div class="card__title">Moyennes par discipline</div>
       <div id="sportAvgs"></div>
     </div>
   </div>
@@ -214,7 +214,7 @@
       </table>
     </div>
     <div id="sessionEmpty" class="empty" style="display:none">
-      <div class="empty__icon">🏊</div>
+      
       <div class="empty__text">Aucune séance enregistrée</div>
       <div class="empty__sub">Cliquez sur "+ Nouvelle séance" pour commencer</div>
     </div>
@@ -238,9 +238,9 @@
         <div class="form-group">
           <label class="form-label">Sport</label>
           <select class="form-select" id="s_sport" onchange="toggleElevationField()">
-            <option value="nat">🏊 Natation</option>
-            <option value="velo">🚴 Vélo</option>
-            <option value="run">🏃 Course</option>
+            <option value="nat">Natation</option>
+            <option value="velo">Vélo</option>
+            <option value="run">Course</option>
           </select>
         </div>
       </div>
@@ -452,7 +452,7 @@ function renderSessions() {
     const wkg  = s.power_avg ? TS.calcWkg(s.power_avg, s.date) : null;
     return `<tr>
       <td style="white-space:nowrap">${s.date ? new Date(s.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—'}</td>
-      <td><span class="badge-sport badge-sport--${s.sport}">${sp.emoji||''} ${sp.label||s.sport}</span></td>
+      <td><span class="badge-sport badge-sport--${s.sport}">${sp.label||s.sport}</span></td>
       <td class="td-num">${s.duration ? formatDuration(s.duration) : '—'}</td>
       <td class="td-num">${s.distance ? s.distance+' km' : '—'}</td>
       <td class="td-num">${pace||'—'}</td>
@@ -464,7 +464,7 @@ function renderSessions() {
       <td class="td-num">${s.elevation ? s.elevation+' m' : '—'}</td>
       <td style="text-align:center">${s.sensation ? ['','😫','😕','😐','🙂','😄'][s.sensation] : ''}</td>
       <td style="font-size:12px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        ${s.comp_id ? '<span style="font-size:10px;background:rgba(91,115,245,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.notes||''}
+        ${s.comp_id ? '<span style="font-size:10px;background:rgba(235,234,230,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.notes||''}
       </td>
       <td style="white-space:nowrap">
         <button class="btn btn--ghost btn--sm btn--icon" onclick="editSession('${s.id}')" title="Modifier">✏️</button>
@@ -483,10 +483,10 @@ function renderSessionStats(sessions) {
   const wkg       = avgPow ? TS.calcWkg(avgPow) : null;
   const wkgLvl    = wkg ? TS.wkgLevel(wkg) : null;
   el.innerHTML = `
-    <div class="kpi"><div class="kpi__emoji">🏊</div><div><span class="kpi__value">${sessions.length}</span></div><div class="kpi__label">Séances</div></div>
-    <div class="kpi"><div class="kpi__emoji">💓</div><div><span class="kpi__value">${avgFC||'—'}</span><span class="kpi__unit">${avgFC?'bpm':''}</span></div><div class="kpi__label">FC moyenne</div></div>
-    <div class="kpi"><div class="kpi__emoji">⚡</div><div><span class="kpi__value">${avgPow||'—'}</span><span class="kpi__unit">${avgPow?'W':''}</span></div><div class="kpi__label">Puissance moy.</div></div>
-    <div class="kpi" style="border-color:${wkgLvl?.color||'var(--border)'}"><div class="kpi__emoji">📊</div><div><span class="kpi__value" style="color:${wkgLvl?.color||'inherit'}">${wkg||'—'}</span><span class="kpi__unit">${wkg?'W/kg':''}</span></div><div class="kpi__label">${wkgLvl?.label||'W/kg'}</div></div>
+    <div class="kpi"><div><span class="kpi__value">${sessions.length}</span></div><div class="kpi__label">Séances</div></div>
+    <div class="kpi"><div><span class="kpi__value">${avgFC||'—'}</span><span class="kpi__unit">${avgFC?'bpm':''}</span></div><div class="kpi__label">FC moyenne</div></div>
+    <div class="kpi"><div><span class="kpi__value">${avgPow||'—'}</span><span class="kpi__unit">${avgPow?'W':''}</span></div><div class="kpi__label">Puissance moy.</div></div>
+    <div class="kpi" style="border-color:${wkgLvl?.color||'var(--border)'}"><div><span class="kpi__value" style="color:${wkgLvl?.color||'inherit'}">${wkg||'—'}</span><span class="kpi__unit">${wkg?'W/kg':''}</span></div><div class="kpi__label">${wkgLvl?.label||'W/kg'}</div></div>
   `;
 
   // also update wkg current
@@ -496,7 +496,7 @@ function renderSessionStats(sessions) {
   if (wkgVelo) {
     const lvl = TS.wkgLevel(wkgVelo);
     el2.innerHTML = `<div style="display:flex;align-items:center;gap:12px">
-      <div style="font-size:36px;font-weight:800;color:${lvl.color}">${wkgVelo}</div>
+      <div style="font-size:36px;font-weight:600;color:${lvl.color}">${wkgVelo}</div>
       <div><div style="font-size:12px;color:var(--text-2)">W/kg</div><div style="font-size:14px;font-weight:600;color:${lvl.color}">${lvl.label}</div></div>
     </div>`;
   } else {
@@ -562,8 +562,8 @@ function showChartOrEmpty(id, points, label) {
 }
 
 const CHART_SCALES = {
-  x: { grid:{display:false}, ticks:{ color:'#475569', font:{size:10}, maxTicksLimit:10, maxRotation:0, autoSkip:true } },
-  y: { grid:{color:'#1e2d47'}, ticks:{ color:'#475569', font:{size:10} } },
+  x: { grid:{display:false}, ticks:{ color:'#64666d', font:{size:10}, maxTicksLimit:10, maxRotation:0, autoSkip:true } },
+  y: { grid:{color:'#26282d'}, ticks:{ color:'#64666d', font:{size:10} } },
 };
 
 function renderFCChart(sessions, label) {
@@ -575,9 +575,9 @@ function renderFCChart(sessions, label) {
       labels: chartDateLabels(pts),
       datasets: [{
         label:'FC moy (bpm)', data: pts.map(s=>s.fc_avg),
-        borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.08)',
+        borderColor:'#d9574f', backgroundColor:'rgba(217,87,79,0.08)',
         tension:0.4, fill:true, pointRadius: pts.length > 80 ? 2 : 3,
-        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#0D7377':s.sport==='velo'?'#F4A261':'#E76F51')
+        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#4b9cd3':s.sport==='velo'?'#d3a24a':'#d6683f')
       }]
     },
     options: {
@@ -611,13 +611,13 @@ function renderPowerChart(sessions, label) {
 
 function renderWkgTable() {
   const levels = [
-    { range:'< 2,0', label:'Débutant',          color:'#94a3b8' },
-    { range:'2,0–2,5', label:'Amateur débutant', color:'#4ade80' },
-    { range:'2,5–3,0', label:'Amateur régulier', color:'#22c55e' },
-    { range:'3,0–3,5', label:'Bon niveau — Ironman', color:'#eab308' },
-    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#f97316' },
-    { range:'4,0–5,0', label:'Élite amateur / semi-pro', color:'#ef4444' },
-    { range:'> 5,0',   label:'Professionnel',   color:'#a855f7' },
+    { range:'< 2,0', label:'Débutant',          color:'#9b9ca1' },
+    { range:'2,0–2,5', label:'Amateur débutant', color:'#5fb37f' },
+    { range:'2,5–3,0', label:'Amateur régulier', color:'#5fb37f' },
+    { range:'3,0–3,5', label:'Bon niveau — Ironman', color:'#d4b24c' },
+    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#d6683f' },
+    { range:'4,0–5,0', label:'Élite amateur / semi-pro', color:'#d9574f' },
+    { range:'> 5,0',   label:'Professionnel',   color:'#9d86cf' },
   ];
   document.getElementById('wkgTable').innerHTML = levels.map(l =>
     `<div class="wkg-row">
@@ -933,7 +933,7 @@ function renderNewImportCard(session, container) {
   card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
     + '<div>'
     + '<div style="font-size:13px;font-weight:700;margin-bottom:4px">'
-    + '<span class="badge-sport badge-sport--' + session.sport + '">' + (sp.emoji||'') + ' ' + (sp.label||session.sport) + '</span>'
+    + '<span class="badge-sport badge-sport--' + session.sport + '">' + (sp.label||session.sport) + '</span>'
     + '<span style="margin-left:8px;color:var(--text-2);font-weight:400">' + session.date + '</span>'
     + '</div>'
     + '<div style="font-size:12px;color:var(--text-2)">'
@@ -968,7 +968,7 @@ function renderSimilarCard(candidate, existing, container) {
   card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:10px';
   card.dataset.session = encodeURIComponent(JSON.stringify(candidate));
   card.innerHTML = '<div style="font-size:12px;font-weight:700;margin-bottom:8px">'
-    + '<span class="badge-sport badge-sport--' + candidate.sport + '">' + (sp.emoji||'') + ' ' + (sp.label||candidate.sport) + '</span>'
+    + '<span class="badge-sport badge-sport--' + candidate.sport + '">' + (sp.label||candidate.sport) + '</span>'
     + '<span style="margin-left:8px;color:var(--text-2);font-weight:400">' + candidate.date + '</span>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
@@ -976,7 +976,7 @@ function renderSimilarCard(candidate, existing, container) {
     + '<div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">D\u00e9j\u00e0 enregistr\u00e9e</div>'
     + '<div style="font-size:12px;color:var(--text-2)">' + formatSessionSummary(existing) + '</div>'
     + '</div>'
-    + '<div style="padding:8px 10px;background:rgba(91,115,245,.08);border-radius:var(--r-sm)">'
+    + '<div style="padding:8px 10px;background:rgba(235,234,230,.08);border-radius:var(--r-sm)">'
     + '<div style="font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Fichier import\u00e9</div>'
     + '<div style="font-size:12px;color:var(--text)">' + formatSessionSummary(candidate) + '</div>'
     + '</div>'
@@ -1029,7 +1029,7 @@ function importAll() {
   });
   document.getElementById('importZone').style.display = 'none';
   renderSessions();
-  TS.toast(`${count} séance${count>1?'s':''} importée${count>1?'s':''} ✅`);
+  TS.toast(`${count} séance${count>1?'s':''} importée${count>1?'s':''}`);
 }
 
 function confirmImport(btn, sessionData) {
@@ -1128,11 +1128,11 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
-  <a href="index.html" class="mobile-nav__item"><span class="mobile-nav__icon">⊞</span>Dashboard</a>
-  <a href="sessions.html" class="mobile-nav__item active"><span class="mobile-nav__icon">▷</span>Séances</a>
-  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon">◎</span>Sports</a>
-  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon">🥗</span>Nutrition</a>
-  <a href="profile.html" class="mobile-nav__item"><span class="mobile-nav__icon">👤</span>Profil</a>
+  <a href="index.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>Dashboard</a>
+  <a href="sessions.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>Séances</a>
+  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>Sports</a>
+  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8M7 3v5M11 3v5M9 3v5"/><path d="M17 21V3c-2 1-3 4-3 8h3"/></svg></span>Nutrition</a>
+  <a href="profile.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 </body>
 </html>

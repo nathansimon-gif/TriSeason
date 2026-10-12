@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#080c14">
+  <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
@@ -25,35 +25,16 @@
       border-radius: var(--r);
       padding: 18px;
       cursor: pointer;
-      transition: transform .2s, border-color .25s, box-shadow .25s;
+      transition: border-color .12s, background .12s;
       position: relative; overflow: hidden;
     }
-    .hero-sport::before {
-      content: '';
-      position: absolute; inset: 0;
-      opacity: 0; transition: opacity .25s;
-    }
-    .hero-sport--nat::before  { background: radial-gradient(ellipse at top left, rgba(11,191,205,.12), transparent 70%); }
-    .hero-sport--velo::before { background: radial-gradient(ellipse at top left, rgba(245,158,66,.12), transparent 70%); }
-    .hero-sport--run::before  { background: radial-gradient(ellipse at top left, rgba(244,97,58,.12), transparent 70%); }
-    .hero-sport:hover::before { opacity: 1; }
-    .hero-sport:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
-    .hero-sport--nat:hover  { border-color: var(--nat); }
-    .hero-sport--velo:hover { border-color: var(--velo); }
-    .hero-sport--run:hover  { border-color: var(--run); }
-    .hero-sport__bar {
-      height: 2px; border-radius: 2px; margin-bottom: 16px;
-      transition: height .2s;
-    }
-    .hero-sport:hover .hero-sport__bar { height: 3px; }
-    .hero-sport--nat  .hero-sport__bar { background: linear-gradient(90deg, var(--nat), transparent); }
-    .hero-sport--velo .hero-sport__bar { background: linear-gradient(90deg, var(--velo), transparent); }
-    .hero-sport--run  .hero-sport__bar { background: linear-gradient(90deg, var(--run), transparent); }
-    .hero-sport__sport { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
-    .hero-sport--nat  .hero-sport__sport { color: var(--nat); }
-    .hero-sport--velo .hero-sport__sport { color: var(--velo); }
-    .hero-sport--run  .hero-sport__sport { color: var(--run); }
-    .hero-sport__val  { font-size: 32px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+    .hero-sport:hover { border-color: var(--border2); background: var(--surface2); }
+    .hero-sport__bar { height: 2px; width: 24px; margin-bottom: 14px; }
+    .hero-sport--nat  .hero-sport__bar { background: var(--nat); }
+    .hero-sport--velo .hero-sport__bar { background: var(--velo); }
+    .hero-sport--run  .hero-sport__bar { background: var(--run); }
+    .hero-sport__sport { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 10px; }
+    .hero-sport__val  { font-size: 32px; font-weight: 600; letter-spacing: -.025em; line-height: 1; }
     .hero-sport__unit { font-size: 14px; font-weight: 400; color: var(--text-2); margin-left: 2px; }
     .hero-sport__meta { font-size: 12px; color: var(--text-2); margin-top: 8px; line-height: 1.8; }
     .hero-sport { display: flex; flex-direction: column; height: auto !important; }
@@ -74,8 +55,8 @@
       border-radius: var(--r-sm);
       padding: 12px 16px;
     }
-    .total-tile__label { font-size: 11px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
-    .total-tile__val   { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; }
+    .total-tile__label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+    .total-tile__val   { font-size: 20px; font-weight: 600; letter-spacing: -.02em; margin-top: 2px; }
 
     .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
     .cal-nav__label { font-size:13px; font-weight:700; text-transform:capitalize; }
@@ -96,7 +77,7 @@
       text-align:center; padding:10px 6px; background:var(--surface2);
       border-radius:var(--r-sm);
     }
-    .month-stat-tile__val { font-size:19px; font-weight:800; letter-spacing:-.02em; }
+    .month-stat-tile__val { font-size:19px; font-weight:600; letter-spacing:-.02em; }
     .month-stat-tile__label { font-size:9px; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
     .month-sport-row {
       display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border);
@@ -104,8 +85,8 @@
     }
     .month-sport-row:last-child { border-bottom:none; }
     .month-best-day {
-      margin-top:10px; padding:10px 12px; background:rgba(91,115,245,.08);
-      border:1px solid rgba(91,115,245,.2); border-radius:var(--r-sm); font-size:12px;
+      margin-top:10px; padding:10px 12px; background:var(--surface2);
+      border:1px solid var(--border); border-radius:var(--r-sm); font-size:12px;
     }
   </style>
 </head>
@@ -113,7 +94,7 @@
 
 <nav class="nav">
   <div class="nav__logo">
-    <div class="nav__logo-icon">◈</div>
+    <span class="nav__logo-icon" aria-hidden="true"><i></i></span>
     TriSeason
   </div>
     <div class="nav__links" id="navLinks">
@@ -131,8 +112,8 @@
       Importer<input type="file" accept=".json" style="display:none" onchange="handleImport(event)">
     </label>
     <button class="btn btn--ghost btn--sm" onclick="openProfileModal()">Profil</button>
-    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil">👤</a>
-    <button class="nav__menu-btn" onclick="toggleMenu()">☰</button>
+    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
+    <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
 </nav>
 
@@ -159,7 +140,7 @@
           <div id="weekNavDates" style="font-size:11px;color:var(--text-2)"></div>
         </div>
         <span id="dayPickerWrap" style="display:none;position:relative;flex-shrink:0;width:26px;height:26px">
-          <button class="btn btn--ghost btn--sm btn--icon" tabindex="-1" aria-hidden="true" style="font-size:14px;width:100%;height:100%;pointer-events:none">📅</button>
+          <button class="btn btn--ghost btn--sm btn--icon" tabindex="-1" aria-hidden="true" style="font-size:14px;width:100%;height:100%;pointer-events:none"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
           <input type="date" id="dayPicker" title="Choisir une date" onchange="onDayPicked(this.value)"
                  style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;-webkit-appearance:none;cursor:pointer">
         </span>
@@ -281,7 +262,7 @@
       <div class="card__title">Poids & morphologie</div>
       <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:14px;flex-wrap:wrap">
         <div>
-          <div style="font-size:40px;font-weight:800;letter-spacing:-.04em;line-height:1" id="weightDisplay">—</div>
+          <div style="font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1" id="weightDisplay">—</div>
           <div style="font-size:11px;color:var(--text-2);margin-top:2px">kg · dernière pesée</div>
           <div id="bmiDisplay" style="font-size:12px;color:var(--text-3);margin-top:4px"></div>
         </div>
@@ -325,7 +306,7 @@
   <!-- ── Records widget ── -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>🏆 Derniers records personnels</span>
+      <span>Derniers records personnels</span>
       <a href="records.html" style="font-size:11px;color:var(--accent2);font-weight:600">Voir tous →</a>
     </div>
     <div id="recordsWidget"></div>
@@ -441,7 +422,7 @@ function updateGreeting() {
 // ── Week navigation ───────────────────────────────────────────────────────────
 function updateWeekNav() {
   const fmt   = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
-  const badge = txt => ` <span style="font-size:10px;color:var(--accent2);background:rgba(91,115,245,.15);padding:1px 7px;border-radius:20px;font-weight:600">${txt}</span>`;
+  const badge = txt => ` <span style="font-size:10px;color:var(--accent2);background:rgba(235,234,230,.15);padding:1px 7px;border-radius:20px;font-weight:600">${txt}</span>`;
 
   // Update "Cette semaine" button label
   const backBtn = document.getElementById('backToNowBtn');
@@ -671,7 +652,7 @@ function renderMonthSummary() {
     const best = byDate[bestDate];
     const d = new Date(bestDate + 'T00:00:00');
     bestEl.innerHTML = `<div class="month-best-day">
-      🏆 <b>Meilleure journée</b> : ${d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})}
+      <b>Meilleure journée</b> : ${d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})}
       — ${calFormatDur(best.h)}${best.km ? ' · ' + best.km.toFixed(1) + ' km' : ''} · ${best.n} séance${best.n>1?'s':''}
     </div>`;
   } else {
@@ -761,10 +742,10 @@ function renderTotals() {
 // ── Charts ────────────────────────────────────────────────────────────────────
 const CO = {
   responsive:true, maintainAspectRatio:false, resizeDelay:0,
-  plugins:{ legend:{ labels:{ color:'#8496b8', font:{size:11}, boxWidth:8, padding:12 } } },
+  plugins:{ legend:{ labels:{ color:'#9b9ca1', font:{size:11}, boxWidth:8, padding:12 } } },
   scales:{
-    x:{ grid:{color:'rgba(30,45,71,.5)'}, ticks:{color:'#3d5070', font:{size:10}, maxRotation:0} },
-    y:{ grid:{color:'rgba(30,45,71,.5)'}, ticks:{color:'#3d5070', font:{size:10}} }
+    x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:10}, maxRotation:0} },
+    y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:10}} }
   }
 };
 
@@ -781,9 +762,9 @@ function renderWeeklyChart() {
   charts['chartWeekly'] = makeChart('chartWeekly', {
     type:'line',
     data:{ labels, datasets:[
-      { label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#0bbfcd', backgroundColor:'rgba(11,191,205,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#f59e42', backgroundColor:'rgba(245,158,66,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#f4613a', backgroundColor:'rgba(244,97,58,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#4b9cd3', backgroundColor:'rgba(75,156,211,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#d3a24a', backgroundColor:'rgba(211,162,74,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#d6683f', backgroundColor:'rgba(214,104,63,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
     ]},
     options:{ ...CO, onClick:(e,el)=>{ if(el.length){ const ds=['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } } }
   });
@@ -795,9 +776,9 @@ function renderFrequencyChart() {
   charts['chartFrequency'] = makeChart('chartFrequency', {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#0bbfcd' },
-      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#f59e42' },
-      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#f4613a' },
+      { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#4b9cd3' },
+      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#d3a24a' },
+      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#d6683f' },
     ]},
     options: {
       ...CO,
@@ -822,9 +803,9 @@ function renderMonthlyChart() {
   charts['chartMonthly'] = makeChart('chartMonthly', {
     type:'bar',
     data:{ labels, datasets:[
-      {label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(11,191,205,.75)',  borderRadius:4},
-      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(245,158,66,.75)', borderRadius:4},
-      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(244,97,58,.75)',  borderRadius:4},
+      {label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(75,156,211,.75)',  borderRadius:4},
+      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(211,162,74,.75)', borderRadius:4},
+      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(214,104,63,.75)',  borderRadius:4},
     ]},
     options:CO
   });
@@ -838,12 +819,12 @@ function renderDonutChart() {
     type:'doughnut',
     data:{
       labels:['Natation','Vélo','Course'],
-      datasets:[{data:vals,backgroundColor:['#0bbfcd','#f59e42','#f4613a'],borderWidth:0,hoverOffset:8}]
+      datasets:[{data:vals,backgroundColor:['#4b9cd3','#d3a24a','#d6683f'],borderWidth:0,hoverOffset:8}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw.toFixed(1)}h (${total?Math.round(ctx.raw/total*100):0}%)`}}}}
   });
   // legend manual
-  const colors=['#0bbfcd','#f59e42','#f4613a'];
+  const colors=['#4b9cd3','#d3a24a','#d6683f'];
   const labels=['Natation','Vélo','Course'];
   document.getElementById('donutLegend').innerHTML=labels.map((l,i)=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
@@ -879,7 +860,7 @@ function renderNutriWidget() {
 
   const tile = (val, label, color) =>
     '<div style="text-align:center;padding:10px;background:var(--surface2);border-radius:var(--r-sm)">'
-    + '<div style="font-size:18px;font-weight:800;color:' + color + '">' + val + '</div>'
+    + '<div style="font-size:18px;font-weight:600;color:' + color + '">' + val + '</div>'
     + '<div style="font-size:10px;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">' + label + '</div>'
     + '</div>';
 
@@ -905,17 +886,16 @@ function renderRecordsWidget() {
   }
 
   const colors = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)', tri: 'var(--accent)' };
-  const emojis = { nat: '\ud83c\udfca', velo: '\ud83d\udeb4', run: '\ud83c\udfc3', tri: '\ud83c\udfc6' };
-
+  
   el.innerHTML = records.map(r => {
     const dateStr = r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">'
-      + '<div style="font-size:16px">' + (emojis[r.sport] || '\ud83c\udfc5') + '</div>'
+      + '<span class="sport-dot sport-dot--' + (r.sport || 'tri') + '"></span>'
       + '<div style="flex:1">'
       + '<div style="font-size:12px;font-weight:700;color:' + (colors[r.sport] || 'var(--text)') + '">' + (r.dist || '') + '</div>'
       + '<div style="font-size:10px;color:var(--text-2)">' + (r.location || '') + '</div>'
       + '</div>'
-      + '<div style="font-family:var(--mono);font-size:13px;font-weight:800">' + (r.time || '') + '</div>'
+      + '<div style="font-family:var(--mono);font-size:13px;font-weight:600">' + (r.time || '') + '</div>'
       + '<div style="font-size:10px;color:var(--text-3);min-width:38px;text-align:right">' + dateStr + '</div>'
       + '</div>';
   }).join('');
@@ -950,7 +930,7 @@ function renderWeight() {
       document.getElementById('wkgDisplay').innerHTML=`
         <div style="padding:10px 14px;background:${lvl.color}18;border:1px solid ${lvl.color}44;border-radius:var(--r-sm)">
           <div style="font-size:10px;color:var(--text-2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">W/kg vélo</div>
-          <div style="font-size:26px;font-weight:800;color:${lvl.color}">${wkg}</div>
+          <div style="font-size:26px;font-weight:600;color:${lvl.color}">${wkg}</div>
           <div style="font-size:11px;color:${lvl.color};font-weight:600">${lvl.label}</div>
         </div>`;
     }
@@ -966,17 +946,17 @@ function renderWeight() {
       labels:weights.map(w=>new Date(w.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})),
       datasets:[{
         data:weights.map(w=>w.value),
-        borderColor:'#22d472', backgroundColor:'rgba(34,212,114,.06)',
+        borderColor:'#5fb37f', backgroundColor:'rgba(95,179,127,.06)',
         tension:.4, pointRadius:3, pointHoverRadius:6, fill:true,
-        pointBackgroundColor:'#22d472', pointBorderColor:'var(--bg)',pointBorderWidth:2
+        pointBackgroundColor:'#5fb37f', pointBorderColor:'var(--bg)',pointBorderWidth:2
       }]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw} kg`}}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#3d5070',font:{size:10}}},
-        y:{grid:{color:'rgba(30,45,71,.5)'},ticks:{color:'#3d5070',font:{size:10}}}
+        x:{grid:{display:false},ticks:{color:'#64666d',font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#64666d',font:{size:10}}}
       }
     }
   });
@@ -1044,14 +1024,14 @@ function renderNextRace(){
     <div style="margin-bottom:14px">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <span style="font-size:10px;font-weight:700;color:${prioColor};background:${prioColor}22;padding:2px 7px;border-radius:20px">${next.priority||'B'}</span>
-        <span style="font-size:11px;color:var(--accent2);background:rgba(91,115,245,.12);padding:2px 9px;border-radius:20px;font-weight:600">J − ${diff}</span>
+        <span style="font-size:11px;color:var(--accent2);background:rgba(235,234,230,.12);padding:2px 9px;border-radius:20px;font-weight:600">J − ${diff}</span>
       </div>
-      <div style="font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px">${next.name}</div>
+      <div style="font-size:18px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px">${next.name}</div>
       <div style="font-size:12px;color:var(--text-2)">${new Date(next.date+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
       ${next.distance?`<div style="font-size:12px;color:var(--text-2);margin-top:2px">${next.type} · ${next.distance} km</div>`:''}
       ${next.goal_time?`<div style="font-family:var(--mono);font-size:13px;color:var(--accent2);margin-top:6px">Objectif : ${next.goal_time}</div>`:''}
     </div>
-    <div class="progress"><div class="progress__bar" style="width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+    <div class="progress"><div class="progress__bar" style="width:${pct}%;background:var(--text-2)"></div></div>
     <div style="font-size:10px;color:var(--text-3);margin-top:5px">Progression vers la course</div>`;
 }
 
@@ -1082,7 +1062,7 @@ function renderMetrics(){
   document.getElementById('metricsGrid').innerHTML=items.map(m=>`
     <div class="metric-box" data-tip="${m.tip.replace(/"/g, '&quot;')}" style="border-right:1px solid var(--border);border-bottom:1px solid var(--border)">
       <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">${m.label}</div>
-      <div style="font-size:18px;font-weight:800;font-family:var(--mono);letter-spacing:-.02em">${m.val}<span style="font-size:11px;color:var(--text-2);font-family:var(--font);font-weight:400"> ${m.unit}</span></div>
+      <div style="font-size:18px;font-weight:600;font-family:var(--mono);letter-spacing:-.02em">${m.val}<span style="font-size:11px;color:var(--text-2);font-family:var(--font);font-weight:400"> ${m.unit}</span></div>
     </div>`).join('');
 }
 
@@ -1106,11 +1086,11 @@ function toggleMenu(){document.getElementById('navLinks').classList.toggle('open
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
-  <a href="index.html" class="mobile-nav__item active"><span class="mobile-nav__icon">⊞</span>Dashboard</a>
-  <a href="sessions.html" class="mobile-nav__item"><span class="mobile-nav__icon">▷</span>Séances</a>
-  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon">◎</span>Sports</a>
-  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon">🥗</span>Nutrition</a>
-  <a href="profile.html" class="mobile-nav__item"><span class="mobile-nav__icon">👤</span>Profil</a>
+  <a href="index.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>Dashboard</a>
+  <a href="sessions.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>Séances</a>
+  <a href="sport.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>Sports</a>
+  <a href="nutrition.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8M7 3v5M11 3v5M9 3v5"/><path d="M17 21V3c-2 1-3 4-3 8h3"/></svg></span>Nutrition</a>
+  <a href="profile.html" class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 </body>
 </html>
