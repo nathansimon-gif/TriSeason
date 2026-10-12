@@ -868,6 +868,27 @@ function median(values) {
   return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
 }
 
+// Seuil qui coupe les valeurs en deux groupes les plus équilibrés possible
+// ("≤ seuil" / "> seuil"). Une simple médiane ne suffit pas : plusieurs séances
+// après la même journée ont exactement la même valeur et tomberaient toutes du
+// même côté. Renvoie null si toutes les valeurs sont identiques.
+function balancedThreshold(values) {
+  const sorted = values.slice().sort((a, b) => a - b);
+  const distinct = [...new Set(sorted)];
+  if (distinct.length < 2) return null;
+  const mid = median(sorted);
+  let best = null, bestMin = -1;
+  for (let i = 0; i < distinct.length - 1; i++) {
+    const t = distinct[i];
+    const low = sorted.filter(v => v <= t).length;
+    const smaller = Math.min(low, sorted.length - low);
+    if (smaller > bestMin || (smaller === bestMin && Math.abs(t - mid) < Math.abs(best - mid))) {
+      best = t; bestMin = smaller;
+    }
+  }
+  return best;
+}
+
 function shiftDay(dateStr, days) {
   const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + days);
@@ -934,12 +955,13 @@ function getNutritionImpact(filters = {}) {
     comparisons[f] = {};
     Object.keys(NUTRI_OUTCOMES).forEach(o => {
       const pts = points.filter(p => p.factors[f] !== null && p.outcomes[o] !== null);
-      const threshold = median(pts.map(p => p.factors[f]));
-      const high = pts.filter(p => p.factors[f] > threshold);
-      const low  = pts.filter(p => p.factors[f] <= threshold);
+      const threshold = balancedThreshold(pts.map(p => p.factors[f]));
+      const high = threshold === null ? [] : pts.filter(p => p.factors[f] > threshold);
+      const low  = threshold === null ? pts : pts.filter(p => p.factors[f] <= threshold);
       const avg = arr => arr.length ? arr.reduce((a, p) => a + p.outcomes[o], 0) / arr.length : null;
       comparisons[f][o] = {
         n: pts.length, threshold,
+        distinctValues: new Set(pts.map(p => p.factors[f])).size,
         high: { n: high.length, avg: avg(high) },
         low:  { n: low.length,  avg: avg(low) },
         enough: high.length >= NUTRI_MIN_GROUP && low.length >= NUTRI_MIN_GROUP,
