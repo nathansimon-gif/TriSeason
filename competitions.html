@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012d"></script>
+  <script src="auth-guard.js?v=20261013a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Compétitions</title>
-  <link rel="stylesheet" href="style.css?v=20261012d">
+  <link rel="stylesheet" href="style.css?v=20261013a">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -181,7 +181,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261012d"></script>
+<script src="app.js?v=20261013a"></script>
 <script>
 let editId = null;
 let currentFilter = 'all';
@@ -288,7 +288,7 @@ function renderCharts() {
       type: 'doughnut',
       data: {
         labels: Object.keys(byType),
-        datasets: [{ data: Object.values(byType), backgroundColor:['#8a8d94','#d6683f','#d3a24a','#4b9cd3','#9d86cf','#5fb37f'], borderWidth:0 }]
+        datasets: [{ data: Object.values(byType), backgroundColor:['#8a8d94','#c4443f','#b0922c','#4b9cd3','#9d86cf','#5fb37f'], borderWidth:0 }]
       },
       options: {
         responsive:true, maintainAspectRatio:false, cutout:'65%',

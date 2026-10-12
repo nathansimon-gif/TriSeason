@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012d"></script>
+  <script src="auth-guard.js?v=20261013a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261012d">
+  <link rel="stylesheet" href="style.css?v=20261013a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -233,7 +233,7 @@
 </div>
 
 
-<script src="app.js?v=20261012d"></script>
+<script src="app.js?v=20261013a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -384,8 +384,8 @@ function renderFCZones() {
   const zones = [
     { num:1, name:'Récupération',   pct:[50,60],  color:'#5fb37f' },
     { num:2, name:'Endurance fond.', pct:[60,70], color:'#ebeae6' },
-    { num:3, name:'Aérobie',        pct:[70,80],  color:'#d3a24a' },
-    { num:4, name:'Seuil',          pct:[80,90],  color:'#d6683f' },
+    { num:3, name:'Aérobie',        pct:[70,80],  color:'#b0922c' },
+    { num:4, name:'Seuil',          pct:[80,90],  color:'#c4443f' },
     { num:5, name:'VO2max',         pct:[90,100], color:'#d9574f' },
   ];
   el.innerHTML = zones.map(z => {

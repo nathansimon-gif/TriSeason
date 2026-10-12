@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012d"></script>
+  <script src="auth-guard.js?v=20261013a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261012d">
+  <link rel="stylesheet" href="style.css?v=20261013a">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -131,7 +131,7 @@
 
   <!-- KPIs du jour -->
   <div class="card" style="margin-bottom:12px">
-    <div class="card__title">Bilan du jour</div>
+    <div class="card__title" style="justify-content:space-between">Bilan du jour <a href="forme.html#nutriImpactCard" style="font-size:12px;font-weight:500;color:var(--text-2)">Impact sur tes séances →</a></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden">
       <div class="nutri-kpi" style="border-right:1px solid var(--border)">
         <div class="nutri-kpi__val" id="kpiKcal">—</div>
@@ -385,7 +385,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261012d"></script>
+<script src="app.js?v=20261013a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -569,9 +569,9 @@ function renderMealsList() {
       </div>
       <div style="font-size:13px;color:var(--text-2);margin-bottom:8px">${m.desc||''}</div>
       ${hasM ? `<div style="display:flex;gap:14px;font-size:12px;flex-wrap:wrap">
-        ${m.glucides  ? `<span style="color:var(--run)">🟠 ${m.glucides}g glucides</span>` : ''}
-        ${m.proteines ? `<span style="color:var(--nat)">🔵 ${m.proteines}g protéines</span>` : ''}
-        ${m.lipides   ? `<span style="color:var(--velo)">🟡 ${m.lipides}g lipides</span>` : ''}
+        ${m.glucides  ? `<span style="color:var(--run)">${m.glucides}g glucides</span>` : ''}
+        ${m.proteines ? `<span style="color:var(--nat)">${m.proteines}g protéines</span>` : ''}
+        ${m.lipides   ? `<span style="color:var(--velo)">${m.lipides}g lipides</span>` : ''}
         ${m.kcal      ? `<span style="color:var(--text-2)">~${m.kcal} kcal</span>` : ''}
       </div>` : ''}
     </div>`;

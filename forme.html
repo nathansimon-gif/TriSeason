@@ -6,13 +6,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012d"></script>
+  <script src="auth-guard.js?v=20261013a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261012d">
+  <link rel="stylesheet" href="style.css?v=20261013a">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -43,6 +43,19 @@
     }
     .obs-card__title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
     .obs-card__text  { font-size: 12px; color: var(--text-2); line-height: 1.6; }
+    .ni-controls { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .ni-control { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text-2); flex:1; min-width:150px; }
+    .ni-headline { font-size:15px; line-height:1.5; margin-bottom:14px; }
+    .ni-headline b { font-weight:600; }
+    .ni-groups { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .ni-group { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px 14px; }
+    .ni-group__label { font-size:12px; color:var(--text-2); }
+    .ni-group__val { font-size:24px; font-weight:600; letter-spacing:-.02em; margin-top:4px; }
+    .ni-group__val small { font-size:13px; font-weight:400; color:var(--text-2); margin-left:2px; }
+    .ni-group__n { font-size:11px; color:var(--text-3); margin-top:2px; }
+    .ni-note { font-size:11px; color:var(--text-3); margin-top:10px; line-height:1.5; }
+    .ni-legend { display:flex; gap:14px; font-size:11px; color:var(--text-2); margin-bottom:6px; flex-wrap:wrap; }
+    .ni-legend span { display:inline-flex; align-items:center; }
     .disclaimer-box {
       background: rgba(212,178,76,.08); border: 1px solid rgba(212,178,76,.25);
       border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
@@ -117,10 +130,44 @@
     <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
   </div>
 
+  <!-- ── Nutrition × performance ── -->
+  <div class="card" style="margin-bottom:12px" id="nutriImpactCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Nutrition et performance</span>
+      <span class="confidence-badge confidence-badge--low">Tendance — non causal</span>
+      <span class="tip-icon" data-tip="Compare tes séances selon ce que tu as mangé ou bu autour. Le seuil « plus / moins » est ta propre médiane, pas une norme. Une différence ici n'est pas une preuve : le type de séance, le sommeil ou la météo jouent aussi.">?</span>
+    </div>
+    <div class="ni-controls">
+      <label class="ni-control"><span>Facteur</span>
+        <select class="form-select" id="niFactor" onchange="renderNutritionImpact()">
+          <option value="carbs_prev">Glucides la veille</option>
+          <option value="carbs_day">Glucides le jour même</option>
+          <option value="kcal_prev">Calories la veille</option>
+          <option value="hydration">Hydratation le jour même</option>
+        </select>
+      </label>
+      <label class="ni-control"><span>Comparer</span>
+        <select class="form-select" id="niOutcome" onchange="renderNutritionImpact()">
+          <option value="sensation">Ressenti de la séance</option>
+          <option value="perf">Vitesse vs ton habitude</option>
+        </select>
+      </label>
+      <label class="ni-control"><span>Sport</span>
+        <select class="form-select" id="niSport" onchange="renderNutritionImpact()">
+          <option value="">Tous</option>
+          <option value="nat">Natation</option>
+          <option value="velo">Vélo</option>
+          <option value="run">Course</option>
+        </select>
+      </label>
+    </div>
+    <div id="niBody"></div>
+  </div>
+
   <!-- ── Observations (corrélations descriptives) ── -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
-      <span>🔍 Observations sur vos données</span>
+      <span>Observations sur vos données</span>
       <span class="confidence-badge confidence-badge--low">Descriptif — non causal</span>
       <span class="tip-icon" data-tip="Ces observations décrivent des tendances dans VOS données uniquement — elles ne prouvent aucun lien de cause à effet et reposent souvent sur un petit nombre d'exemples.">?</span>
     </div>
@@ -138,7 +185,7 @@
   <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 
-<script src="app.js?v=20261012d"></script>
+<script src="app.js?v=20261013a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -157,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populatePredSource();
   renderPrediction();
   renderPMC();
+  renderNutritionImpact();
   renderObservations();
   TS.initTooltips();
 });
@@ -165,6 +213,7 @@ window.addEventListener('triseason:update', () => {
   populatePredSource();
   renderPrediction();
   renderPMC();
+  renderNutritionImpact();
   renderObservations();
 });
 
@@ -324,7 +373,7 @@ function renderPMC() {
       labels: recent.map(s => new Date(s.day+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
       datasets: [
         { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#ebeae6', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#d6683f', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#c4443f', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
         { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#5fb37f', backgroundColor:'rgba(95,179,127,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
       ]
     },
@@ -351,7 +400,7 @@ function renderObservations() {
     const diff  = (last - first).toFixed(1);
     if (Math.abs(diff) >= 1) {
       observations.push({
-        title: '⚖️ Évolution du poids',
+        title: 'Évolution du poids',
         text: `Votre poids a ${diff > 0 ? 'augmenté' : 'diminué'} de ${Math.abs(diff)} kg depuis le début de vos mesures (${weights.length} pesées). ${Math.abs(diff) >= 3 ? "Une variation de cette ampleur peut avoir un effet notable sur vos performances en course à pied et en vélo (rapport poids/puissance)." : "Variation modérée, effet probablement limité sur vos performances."}`
       });
     }
@@ -373,7 +422,7 @@ function renderObservations() {
       const diff = (lastAvg - firstAvg).toFixed(1);
       if (Math.abs(diff) >= 0.5) {
         observations.push({
-          title: '💪 Ressenti d’effort (RPE)',
+          title: 'Ressenti d’effort (RPE)',
           text: `Votre RPE moyen est passé de ${firstAvg.toFixed(1)}/10 à ${lastAvg.toFixed(1)}/10 entre vos premières et dernières séances renseignées. ${diff < 0 ? "Une baisse peut indiquer une progression de la forme (mêmes efforts perçus comme plus faciles)." : "Une hausse peut refléter une charge d'entraînement plus exigeante ou un début de fatigue accumulée."}`
         });
       }
@@ -386,7 +435,7 @@ function renderObservations() {
   if (totalSessions >= 10) {
     const pct = Math.round(highRpeCount / totalSessions * 100);
     observations.push({
-      title: '🔥 Répartition de l’intensité',
+      title: 'Répartition de l’intensité',
       text: `${pct}% de vos séances renseignées ont un RPE ≥ 8/10 (${highRpeCount} sur ${totalSessions}). ${pct > 30 ? "C'est une proportion élevée — la littérature sportive recommande généralement 70-80% du volume en endurance fondamentale (RPE bas) pour limiter le risque de surentraînement." : "Cette répartition semble cohérente avec un modèle d'entraînement polarisé classique."}`
     });
   }
@@ -435,6 +484,157 @@ function renderObservations() {
       <div class="obs-card__title">${o.title}</div>
       <div class="obs-card__text">${o.text}</div>
     </div>`).join('');
+}
+
+
+// ── Nutrition × performance ─────────────────────────────────────────────────
+const NI_SPORT_COLORS = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)' };
+const NI_SPORT_LABELS = { nat: 'Natation', velo: 'Vélo', run: 'Course' };
+
+function niCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function niFmtOutcome(o, v) {
+  if (v === null || v === undefined) return '—';
+  if (o === 'sensation') return v.toFixed(1).replace('.', ',') + '<small>/5</small>';
+  return (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + '<small>%</small>';
+}
+
+// "de glucides" / "d’hydratation"
+function niDe(word) { return (/^[aeiouyhéè]/i.test(word) ? 'd’' : 'de ') + word; }
+
+// Le ressenti est un entier : on écarte un peu verticalement les séances de même
+// valeur pour qu'elles ne se cachent pas (affichage seulement, le survol garde la vraie valeur).
+function niJitter(id) {
+  let h = 0;
+  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return ((h % 1000) / 1000 - 0.5) * 0.3;
+}
+
+function niFmtFactor(f, v) {
+  const unit = TS.NUTRI_FACTORS[f].unit;
+  return Math.round(v).toLocaleString('fr-FR') + (unit === 'ml' ? ' ml' : unit === 'kcal' ? ' kcal' : ' g');
+}
+
+function renderNutritionImpact() {
+  const body = document.getElementById('niBody');
+  if (!body) return;
+  const f = document.getElementById('niFactor').value;
+  const o = document.getElementById('niOutcome').value;
+  const sport = document.getElementById('niSport').value;
+  const range = TS.getSeasonRange ? TS.getSeasonRange(TS.getSeasonFilter()) : null;
+  const res = TS.getNutritionImpact({ ...(range || {}), sport: sport || undefined });
+  const cmp = res.comparisons[f][o];
+  const factor = TS.NUTRI_FACTORS[f];
+  const min = TS.NUTRI_MIN_GROUP;
+
+  if (!cmp.enough) {
+    const need = min * 2;
+    const outcomeHint = o === 'sensation'
+      ? 'renseigne ton <b>ressenti</b> (les visages) quand tu enregistres une séance'
+      : 'garde <b>distance et durée</b> sur tes séances (il faut au moins 5 séances d’un sport pour connaître ton habitude)';
+    const factorHint = f === 'hydration'
+      ? 'note ton <b>hydratation</b> dans Nutrition les jours où tu t’entraînes'
+      : 'saisis tes <b>repas avec les glucides</b> dans Nutrition' + (f.endsWith('_prev') ? ', surtout la veille de tes séances' : ' les jours où tu t’entraînes');
+    const pct = Math.min(100, Math.round(cmp.n / need * 100));
+    destroyNiChart();
+    body.innerHTML = `
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
+        Il faut au moins <b>${need} séances</b> avec à la fois « ${factor.short} » et un résultat pour comparer.
+        Pour y arriver, ${factorHint}, et ${outcomeHint}.
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--text-2)">Séances utilisables</span>
+        <span style="font-weight:600">${cmp.n} / ${need}</span>
+      </div>
+      <div class="progress"><div class="progress__bar" style="width:${pct}%;background:var(--text-2)"></div></div>
+      <div class="ni-note">${res.counts.daysWithMeals} jour${res.counts.daysWithMeals > 1 ? 's' : ''} avec des repas saisis · ${res.counts.sessions} séance${res.counts.sessions > 1 ? 's' : ''} sur la période.</div>`;
+    return;
+  }
+
+  const diff = cmp.high.avg - cmp.low.avg;
+  const meaningful = o === 'sensation' ? Math.abs(diff) >= 0.4 : Math.abs(diff) >= 2;
+  const thr = niFmtFactor(f, cmp.threshold);
+  const outcomeTxt = o === 'sensation' ? 'ton ressenti moyen' : 'ta vitesse par rapport à ton habitude';
+  let headline;
+  if (!meaningful) {
+    headline = `Pas de différence nette pour l’instant : avec plus ou moins ${niDe(factor.short)}, ${outcomeTxt} reste proche.`;
+  } else {
+    const better = diff > 0 ? 'plus' : 'moins';
+    const gap = o === 'sensation'
+      ? `${Math.abs(diff).toFixed(1).replace('.', ',')} point${Math.abs(diff) >= 2 ? 's' : ''} de ressenti en plus`
+      : `une vitesse ${Math.abs(diff).toFixed(1).replace('.', ',')} % plus élevée`;
+    headline = `Tes séances avec <b>${better} ${niDe(factor.short)}</b> (${better === 'plus' ? 'au-dessus de' : 'jusqu’à'} ${thr}) vont avec <b>${gap}</b> en moyenne.`;
+  }
+
+  body.innerHTML = `
+    <div class="ni-headline">${headline}</div>
+    <div class="ni-groups">
+      <div class="ni-group">
+        <div class="ni-group__label">Plus ${niDe(factor.short)} <span style="color:var(--text-3)">(&gt; ${thr})</span></div>
+        <div class="ni-group__val">${niFmtOutcome(o, cmp.high.avg)}</div>
+        <div class="ni-group__n">${cmp.high.n} séance${cmp.high.n > 1 ? 's' : ''}</div>
+      </div>
+      <div class="ni-group">
+        <div class="ni-group__label">Moins <span style="color:var(--text-3)">(≤ ${thr})</span></div>
+        <div class="ni-group__val">${niFmtOutcome(o, cmp.low.avg)}</div>
+        <div class="ni-group__n">${cmp.low.n} séance${cmp.low.n > 1 ? 's' : ''}</div>
+      </div>
+    </div>
+    <div class="ni-legend" id="niLegend"></div>
+    <div style="position:relative;height:240px"><canvas id="chartNutriImpact" aria-label="Chaque point est une séance : ${factor.label} en horizontal, ${TS.NUTRI_OUTCOMES[o].label} en vertical"></canvas></div>
+    <div class="ni-note">Chaque point est une séance. ${o === 'perf' ? '« Vitesse vs ton habitude » compare la vitesse de la séance à ta vitesse médiane dans ce sport : une séance volontairement lente (récupération) tire donc vers le bas.' : ''}
+      ${cmp.n < 20 ? 'Avec ' + cmp.n + ' séances, la tendance reste fragile : elle se précisera avec le temps.' : ''}
+      Ce n’est pas une preuve de cause à effet.</div>`;
+
+  const pts = res.points.filter(p => p.factors[f] !== null && p.outcomes[o] !== null);
+  const sports = ['nat', 'velo', 'run'].filter(sp => pts.some(p => p.sport === sp));
+  document.getElementById('niLegend').innerHTML = sports.map(sp =>
+    `<span><span class="sport-dot sport-dot--${sp}"></span>${NI_SPORT_LABELS[sp]}</span>`).join('');
+  const surface = niCss('--surface') || '#16171a';
+  makeChart('chartNutriImpact', {
+    type: 'scatter',
+    data: {
+      datasets: sports.map(sp => ({
+        label: NI_SPORT_LABELS[sp],
+        data: pts.filter(p => p.sport === sp).map(p => ({
+          x: p.factors[f],
+          y: o === 'sensation' ? p.outcomes[o] + niJitter(p.id) : p.outcomes[o],
+          value: p.outcomes[o], date: p.date,
+        })),
+        backgroundColor: niCss('--' + sp),
+        borderColor: surface, borderWidth: 2,
+        pointRadius: 5, pointHoverRadius: 7, pointHitRadius: 10,
+      })),
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => {
+              const d = items[0].raw.date;
+              return items[0].dataset.label + ' · ' + new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+            },
+            label: item => [
+              factor.label + ' : ' + niFmtFactor(f, item.raw.x),
+              TS.NUTRI_OUTCOMES[o].label + ' : ' + niFmtOutcome(o, item.raw.value).replace(/<\/?small>/g, ''),
+            ],
+          },
+        },
+      },
+      scales: {
+        x: { title: { display: true, text: factor.label + ' (' + factor.unit + ')', color: '#9b9ca1', font: { size: 11 } },
+             grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#64666d', font: { size: 10 } } },
+        y: { title: { display: true, text: TS.NUTRI_OUTCOMES[o].label + ' (' + TS.NUTRI_OUTCOMES[o].unit + ')', color: '#9b9ca1', font: { size: 11 } },
+             grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#64666d', font: { size: 10 } },
+             ...(o === 'sensation' ? { min: 0.5, max: 5.5, afterBuildTicks: axis => { axis.ticks = [1, 2, 3, 4, 5].map(v => ({ value: v })); } } : {}) },
+      },
+    },
+  });
+}
+
+function destroyNiChart() {
+  if (charts.chartNutriImpact) { charts.chartNutriImpact.destroy(); charts.chartNutriImpact = null; }
 }
 
 function toggleMenu() { document.getElementById('navLinks').classList.toggle('open'); }

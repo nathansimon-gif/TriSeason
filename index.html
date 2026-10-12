@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012d"></script>
+  <script src="auth-guard.js?v=20261013a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261012d">
+  <link rel="stylesheet" href="style.css?v=20261013a">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -349,7 +349,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261012d"></script>
+<script src="app.js?v=20261013a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -767,8 +767,8 @@ function renderWeeklyChart() {
     type:'line',
     data:{ labels, datasets:[
       { label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#4b9cd3', backgroundColor:'rgba(75,156,211,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#d3a24a', backgroundColor:'rgba(211,162,74,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#d6683f', backgroundColor:'rgba(214,104,63,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#b0922c', backgroundColor:'rgba(176,146,44,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#c4443f', backgroundColor:'rgba(196,68,63,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
     ]},
     options:{ ...CO, onClick:(e,el)=>{ if(el.length){ const ds=['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } } }
   });
@@ -781,8 +781,8 @@ function renderFrequencyChart() {
     type: 'bar',
     data: { labels, datasets: [
       { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#4b9cd3' },
-      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#d3a24a' },
-      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#d6683f' },
+      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#b0922c' },
+      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#c4443f' },
     ]},
     options: {
       ...CO,
@@ -808,8 +808,8 @@ function renderMonthlyChart() {
     type:'bar',
     data:{ labels, datasets:[
       {label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(75,156,211,.75)',  borderRadius:4},
-      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(211,162,74,.75)', borderRadius:4},
-      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(214,104,63,.75)',  borderRadius:4},
+      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(176,146,44,.75)', borderRadius:4},
+      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(196,68,63,.75)',  borderRadius:4},
     ]},
     options:CO
   });
@@ -823,12 +823,12 @@ function renderDonutChart() {
     type:'doughnut',
     data:{
       labels:['Natation','Vélo','Course'],
-      datasets:[{data:vals,backgroundColor:['#4b9cd3','#d3a24a','#d6683f'],borderWidth:0,hoverOffset:8}]
+      datasets:[{data:vals,backgroundColor:['#4b9cd3','#b0922c','#c4443f'],borderWidth:0,hoverOffset:8}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw.toFixed(1)}h (${total?Math.round(ctx.raw/total*100):0}%)`}}}}
   });
   // legend manual
-  const colors=['#4b9cd3','#d3a24a','#d6683f'];
+  const colors=['#4b9cd3','#b0922c','#c4443f'];
   const labels=['Natation','Vélo','Course'];
   document.getElementById('donutLegend').innerHTML=labels.map((l,i)=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">

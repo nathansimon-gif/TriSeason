@@ -33,7 +33,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 
 - `app.js` : couche de données partagée, exposée via `window.TS` (séances,
   compétitions, records, poids, profil, saisons, synchro des compétitions et
-  records automatiques, formats FFTri, helpers de dates et d'allure).
+  records automatiques, formats FFTri, helpers de dates et d'allure,
+  `getNutritionImpact` : croisement nutrition × séances affiché dans Forme).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx.
 - `auth-guard.js` : connexion Firebase, redirige vers `login.html` si personne
   n'est connecté.
@@ -82,6 +83,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 4. **Design** : rester sobre (graphite, IBM Plex, pas de dégradés ni d'emojis
    décoratifs). Utiliser les variables de `style.css` (`--nat`, `--velo`,
    `--run`, `--text-2`…) et le repère `.sport-dot` plutôt que des emojis de sport.
+   Les 3 couleurs de sport ont été validées (daltonisme compris) sur le fond
+   sombre : ne pas les modifier sans revérifier qu'elles restent distinguables.
 5. **Records automatiques** : créés depuis les compétitions (`compRefreshRecordsInData`),
    marqués `auto` + `comp_id`. Ne jamais toucher aux records saisis à la main.
 

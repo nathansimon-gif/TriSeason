@@ -801,7 +801,7 @@ function wkgLevel(wkg) {
   if (wkg < 2.5) return { label: 'Amateur débutant',   color: '#5fb37f' };
   if (wkg < 3)   return { label: 'Amateur régulier',   color: '#5fb37f' };
   if (wkg < 3.5) return { label: 'Bon niveau',         color: '#d4b24c' };
-  if (wkg < 4)   return { label: 'Très bon amateur',   color: '#d6683f' };
+  if (wkg < 4)   return { label: 'Très bon amateur',   color: '#c4443f' };
   if (wkg < 5)   return { label: 'Élite amateur',      color: '#d9574f' };
   return              { label: 'Professionnel',        color: '#9d86cf' };
 }
@@ -809,7 +809,7 @@ function wkgLevel(wkg) {
 function tssLevel(tss) {
   if (tss < 50)  return { label: '🟢 Récupération', color: '#5fb37f' };
   if (tss < 150) return { label: '🟡 Normal',        color: '#d4b24c' };
-  if (tss < 300) return { label: '🟠 Élevé',         color: '#d6683f' };
+  if (tss < 300) return { label: '🟠 Élevé',         color: '#c4443f' };
   return              { label: '🔴 Très élevé',    color: '#d9574f' };
 }
 
@@ -841,6 +841,120 @@ function getSeasonStats() {
     ? (stats.rpe.reduce((a,b)=>a+b,0)/stats.rpe.length).toFixed(1)
     : null;
   return stats;
+}
+
+// ── Nutrition × performance ──────────────────────────────────────────────────
+// Rapproche chaque séance de la nutrition qui l'entoure, pour voir si certains
+// facteurs (glucides la veille, hydratation…) vont avec de meilleures séances.
+// Ce sont des tendances observées sur les données de l'utilisateur, pas une
+// preuve : le type de séance, le sommeil, la météo… comptent aussi.
+const NUTRI_FACTORS = {
+  carbs_prev: { label: 'Glucides la veille',      unit: 'g',    short: 'glucides la veille' },
+  carbs_day:  { label: 'Glucides le jour même',   unit: 'g',    short: 'glucides le jour même' },
+  kcal_prev:  { label: 'Calories la veille',      unit: 'kcal', short: 'calories la veille' },
+  hydration:  { label: 'Hydratation le jour même', unit: 'ml',  short: 'hydratation le jour même' },
+};
+const NUTRI_OUTCOMES = {
+  sensation: { label: 'Ressenti', unit: '/5' },
+  perf:      { label: 'Vitesse vs ton habitude', unit: '%' },
+};
+const NUTRI_MIN_GROUP = 3;      // séances minimum de chaque côté pour comparer
+const NUTRI_MIN_SPORT_REF = 5;  // séances minimum d'un sport pour calculer "ton habitude"
+
+function median(values) {
+  const v = values.slice().sort((a, b) => a - b);
+  if (!v.length) return null;
+  const mid = Math.floor(v.length / 2);
+  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+}
+
+function shiftDay(dateStr, days) {
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() + days);
+  return localDateStr(d);
+}
+
+// Vitesse d'une séance (km/h), quel que soit le sport : plus haut = plus rapide.
+function sessionSpeed(s) {
+  return s.distance > 0 && s.duration > 0 ? s.distance / s.duration : null;
+}
+
+function getNutritionImpact(filters = {}) {
+  const data = getData();
+  const nutri = data.nutrition || {};
+  const meals = nutri.meals || [];
+  const hydration = nutri.hydration || {};
+
+  // Totaux par jour (seulement les jours où au moins un repas est saisi)
+  const daily = {};
+  meals.forEach(m => {
+    if (!m.date) return;
+    const d = daily[m.date] || (daily[m.date] = { carbs: 0, kcal: 0, meals: 0 });
+    d.carbs += m.glucides || 0;
+    d.kcal  += m.kcal || ((m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9);
+    d.meals += 1;
+  });
+
+  let sessions = data.sessions || [];
+  if (filters.from) sessions = sessions.filter(s => s.date >= filters.from);
+  if (filters.to)   sessions = sessions.filter(s => s.date <= filters.to);
+  if (filters.sport) sessions = sessions.filter(s => s.sport === filters.sport);
+
+  // "Ton habitude" = vitesse médiane par sport, sur toutes les séances du sport
+  const refSpeed = {};
+  ['nat', 'velo', 'run'].forEach(sp => {
+    const speeds = (data.sessions || []).filter(s => s.sport === sp).map(sessionSpeed).filter(v => v);
+    refSpeed[sp] = speeds.length >= NUTRI_MIN_SPORT_REF ? median(speeds) : null;
+  });
+
+  const points = sessions.map(s => {
+    const prev = daily[shiftDay(s.date, -1)];
+    const day  = daily[s.date];
+    const speed = sessionSpeed(s);
+    const ref = refSpeed[s.sport];
+    return {
+      id: s.id, date: s.date, sport: s.sport,
+      factors: {
+        carbs_prev: prev && prev.carbs > 0 ? prev.carbs : null,
+        carbs_day:  day && day.carbs > 0 ? day.carbs : null,
+        kcal_prev:  prev && prev.kcal > 0 ? Math.round(prev.kcal) : null,
+        hydration:  hydration[s.date] > 0 ? hydration[s.date] : null,
+      },
+      outcomes: {
+        sensation: s.sensation >= 1 && s.sensation <= 5 ? s.sensation : null,
+        perf: speed && ref ? Math.round((speed / ref - 1) * 1000) / 10 : null,
+      },
+    };
+  });
+
+  // Pour chaque facteur × résultat : séances "au-dessus" vs "en dessous" de la
+  // médiane du facteur (seuil propre à l'utilisateur, pas une norme générale).
+  const comparisons = {};
+  Object.keys(NUTRI_FACTORS).forEach(f => {
+    comparisons[f] = {};
+    Object.keys(NUTRI_OUTCOMES).forEach(o => {
+      const pts = points.filter(p => p.factors[f] !== null && p.outcomes[o] !== null);
+      const threshold = median(pts.map(p => p.factors[f]));
+      const high = pts.filter(p => p.factors[f] > threshold);
+      const low  = pts.filter(p => p.factors[f] <= threshold);
+      const avg = arr => arr.length ? arr.reduce((a, p) => a + p.outcomes[o], 0) / arr.length : null;
+      comparisons[f][o] = {
+        n: pts.length, threshold,
+        high: { n: high.length, avg: avg(high) },
+        low:  { n: low.length,  avg: avg(low) },
+        enough: high.length >= NUTRI_MIN_GROUP && low.length >= NUTRI_MIN_GROUP,
+      };
+    });
+  });
+
+  return {
+    points, comparisons, refSpeed,
+    counts: {
+      sessions: sessions.length,
+      daysWithMeals: Object.keys(daily).length,
+      withNutrition: points.filter(p => Object.values(p.factors).some(v => v !== null)).length,
+    },
+  };
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────────
@@ -934,8 +1048,8 @@ function initTooltips() {
 // ── Sport config ─────────────────────────────────────────────────────────────
 const SPORTS = {
   nat:  { label: 'Natation',  emoji: '<span class="sport-dot sport-dot--nat"></span>', color: '#4b9cd3', unit: 'km', paceLabel: 'Allure', paceUnit: '/100m' },
-  velo: { label: 'Vélo',      emoji: '<span class="sport-dot sport-dot--velo"></span>', color: '#d3a24a', unit: 'km', paceLabel: 'Vitesse', paceUnit: 'km/h' },
-  run:  { label: 'Course',    emoji: '<span class="sport-dot sport-dot--run"></span>', color: '#d6683f', unit: 'km', paceLabel: 'Allure', paceUnit: '/km' },
+  velo: { label: 'Vélo',      emoji: '<span class="sport-dot sport-dot--velo"></span>', color: '#b0922c', unit: 'km', paceLabel: 'Vitesse', paceUnit: 'km/h' },
+  run:  { label: 'Course',    emoji: '<span class="sport-dot sport-dot--run"></span>', color: '#c4443f', unit: 'km', paceLabel: 'Allure', paceUnit: '/km' },
 };
 
 const COMP_TYPES = ['TRI', 'RUN', 'VELO', 'NAT', 'DUATH', 'AQUA'];
@@ -979,7 +1093,7 @@ window.TS = {
   getWeight, saveWeight, deleteWeight, getLatestWeight,
   getProfile, saveProfile,
   calcPace, calcTSS, calcWkg, wkgLevel, tssLevel,
-  getSeasonStats,
+  getSeasonStats, getNutritionImpact, NUTRI_FACTORS, NUTRI_OUTCOMES, NUTRI_MIN_GROUP,
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
