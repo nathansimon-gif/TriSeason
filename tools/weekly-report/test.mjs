@@ -1,6 +1,6 @@
 // Tests du calcul du rapport, sans accès à Firebase : node test.mjs
 import assert from 'node:assert/strict';
-import { computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail } from './report.mjs';
+import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail } from './report.mjs';
 
 // Dates
 assert.equal(lastFullWeekMonday(new Date('2026-10-12T08:00:00Z')), '2026-10-05'); // lundi → lundi précédent
@@ -10,6 +10,13 @@ assert.equal(addDays('2026-10-26', 6), '2026-11-01');
 assert.equal(parisMidnight('2026-10-12').toISOString(), '2026-10-11T22:00:00.000Z'); // heure d'été
 assert.equal(parisMidnight('2026-11-02').toISOString(), '2026-11-01T23:00:00.000Z'); // heure d'hiver
 assert.equal(parisDay(new Date('2026-10-11T22:30:00Z')), '2026-10-12');
+
+// Clé en deux variables (private_key copiée telle quelle du JSON, avec des \n littéraux)
+const sa = loadServiceAccount({ FIREBASE_CLIENT_EMAIL: ' rapport@x.iam.gserviceaccount.com ', FIREBASE_PRIVATE_KEY: '"-----BEGIN PRIVATE KEY-----\\nABC\\n-----END PRIVATE KEY-----\\n"' });
+assert.equal(sa.client_email, 'rapport@x.iam.gserviceaccount.com');
+assert.equal(sa.private_key, '-----BEGIN PRIVATE KEY-----\nABC\n-----END PRIVATE KEY-----\n');
+assert.equal(sa.project_id, 'triseason-3c80c');
+assert.equal(loadServiceAccount({}), null);
 
 // Calcul
 const weekStart = '2026-10-05';
@@ -54,6 +61,7 @@ const r2 = computeReport({ weekStart, users, docs: [{ uid: 'a', data: {} }], met
 const md2 = toMarkdown(r2);
 assert.match(md2, /pas encore de données/);
 assert.match(md2, /Chiffres indisponibles/);
+assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics: null, prevMetrics: null, metricsError: 'Cloud Monitoring 403 : This API method requires billing to be enabled' })), /forfait Blaze/);
 
 // E-mail : conversion HTML et appel à l'API (simulé)
 const html = markdownToHtml(md);
@@ -69,6 +77,10 @@ assert.equal(sent.opts.headers.Authorization, 'Bearer cle-test');
 const payload = JSON.parse(sent.opts.body);
 assert.deepEqual(payload.to, ['moi@exemple.fr']);
 assert.equal(payload.from, 'TriSeason <onboarding@resend.dev>');
+// Sans clé dans le script (secret réseau injecté par le proxy) : pas d'en-tête Authorization
+await sendReportEmail({ subject: 's', markdown: 'x', to: 't@x.fr',
+  fetchImpl: async (url, opts) => { sent = { url, opts }; return { ok: true, json: async () => ({}) }; } });
+assert.equal(sent.opts.headers.Authorization, undefined);
 await assert.rejects(sendReportEmail({ subject: 's', markdown: 'x', to: 't', apiKey: 'k',
   fetchImpl: async () => ({ ok: false, status: 403, text: async () => 'interdit' }) }), /Resend 403/);
 
