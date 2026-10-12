@@ -57,6 +57,12 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - Limite à garder en tête : un document Firestore fait **1 Mo maximum**. Avec
   beaucoup d'historique (surtout la nutrition), il faudra un jour découper les
   données (une collection par type), en particulier avant un usage commercial.
+- Règles de sécurité Firestore (console Firebase, pas dans le dépôt) : seul
+  le propriétaire peut lire/écrire `users/{userId}`. Elles ne couvrent **que ce
+  document**, pas d'éventuelles sous-collections : si on découpe les données en
+  `users/{uid}/sessions/...`, il faudra ajouter
+  `match /users/{userId}/{document=**}` avec la même condition. Un accès
+  nutritionniste demandera aussi de nouvelles règles.
 
 ## Règles à respecter
 
