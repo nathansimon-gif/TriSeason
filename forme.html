@@ -8,7 +8,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
   <script src="auth-guard.js"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#080c14">
+  <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
@@ -20,22 +20,22 @@
       font-size: 10px; font-weight: 700; text-transform: uppercase;
       letter-spacing: .06em; padding: 3px 9px; border-radius: 20px;
     }
-    .confidence-badge--high   { background: rgba(34,212,114,.15); color: var(--green); }
-    .confidence-badge--medium { background: rgba(245,200,74,.15); color: var(--yellow); }
-    .confidence-badge--low    { background: rgba(240,72,74,.15);  color: var(--red); }
+    .confidence-badge--high   { background: rgba(95,179,127,.15); color: var(--green); }
+    .confidence-badge--medium { background: rgba(212,178,76,.15); color: var(--yellow); }
+    .confidence-badge--low    { background: rgba(217,87,79,.15);  color: var(--red); }
     .pred-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 0; border-bottom: 1px solid var(--border);
     }
     .pred-row:last-child { border-bottom: none; }
     .pred-row__dist { font-size: 13px; font-weight: 600; }
-    .pred-row__time { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--accent2); }
+    .pred-row__time { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); }
     .tsb-tile {
       text-align: center; padding: 16px; border-radius: var(--r-sm);
       background: var(--surface2); border: 1px solid var(--border);
     }
-    .tsb-tile__val { font-size: 28px; font-weight: 800; letter-spacing: -.03em; }
-    .tsb-tile__label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
+    .tsb-tile__val { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+    .tsb-tile__label { font-size: 12px; color: var(--text-2); margin-top: 4px; }
     .tsb-tile[data-tip] { cursor: help; }
     .obs-card {
       padding: 12px 14px; background: var(--surface2); border-radius: var(--r-sm);
@@ -44,7 +44,7 @@
     .obs-card__title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
     .obs-card__text  { font-size: 12px; color: var(--text-2); line-height: 1.6; }
     .disclaimer-box {
-      background: rgba(245,200,74,.08); border: 1px solid rgba(245,200,74,.25);
+      background: rgba(212,178,76,.08); border: 1px solid rgba(212,178,76,.25);
       border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
       color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
     }
@@ -52,7 +52,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><div class="nav__logo-icon">◈</div> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
   <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link">Dashboard</a>
     <a href="sport.html"        class="nav__link">Sports</a>
@@ -63,8 +63,8 @@
     <a href="forme.html"        class="nav__link active">Forme</a>
   </div>
   <div class="nav__actions">
-    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil">👤</a>
-    <button class="nav__menu-btn" onclick="toggleMenu()">☰</button>
+    <a href="profile.html" class="btn btn--ghost btn--sm btn--icon" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
+    <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
 </nav>
 
@@ -76,13 +76,13 @@
   </div>
 
   <div class="disclaimer-box">
-    ⚠️ Ces estimations sont basées sur des modèles statistiques génériques (Riegel, Banister) et sur vos propres données. Elles ne remplacent pas un avis d'entraîneur ou de médecin du sport, et leur fiabilité dépend directement du volume de données saisies.
+    Ces estimations sont basées sur des modèles statistiques génériques (Riegel, Banister) et sur vos propres données. Elles ne remplacent pas un avis d'entraîneur ou de médecin du sport, et leur fiabilité dépend directement du volume de données saisies.
   </div>
 
   <!-- ── Prédicteur de temps (Riegel) ── -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
-      <span>🎯 Prédicteur de temps de course</span>
+      <span>Prédicteur de temps de course</span>
       <span class="confidence-badge confidence-badge--high">Fiabilité élevée</span>
       <span class="tip-icon" data-tip="Formule de Riegel : T2 = T1 × (D2/D1)^1.06. Valide surtout en course à pied, à utiliser avec prudence en natation/vélo.">?</span>
     </div>
@@ -90,9 +90,9 @@
       <div class="form-group" style="flex:1;min-width:160px">
         <label class="form-label">Sport</label>
         <select class="form-select" id="predSport" onchange="populatePredSource();renderPrediction()">
-          <option value="run">🏃 Course à pied</option>
-          <option value="nat">🏊 Natation</option>
-          <option value="velo">🚴 Vélo</option>
+          <option value="run">Course à pied</option>
+          <option value="nat">Natation</option>
+          <option value="velo">Vélo</option>
         </select>
       </div>
       <div class="form-group" style="flex:1;min-width:200px">
@@ -106,7 +106,7 @@
   <!-- ── Charge d'entraînement (CTL/ATL/TSB) ── -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
-      <span>📈 Charge d'entraînement & Forme</span>
+      <span>Charge d'entraînement & Forme</span>
       <span class="confidence-badge confidence-badge--high">Méthode établie</span>
       <span class="tip-icon" data-tip="Trois indicateurs pour suivre ta forme : ta condition de fond (CTL), ta fatigue récente (ATL), et ton niveau de fraîcheur du moment (TSB). Survole chaque case pour le détail.">?</span>
     </div>
@@ -131,11 +131,11 @@
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
-  <a href="index.html"        class="mobile-nav__item"><span class="mobile-nav__icon">⊞</span>Dashboard</a>
-  <a href="sessions.html"     class="mobile-nav__item"><span class="mobile-nav__icon">▷</span>Séances</a>
-  <a href="sport.html"        class="mobile-nav__item"><span class="mobile-nav__icon">◎</span>Sports</a>
-  <a href="nutrition.html"    class="mobile-nav__item"><span class="mobile-nav__icon">🥗</span>Nutrition</a>
-  <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon">👤</span>Profil</a>
+  <a href="index.html"        class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>Dashboard</a>
+  <a href="sessions.html"     class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>Séances</a>
+  <a href="sport.html"        class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>Sports</a>
+  <a href="nutrition.html"    class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8M7 3v5M11 3v5M9 3v5"/><path d="M17 21V3c-2 1-3 4-3 8h3"/></svg></span>Nutrition</a>
+  <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 
 <script src="app.js"></script>
@@ -323,17 +323,17 @@ function renderPMC() {
     data: {
       labels: recent.map(s => new Date(s.day+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
       datasets: [
-        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#5b73f5', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#f4613a', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#22d472', backgroundColor:'rgba(34,212,114,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
+        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#ebeae6', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#d6683f', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#5fb37f', backgroundColor:'rgba(95,179,127,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
       ]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#8496b8', font:{size:11}, boxWidth:8 } } },
+      plugins:{ legend:{ labels:{ color:'#9b9ca1', font:{size:11}, boxWidth:8 } } },
       scales:{
-        x:{ grid:{color:'rgba(30,45,71,.5)'}, ticks:{color:'#3d5070', font:{size:9}, maxTicksLimit:10, maxRotation:0} },
-        y:{ grid:{color:'rgba(30,45,71,.5)'}, ticks:{color:'#3d5070', font:{size:10}} }
+        x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:9}, maxTicksLimit:10, maxRotation:0} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:10}} }
       }
     }
   });
@@ -396,7 +396,7 @@ function renderObservations() {
   if (comps.length >= 2) {
     const achieved = comps.filter(c => timeToSec(c.actual_time) <= timeToSec(c.goal_time)).length;
     observations.push({
-      title: '🏁 Taux de réussite des objectifs',
+      title: 'Taux de réussite des objectifs',
       text: `Vous avez atteint votre objectif de temps sur ${achieved} course${achieved>1?'s':''} sur ${comps.length} renseignée${comps.length>1?'s':''} (${Math.round(achieved/comps.length*100)}%). ${comps.length < 5 ? "Échantillon encore restreint — ce taux se précisera avec plus de courses." : ""}`
     });
   }
@@ -420,7 +420,7 @@ function renderObservations() {
           const color = done ? 'var(--green)' : 'var(--accent2)';
           return '<div style="margin-bottom:10px">'
             + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'
-            + '<span style="color:var(--text-2)">' + (done ? '✅ ' : '') + r.label + '</span>'
+            + '<span style="color:var(--text-2)">' + (done ? '' : '') + r.label + '</span>'
             + '<span style="font-weight:700;color:' + color + '">' + r.current + ' / ' + r.target + '</span>'
             + '</div>'
             + '<div class="progress"><div class="progress__bar" style="width:' + pct + '%;background:' + color + '"></div></div>'

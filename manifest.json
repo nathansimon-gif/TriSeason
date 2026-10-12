@@ -4,8 +4,8 @@
   "description": "Suivi de saison triathlon — natation, vélo, course",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#080c14",
-  "theme_color": "#080c14",
+  "background_color": "#0e0f11",
+  "theme_color": "#0e0f11",
   "orientation": "portrait-primary",
   "icons": [
     {
