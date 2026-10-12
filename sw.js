@@ -1,5 +1,5 @@
 // TriSeason Tracker — Service Worker
-const CACHE = 'triseason-v3';
+const CACHE = 'triseason-v4';
 const ASSETS = [
   '/', '/index.html', '/sport.html', '/sessions.html',
   '/competitions.html', '/nutrition.html', '/records.html',
@@ -26,8 +26,11 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // 'no-cache' : on revalide auprès du serveur au lieu de reprendre une copie du
+  // cache HTTP, pour ne jamais mélanger une page récente avec un ancien app.js.
+  const sameOrigin = new URL(e.request.url).origin === location.origin;
   e.respondWith(
-    fetch(e.request).then(res => {
+    fetch(e.request, sameOrigin ? { cache: 'no-cache' } : undefined).then(res => {
       if (res.ok && e.request.method === 'GET') {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
