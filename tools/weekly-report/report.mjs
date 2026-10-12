@@ -53,7 +53,7 @@ export function parisMidnight(day) {
 // users   : [{ uid, creationTime, lastSignInTime, providers: [] }]   (Firebase Auth)
 // docs    : [{ uid, activeDays: [], data: {...}, sizeBytes }]         (Firestore users/{uid})
 // metrics : { reads: {day: n}, writes: {day: n}, deletes: {day: n} } ou null
-export function computeReport({ weekStart, users, docs, metrics, prevMetrics }) {
+export function computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError = null }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekEnd = days[6];
   const prevStart = addDays(weekStart, -7);
@@ -114,7 +114,7 @@ export function computeReport({ weekStart, users, docs, metrics, prevMetrics }) 
       tracked: docs.some(d => (d.activeDays || []).length > 0),
     },
     content: { sessionsWeek, sessionsTotal, bySport, mealsWeek, compsWeek, usersLoggingSessions, usersLoggingMeals },
-    firestore, prevFirestore,
+    firestore, prevFirestore, metricsError,
     storage: { biggestBytes: biggest.sizeBytes, biggestPct: Math.round(biggest.sizeBytes / DOC_LIMIT_BYTES * 1000) / 10 },
   };
 }
@@ -156,7 +156,14 @@ export function toMarkdown(r) {
     L.push(`- Suppressions : **${nf(r.firestore.deletes)}**`);
     L.push(`- Repère quota gratuit (plan Spark) : 50 000 lectures et 20 000 écritures **par jour**. Jour le plus chargé cette semaine : ${nf(Math.max(...r.firestore.readsByDay))} lectures, ${nf(Math.max(...r.firestore.writesByDay))} écritures.`);
   } else {
-    L.push('- Chiffres indisponibles (rôle « Monitoring Viewer » manquant sur la clé, ou API Cloud Monitoring désactivée).');
+    const err = r.metricsError || '';
+    if (/billing/i.test(err)) {
+      L.push('- Chiffres indisponibles : Google ne les fournit que si la facturation est activée sur le projet (forfait Blaze). En attendant, ils restent consultables dans la console Firebase, onglet Firestore → Utilisation.');
+    } else if (/403|permission/i.test(err)) {
+      L.push('- Chiffres indisponibles : la clé n’a pas le rôle « Lecteur Monitoring ».');
+    } else {
+      L.push('- Chiffres indisponibles' + (err ? ' : ' + err.slice(0, 160) : '.'));
+    }
   }
   L.push('');
   L.push('## Contenu saisi cette semaine');
@@ -305,9 +312,8 @@ async function main() {
     prevMetrics = await fetchFirestoreMetrics(credential, sa.project_id, addDays(weekStart, -7), weekStart);
   } catch (e) { metricsError = e.message; }
 
-  const report = computeReport({ weekStart, users, docs, metrics, prevMetrics });
-  let md = toMarkdown(report);
-  if (metricsError) md += `\n\n_Lectures/écritures indisponibles : ${metricsError}_`;
+  const report = computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError });
+  const md = toMarkdown(report);
   console.log(md);
   if (process.argv.includes('--email')) {
     const to = process.env.REPORT_EMAIL_TO, apiKey = process.env.RESEND_API_KEY;

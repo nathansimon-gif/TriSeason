@@ -61,6 +61,7 @@ const r2 = computeReport({ weekStart, users, docs: [{ uid: 'a', data: {} }], met
 const md2 = toMarkdown(r2);
 assert.match(md2, /pas encore de données/);
 assert.match(md2, /Chiffres indisponibles/);
+assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics: null, prevMetrics: null, metricsError: 'Cloud Monitoring 403 : This API method requires billing to be enabled' })), /forfait Blaze/);
 
 // E-mail : conversion HTML et appel à l'API (simulé)
 const html = markdownToHtml(md);
