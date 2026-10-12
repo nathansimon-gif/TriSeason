@@ -771,18 +771,13 @@ function saveProfile(profile) {
 // ── Calculations ──────────────────────────────────────────────────────────────
 function calcPace(durH, distKm, sport) {
   if (!durH || !distKm) return null;
-  if (sport === 'run') {
-    const minPerKm = durH * 60 / distKm;
-    const m = Math.floor(minPerKm);
-    const s = Math.round((minPerKm - m) * 60);
-    return `${m}'${String(s).padStart(2, '0')}"`;
-  }
-  if (sport === 'nat') {
-    const minPer100 = durH * 60 / (distKm * 10);
-    const m = Math.floor(minPer100);
-    const s = Math.round((minPer100 - m) * 60);
-    return `${m}'${String(s).padStart(2, '0')}"`;
-  }
+  // Arrondi à la seconde AVANT de séparer minutes et secondes (sinon 3'59,7" → 3'60")
+  const fmtMinSec = (totalSec) => {
+    const sec = Math.round(totalSec);
+    return `${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, '0')}"`;
+  };
+  if (sport === 'run') return fmtMinSec(durH * 3600 / distKm);
+  if (sport === 'nat') return fmtMinSec(durH * 3600 / (distKm * 10));
   if (sport === 'velo') {
     return `${(distKm / durH).toFixed(1)} km/h`;
   }

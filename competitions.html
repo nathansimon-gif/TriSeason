@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012b"></script>
+  <script src="auth-guard.js?v=20261012d"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Compétitions</title>
-  <link rel="stylesheet" href="style.css?v=20261012b">
+  <link rel="stylesheet" href="style.css?v=20261012d">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -72,6 +72,21 @@
     <button class="btn btn--ghost btn--sm filter-btn" onclick="filterComps('upcoming', this)">À venir</button>
     <button class="btn btn--ghost btn--sm filter-btn" onclick="filterComps('done', this)">Réalisées</button>
     <button class="btn btn--ghost btn--sm filter-btn" onclick="filterComps('goal_ok', this)">Objectif atteint</button>
+    <label style="display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:var(--text-2)">
+      Trier par
+      <select class="form-select" id="compSort" onchange="onSortChange()" style="width:auto">
+        <option value="date_desc">Date (récentes d'abord)</option>
+        <option value="date_asc">Date (anciennes d'abord)</option>
+        <option value="time_asc">Temps réalisé (plus court)</option>
+        <option value="time_desc">Temps réalisé (plus long)</option>
+        <option value="dist_desc">Distance (plus longue)</option>
+        <option value="dist_asc">Distance (plus courte)</option>
+        <option value="gap_asc">Écart à l'objectif (meilleur)</option>
+        <option value="prio">Priorité (A, B, C)</option>
+        <option value="type">Type de course</option>
+        <option value="name">Nom (A → Z)</option>
+      </select>
+    </label>
   </div>
 
   <div id="compList" class="stack"></div>
@@ -166,7 +181,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261012b"></script>
+<script src="app.js?v=20261012d"></script>
 <script>
 let editId = null;
 let currentFilter = 'all';
@@ -356,12 +371,52 @@ function renderCompPrep(c) {
     + '</div>';
 }
 
+// ── Tri de la liste ─────────────────────────────────────────────────────────
+// Le choix est mémorisé sur cet appareil. Les courses sans la valeur triée
+// (pas de temps réalisé, pas de distance…) passent toujours en fin de liste.
+const SORT_KEY = 'triseason_comp_sort';
+let currentSort = 'date_desc';
+try { currentSort = localStorage.getItem(SORT_KEY) || 'date_desc'; } catch {}
+
+function onSortChange() {
+  currentSort = document.getElementById('compSort').value;
+  try { localStorage.setItem(SORT_KEY, currentSort); } catch {}
+  renderList();
+}
+
+function sortCompetitions(comps) {
+  const num = (v) => (v > 0 ? v : null);
+  const getters = {
+    date: c => c.date || null,
+    time: c => num(timeToSec(c.actual_time)),
+    dist: c => num(parseFloat(c.distance)),
+    gap:  c => (c.actual_time && c.goal_time) ? timeToSec(c.actual_time) - timeToSec(c.goal_time) : null,
+    prio: c => c.priority || 'B',
+    type: c => c.type || null,
+    name: c => (c.name || '').toLocaleLowerCase('fr') || null,
+  };
+  const [field, dir] = currentSort.split('_');
+  const get = getters[field] || getters.date;
+  const sign = dir === 'desc' ? -1 : 1;
+  return comps.slice().sort((a, b) => {
+    const va = get(a), vb = get(b);
+    if (va === null && vb === null) return (b.date || '').localeCompare(a.date || '');
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    const cmp = typeof va === 'string' ? va.localeCompare(vb, 'fr', { numeric: true }) : va - vb;
+    return cmp !== 0 ? sign * cmp : (b.date || '').localeCompare(a.date || '');
+  });
+}
+
 function renderList() {
   const today = TS.localDateStr();
   let comps = getFilteredCompetitions();
   if (currentFilter === 'upcoming') comps = comps.filter(c=>c.date>=today);
   else if (currentFilter === 'done') comps = comps.filter(c=>c.date<today||c.actual_time);
   else if (currentFilter === 'goal_ok') comps = comps.filter(c=>c.actual_time&&c.goal_time&&timeToSec(c.actual_time)<=timeToSec(c.goal_time));
+  comps = sortCompetitions(comps);
+  const sortSel = document.getElementById('compSort');
+  if (sortSel && sortSel.value !== currentSort) sortSel.value = currentSort;
 
   const el = document.getElementById('compList');
   if (!comps.length) {
@@ -394,14 +449,14 @@ function renderList() {
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-2)">
           ${c.distance ? `<span>${c.distance} km</span>` : ''}
           ${c.goal_time ? `<span>Objectif : <b style="font-family:var(--mono)">${c.goal_time}</b></span>` : ''}
-          ${hasDone ? `<span>Réalisé : <b style="font-family:var(--mono);color:${goalOk?'var(--green)':'var(--red)'}">${c.actual_time}</b></span>` : ''}
+          ${hasDone ? `<span>Réalisé : <b style="font-family:var(--mono);color:${!c.goal_time?'var(--text)':goalOk?'var(--green)':'var(--red)'}">${c.actual_time}</b></span>` : ''}
           ${pace ? `<span>Allure : <b style="font-family:var(--mono)">${pace}</b></span>` : ''}
           ${ecart ? `<span>Écart : <b style="color:${ecart.positive?'var(--green)':'var(--red)'}">${ecart.label}</b></span>` : ''}
         </div>
         ${c.notes ? `<div style="font-size:11px;color:var(--text-3);margin-top:4px;font-style:italic">${c.notes}</div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-        ${hasDone ? `<div style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:var(--r-sm);border:1px solid ${goalOk ? 'var(--green)' : 'var(--red)'};color:${goalOk ? 'var(--green)' : 'var(--red)'}">${goalOk ? 'Objectif atteint' : 'Objectif manqué'}</div>` : `<div style="font-size:11px;color:var(--text-3)">À venir</div>`}
+        ${hasDone && c.goal_time ? `<div style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:var(--r-sm);border:1px solid ${goalOk ? 'var(--green)' : 'var(--red)'};color:${goalOk ? 'var(--green)' : 'var(--red)'}">${goalOk ? 'Objectif atteint' : 'Objectif manqué'}</div>` : hasDone ? `<div style="font-size:11px;color:var(--text-2)">Terminée</div>` : `<div style="font-size:11px;color:var(--text-3)">À venir</div>`}
         <button class="btn btn--ghost btn--sm" onclick="editComp('${c.id}')">Modifier</button>
         <button class="btn btn--ghost btn--sm" onclick="openLinkModal('${c.id}')">Séances</button>
       </div>
