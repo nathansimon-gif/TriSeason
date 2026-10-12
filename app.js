@@ -36,7 +36,7 @@ function migrateWeeksToSessions() {
 
   for (const [weekKey, wk] of Object.entries(data.weeks)) {
     const monday = getWeekMonday(weekKey);
-    const dateStr = monday.toISOString().split('T')[0];
+    const dateStr = localDateStr(monday);
 
     for (const sport of ['nat', 'velo', 'run']) {
       const d = wk[sport];
@@ -132,9 +132,27 @@ function saveData(data) {
 
 function getData() { return loadData(); }
 
+// ── Date helpers ─────────────────────────────────────────────────────────────
+// Les dates de séance sont stockées en 'YYYY-MM-DD' (jour local). Ne jamais
+// passer par toISOString() pour les produire : il convertit en UTC et, en France,
+// le lundi 00:00 devient le dimanche 22:00/23:00 → décalage d'un jour.
+function localDateStr(date = new Date()) {
+  const d = parseLocalDate(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 'YYYY-MM-DD' → minuit local (new Date('YYYY-MM-DD') le lit comme minuit UTC).
+function parseLocalDate(date) {
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(date);
+}
+
 // ── Week helpers ─────────────────────────────────────────────────────────────
 function getISOWeek(date) {
-  const d = new Date(date);
+  const d = parseLocalDate(date);
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
   const week1 = new Date(d.getFullYear(), 0, 4);
@@ -157,8 +175,7 @@ function formatDate(date) {
 }
 
 function formatDateInput(date) {
-  const d = new Date(date);
-  return d.toISOString().split('T')[0];
+  return localDateStr(date);
 }
 
 function getLast12Weeks() {
@@ -191,8 +208,8 @@ function getWeek(weekKey) {
   // Aggregate from individual sessions (source of truth)
   const monday = getWeekMonday(weekKey);
   const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-  const from = monday.toISOString().split('T')[0];
-  const to   = sunday.toISOString().split('T')[0];
+  const from = localDateStr(monday);
+  const to   = localDateStr(sunday);
   const sessions = (data.sessions || []).filter(s => s.date >= from && s.date <= to);
 
   const result = {
@@ -831,7 +848,7 @@ function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `triseason-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `triseason-backup-${localDateStr()}.json`;
   a.click();
 }
 
@@ -950,7 +967,7 @@ migrateWeeksToSessions();
 window.TS = {
   getData, saveData, loadData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
-  getWeekMonday, formatDate, formatDateInput, getISOWeek,
+  getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,
   getSessions, saveSession, deleteSession,
   getCompetitions, saveCompetition, deleteCompetition,
   syncCompetition, refreshCompetitionRecords, linkSessionsToCompetition,

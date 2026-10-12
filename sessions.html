@@ -656,7 +656,7 @@ function openSessionModal(session = null) {
   editId = session?.id || null;
   document.getElementById('modalTitle').textContent = session ? 'Modifier la séance' : 'Nouvelle séance';
   document.getElementById('deleteBtn').style.display = session ? 'inline-flex' : 'none';
-  document.getElementById('s_date').value     = session?.date     || new Date().toISOString().split('T')[0];
+  document.getElementById('s_date').value     = session?.date     || TS.localDateStr();
   document.getElementById('s_sport').value    = session?.sport    || 'velo';
   if (session?.duration) {
     const hrs  = Math.floor(session.duration);

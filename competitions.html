@@ -225,7 +225,7 @@ function renderAll() {
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function renderKPIs() {
   const comps = getFilteredCompetitions();
-  const today = new Date().toISOString().split('T')[0];
+  const today = TS.localDateStr();
   const done     = comps.filter(c => c.actual_time);
   const upcoming = comps.filter(c => c.date >= today && !c.actual_time);
   const goalOk   = done.filter(c => c.goal_time && timeToSec(c.actual_time) <= timeToSec(c.goal_time));
@@ -357,7 +357,7 @@ function renderCompPrep(c) {
 }
 
 function renderList() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = TS.localDateStr();
   let comps = getFilteredCompetitions();
   if (currentFilter === 'upcoming') comps = comps.filter(c=>c.date>=today);
   else if (currentFilter === 'done') comps = comps.filter(c=>c.date<today||c.actual_time);
@@ -489,7 +489,7 @@ function openCompModal(comp=null) {
   editId = comp?.id || null;
   document.getElementById('compModalTitle').textContent = comp ? 'Modifier la course' : 'Nouvelle course';
   document.getElementById('deleteCompBtn').style.display = comp ? 'inline-flex' : 'none';
-  document.getElementById('c_date').value     = comp?.date     || new Date().toISOString().split('T')[0];
+  document.getElementById('c_date').value     = comp?.date     || TS.localDateStr();
   document.getElementById('c_type').value     = comp?.type     || 'TRI';
   document.getElementById('c_name').value     = comp?.name     || '';
   document.getElementById('c_dist').value     = comp?.distance || '';
@@ -540,7 +540,7 @@ function saveCompForm() {
   TS.toast('Course enregistrée' + (recMsg ? ' · ' + recMsg : ''));
 
   // Nouvelle course multisport déjà courue : on propose tout de suite d'associer ses séances
-  const today = new Date().toISOString().split('T')[0];
+  const today = TS.localDateStr();
   if (wasNew && ['TRI','DUATH','AQUA'].includes(saved.type) && saved.date <= today && linkCandidates(saved).length) {
     setTimeout(() => openLinkModal(saved.id), 200);
   }
