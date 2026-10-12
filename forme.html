@@ -6,13 +6,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013b"></script>
+  <script src="auth-guard.js?v=20261013c"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261013b">
+  <link rel="stylesheet" href="style.css?v=20261013c">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -185,7 +185,7 @@
   <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 
-<script src="app.js?v=20261013b"></script>
+<script src="app.js?v=20261013c"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -535,19 +535,38 @@ function renderNutritionImpact() {
     const factorHint = f === 'hydration'
       ? 'note ton <b>hydratation</b> dans Nutrition les jours où tu t’entraînes'
       : 'saisis tes <b>repas avec les glucides</b> dans Nutrition' + (f.endsWith('_prev') ? ', surtout la veille de tes séances' : ' les jours où tu t’entraînes');
-    const pct = Math.min(100, Math.round(cmp.n / need * 100));
+    const plural = (n, w) => n + ' ' + w + (n > 1 ? 's' : '');
+    let intro;
+    if (cmp.n < need) {
+      intro = `Il faut au moins <b>${need} séances</b> avec à la fois « ${factor.short} » et un résultat pour comparer.
+        Pour y arriver, ${factorHint}, et ${outcomeHint}.`;
+    } else if (cmp.distinctValues < 2) {
+      intro = `Tes ${cmp.n} séances utilisables ont toutes la même valeur de « ${factor.short} » : il n’y a rien à comparer.
+        Il faut des séances après des journées différentes : ${factorHint}.`;
+    } else {
+      intro = `Tu as ${cmp.n} séances utilisables, mais elles dépendent de trop peu de journées différentes
+        (plusieurs séances après la même journée ont la même valeur). Pour comparer, il faut au moins
+        <b>${min} séances de chaque côté</b> de ta valeur habituelle. Continue à ${factorHint.replace(/^saisis/, 'saisir').replace(/^note/, 'noter')}.`;
+    }
+    const bar = (label, n, target = min) => {
+      const pct = Math.min(100, Math.round(n / target * 100));
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="color:var(--text-2)">${label}</span>
+          <span style="font-weight:600">${Math.min(n, target)} / ${target}</span>
+        </div>
+        <div class="progress"><div class="progress__bar" style="width:${pct}%"></div></div>
+      </div>`;
+    };
+    const groups = cmp.threshold === null
+      ? ''
+      : bar(`Séances avec plus ${niDe(factor.short)} (&gt; ${niFmtFactor(f, cmp.threshold)})`, cmp.high.n)
+        + bar(`Séances avec moins (≤ ${niFmtFactor(f, cmp.threshold)})`, cmp.low.n);
     destroyNiChart();
     body.innerHTML = `
-      <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
-        Il faut au moins <b>${need} séances</b> avec à la fois « ${factor.short} » et un résultat pour comparer.
-        Pour y arriver, ${factorHint}, et ${outcomeHint}.
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-        <span style="color:var(--text-2)">Séances utilisables</span>
-        <span style="font-weight:600">${cmp.n} / ${need}</span>
-      </div>
-      <div class="progress"><div class="progress__bar" style="width:${pct}%;background:var(--text-2)"></div></div>
-      <div class="ni-note">${res.counts.daysWithMeals} jour${res.counts.daysWithMeals > 1 ? 's' : ''} avec des repas saisis · ${res.counts.sessions} séance${res.counts.sessions > 1 ? 's' : ''} sur la période.</div>`;
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">${intro}</div>
+      ${cmp.n < need ? bar('Séances utilisables', cmp.n, need) : groups}
+      <div class="ni-note">${plural(res.counts.daysWithMeals, 'jour')} avec des repas saisis · ${plural(res.counts.sessions, 'séance')} sur la période.</div>`;
     return;
   }
 
