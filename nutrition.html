@@ -711,7 +711,7 @@ const FOODS = [
   { keys:["quinoa"],                                                  g:21, p:4,   l:2,   portion:150, unit:"g" },
   { keys:["boulgour","blé","semoule","couscous"],                     g:23, p:3.5, l:0.5, portion:150, unit:"g" },
   { keys:["sarrasin","galette de sarrasin"],                          g:20, p:3.4, l:0.9, portion:100, unit:"g" },
-  { keys:["maïs","polenta","maïzena"],                                g:19, p:2,   l:0.5, portion:150, unit:"g" },
+  { keys:["maïs","polenta","maïzena"],                                g:19, p:2,   l:0.5, portion:150, unit:"g", ing:true },
   { keys:["céréale","corn flakes"],                                   g:74, p:8,   l:3,   portion:40,  unit:"g" },
   { keys:["crêpe","pancake"],                                         g:20, p:3.5, l:4,   portion:2,   unit:"unité", name:"crêpe" },
   { keys:["galette de riz","galette de maïs"],                        g:80, p:7,   l:2,   portion:1,   unit:"unité", name:"galette" },
@@ -719,7 +719,7 @@ const FOODS = [
   { keys:["croissant"],                                               g:46, p:8,   l:21,  portion:1,   unit:"unité", name:"croissant" },
   // ── LÉGUMINEUSES ─────────────────────────────────────────────────────────
   { keys:["lentille","lentilles"],                                    g:20, p:9,   l:0.5, portion:150, unit:"g" },
-  { keys:["pois chiche","houmous"],                                   g:17, p:5,   l:2.5, portion:150, unit:"g" },
+  { keys:["pois chiche","pois chiches","houmous"],                                   g:17, p:5,   l:2.5, portion:150, unit:"g" },
   { keys:["haricot rouge","haricot blanc","haricot"],                 g:14, p:7,   l:0.5, portion:150, unit:"g" },
   { keys:["fève","édamame"],                                          g:10, p:7,   l:0.4, portion:100, unit:"g" },
   { keys:["soja","pousse de soja"],                                   g:4,  p:7,   l:2,   portion:100, unit:"g" },
@@ -731,17 +731,17 @@ const FOODS = [
   { keys:["veau"],                                                    g:0,  p:28,  l:5,   portion:120, unit:"g" },
   { keys:["porc","côte de porc","rôti de porc"],                      g:0,  p:24,  l:10,  portion:120, unit:"g" },
   { keys:["agneau"],                                                  g:0,  p:22,  l:16,  portion:120, unit:"g" },
-  { keys:["jambon blanc","jambon cuit"],                              g:0,  p:17,  l:4,   portion:60,  unit:"g" },
-  { keys:["jambon sec","prosciutto","serrano"],                       g:0,  p:25,  l:10,  portion:40,  unit:"g" },
-  { keys:["bacon","lardons"],                                         g:0,  p:15,  l:20,  portion:30,  unit:"g" },
-  { keys:["saucisse","merguez","chipolata"],                          g:1,  p:12,  l:20,  portion:80,  unit:"g" },
+  { keys:["jambon blanc","jambon cuit"],                              g:0,  p:17,  l:4,   portion:60,  unit:"g", ing:true },
+  { keys:["jambon sec","prosciutto","serrano"],                       g:0,  p:25,  l:10,  portion:40,  unit:"g", ing:true },
+  { keys:["bacon","lardons"],                                         g:0,  p:15,  l:20,  portion:30,  unit:"g", ing:true },
+  { keys:["saucisse","merguez","chipolata"],                          g:1,  p:12,  l:20,  portion:80,  unit:"g", ing:true },
   // ── POISSONS & FRUITS DE MER ──────────────────────────────────────────────
-  { keys:["saumon","saumon fumé"],                                    g:0,  p:20,  l:13,  portion:150, unit:"g" },
-  { keys:["thon","thon en conserve"],                                 g:0,  p:26,  l:1,   portion:100, unit:"g" },
-  { keys:["cabillaud","colin","lieu","merlu","daurade","bar"],        g:0,  p:18,  l:1,   portion:150, unit:"g" },
-  { keys:["sardine","maquereau"],                                     g:0,  p:19,  l:12,  portion:100, unit:"g" },
-  { keys:["crevette","crevettes"],                                    g:0,  p:18,  l:1.5, portion:100, unit:"g" },
-  { keys:["moule","moules"],                                          g:4,  p:12,  l:2,   portion:150, unit:"g" },
+  { keys:["saumon"],                                    g:0,  p:20,  l:13,  portion:150, unit:"g", ing:true },
+  { keys:["thon","thon en conserve"],                                 g:0,  p:26,  l:1,   portion:100, unit:"g", ing:true },
+  { keys:["cabillaud","colin","lieu","merlu","daurade","bar"],        g:0,  p:18,  l:1,   portion:150, unit:"g", ing:true },
+  { keys:["sardine","maquereau"],                                     g:0,  p:19,  l:12,  portion:100, unit:"g", ing:true },
+  { keys:["crevette","crevettes"],                                    g:0,  p:18,  l:1.5, portion:100, unit:"g", ing:true },
+  { keys:["moule","moules"],                                          g:4,  p:12,  l:2,   portion:150, unit:"g", ing:true },
   // ── OEUFS & PRODUITS LAITIERS ─────────────────────────────────────────────
   { keys:["oeuf","omelette"],                                         g:0.5,p:6.5, l:5,   portion:1,   unit:"unité", name:"oeuf" },
   { keys:["oeuf dur"],                                                g:0.5,p:6.5, l:5,   portion:1,   unit:"unité", name:"oeuf dur" },
@@ -753,9 +753,20 @@ const FOODS = [
   { keys:["skyr"],                                                    g:4,  p:11,  l:0.3, portion:150, unit:"g" },
   { keys:["fromage blanc","faisselle"],                               g:4,  p:8,   l:0.5, portion:200, unit:"g" },
   { keys:["cottage cheese","cottage"],                                g:3,  p:11,  l:4,   portion:150, unit:"g" },
-  { keys:["fromage","emmental","comté","gruyère","cheddar","mozzarella"], g:0, p:25, l:30, portion:30, unit:"g" },
-  { keys:["brie","camembert","roquefort","chèvre"],                   g:0,  p:18,  l:25,  portion:40,  unit:"g" },
-  { keys:["parmesan"],                                                g:0,  p:36,  l:28,  portion:20,  unit:"g" },
+  // ── FROMAGES (ing:true = ingrédient ignoré s'il est déjà dans un plat : pizza, quiche...) ──
+  { keys:["fromage","fromage râpé","fromage rapé","gruyère râpé","emmental râpé"], g:0.5, p:25, l:30, portion:30, unit:"g", ing:true },
+  { keys:["emmental","comté","comte","gruyère","beaufort","abondance","gouda","edam","mimolette","maasdam","leerdammer","cheddar","fromage à raclette"], g:0.5, p:27, l:30, portion:30, unit:"g", ing:true },
+  { keys:["cantal","salers","tomme","saint-nectaire","saint nectaire","reblochon","morbier","munster","maroilles","livarot","pont-l'évêque","port-salut","ossau-iraty","fromage de brebis","manchego"], g:0.5, p:23, l:28, portion:30, unit:"g", ing:true },
+  { keys:["brie","camembert","coulommiers","chaource","brillat-savarin","neufchâtel","fromage à pâte molle"], g:0.5, p:20, l:26, portion:40, unit:"g", ing:true },
+  { keys:["roquefort","bleu","bleu d'auvergne","fourme d'ambert","gorgonzola","stilton","fromage bleu"], g:0.5, p:19, l:31, portion:30, unit:"g", ing:true },
+  { keys:["chèvre","fromage de chèvre","bûche de chèvre","crottin","crottin de chavignol","sainte-maure","picodon","rocamadour","cabécou","chèvre frais","chèvre chaud"], g:1, p:20, l:26, portion:30, unit:"g", ing:true },
+  { keys:["mozzarella","mozza","burrata","bocconcini","mozzarella di bufala"], g:1, p:18, l:20, portion:60, unit:"g", ing:true },
+  { keys:["feta","halloumi","fromage grec"], g:1, p:17, l:23, portion:40, unit:"g", ing:true },
+  { keys:["ricotta","brousse"], g:3, p:11, l:10, portion:60, unit:"g", ing:true },
+  { keys:["mascarpone"], g:4, p:5, l:42, portion:30, unit:"g", ing:true },
+  { keys:["boursin","philadelphia","cream cheese","saint-môret","saint moret","kiri","vache qui rit","fromage à tartiner","fromage fondu","fromage frais à tartiner"], g:4, p:8, l:26, portion:20, unit:"g", ing:true },
+  { keys:["parmesan","parmigiano","grana padano","pecorino","parmesan râpé"], g:0, p:36, l:28, portion:20, unit:"g", ing:true },
+  { keys:["plateau de fromages","plateau de fromage","plateau fromage"], g:0.5, p:24, l:28, portion:100, unit:"g", name:"plateau de fromages" },
   { keys:["crème fraîche","crème"],                                   g:3,  p:2,   l:25,  portion:30,  unit:"g" },
   // ── PROTEINES VEGETALES & SUPPLEMENTS ───────────────────────────────────
   { keys:["tofu"],                                                    g:1,  p:8,   l:4,   portion:150, unit:"g" },
@@ -768,7 +779,7 @@ const FOODS = [
   { keys:["huile olive","huile de coco","huile de tournesol","huile"], g:0, p:0, l:14, portion:10, unit:"g" },
   { keys:["beurre"],                                                  g:0,  p:0.5, l:18,  portion:10,  unit:"g" },
   { keys:["margarine"],                                               g:0,  p:0,   l:16,  portion:10,  unit:"g" },
-  { keys:["avocat"],                                                  g:2,  p:1.5, l:15,  portion:100, unit:"g" },
+  { keys:["avocat"],                                                  g:2,  p:1.5, l:15,  portion:100, unit:"g", ing:true },
   { keys:["amande","amandes"],                                        g:6,  p:6,   l:14,  portion:30,  unit:"g" },
   { keys:["noix de cajou","cajou"],                                   g:9,  p:5,   l:12,  portion:30,  unit:"g" },
   { keys:["noix de grenoble","noix"],                                 g:4,  p:4,   l:16,  portion:30,  unit:"g" },
@@ -791,23 +802,23 @@ const FOODS = [
   { keys:["melon","pastèque"],                                        g:9,  p:0.7, l:0.2, portion:200, unit:"g" },
   { keys:["pruneau","datte","figue sèche","abricot sec"],             g:64, p:2.5, l:0.4, portion:30,  unit:"g" },
   // ── LEGUMES ───────────────────────────────────────────────────────────────
-  { keys:["brocoli","brocolis"],                                      g:7,  p:3,   l:0.4, portion:200, unit:"g" },
-  { keys:["épinard","épinards"],                                      g:4,  p:3,   l:0.4, portion:150, unit:"g" },
-  { keys:["courgette","courgettes"],                                  g:3.5,p:1.2, l:0.3, portion:150, unit:"g" },
-  { keys:["aubergine"],                                               g:6,  p:1,   l:0.2, portion:150, unit:"g" },
-  { keys:["poivron","poivrons"],                                      g:6,  p:1,   l:0.3, portion:150, unit:"g" },
-  { keys:["tomate","tomates"],                                        g:4,  p:0.9, l:0.2, portion:150, unit:"g" },
-  { keys:["carotte","carottes"],                                      g:10, p:1,   l:0.2, portion:150, unit:"g" },
-  { keys:["concombre"],                                               g:3,  p:0.6, l:0.1, portion:150, unit:"g" },
+  { keys:["brocoli","brocolis"],                                      g:7,  p:3,   l:0.4, portion:200, unit:"g", ing:true },
+  { keys:["épinard","épinards"],                                      g:4,  p:3,   l:0.4, portion:150, unit:"g", ing:true },
+  { keys:["courgette","courgettes"],                                  g:3.5,p:1.2, l:0.3, portion:150, unit:"g", ing:true },
+  { keys:["aubergine"],                                               g:6,  p:1,   l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["poivron","poivrons"],                                      g:6,  p:1,   l:0.3, portion:150, unit:"g", ing:true },
+  { keys:["tomate","tomates"],                                        g:4,  p:0.9, l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["carotte","carottes"],                                      g:10, p:1,   l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["concombre"],                                               g:3,  p:0.6, l:0.1, portion:150, unit:"g", ing:true },
   { keys:["salade","laitue","roquette","mâche"],                      g:2,  p:1.4, l:0.2, portion:50,  unit:"g" },
-  { keys:["champignon","champignons"],                                g:3,  p:2.5, l:0.3, portion:100, unit:"g" },
-  { keys:["céleri"],                                                  g:3,  p:0.7, l:0.2, portion:100, unit:"g" },
-  { keys:["poireau","poireaux"],                                      g:5,  p:1.5, l:0.3, portion:150, unit:"g" },
-  { keys:["oignon","oignons","échalote"],                             g:9,  p:1.2, l:0.1, portion:80,  unit:"g" },
+  { keys:["champignon","champignons"],                                g:3,  p:2.5, l:0.3, portion:100, unit:"g", ing:true },
+  { keys:["céleri"],                                                  g:3,  p:0.7, l:0.2, portion:100, unit:"g", ing:true },
+  { keys:["poireau","poireaux"],                                      g:5,  p:1.5, l:0.3, portion:150, unit:"g", ing:true },
+  { keys:["oignon","oignons","échalote"],                             g:9,  p:1.2, l:0.1, portion:80,  unit:"g", ing:true },
   { keys:["ail"],                                                     g:33, p:6,   l:0.5, portion:5,   unit:"g" },
-  { keys:["petits pois"],                                             g:14, p:5,   l:0.4, portion:100, unit:"g" },
-  { keys:["haricot vert","haricots verts"],                           g:7,  p:2,   l:0.2, portion:150, unit:"g" },
-  { keys:["chou-fleur","chou rouge","chou vert","chou"],              g:5,  p:2,   l:0.3, portion:150, unit:"g" },
+  { keys:["petits pois","petit pois"],                                             g:14, p:5,   l:0.4, portion:100, unit:"g" },
+  { keys:["haricot vert","haricots verts"],                           g:7,  p:2,   l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["chou-fleur","chou rouge","chou vert","chou"],              g:5,  p:2,   l:0.3, portion:150, unit:"g", ing:true },
   // ── CONDIMENTS & SAUCES ──────────────────────────────────────────────────
   { keys:["miel"],                                                    g:82, p:0.3, l:0,   portion:20,  unit:"g" },
   { keys:["confiture","marmelade"],                                   g:65, p:0.5, l:0,   portion:20,  unit:"g" },
@@ -841,7 +852,7 @@ const FOODS = [
   { keys:["boisson de récupération"],                                 g:30, p:15,  l:2,   portion:1,   unit:"portion" },
   { keys:["compote","gourde de compote"],                             g:12, p:0.3, l:0.1, portion:90,  unit:"g" },
   // ── PLATS COMPOSES ───────────────────────────────────────────────────────
-  { keys:["pizza"],                                                   g:30, p:11,  l:10,  portion:300, unit:"g" },
+  { keys:["pizza","pizza 4 fromages","pizza quatre fromages","pizza aux 4 fromages"],                                                   g:30, p:11,  l:10,  portion:300, unit:"g" },
   { keys:["burger","hamburger"],                                      g:35, p:20,  l:18,  portion:1,   unit:"unité" },
   { keys:["sandwich","wrap"],                                         g:35, p:15,  l:8,   portion:1,   unit:"unité", name:"sandwich" },
   { keys:["kebab"],                                                   g:40, p:25,  l:18,  portion:1,   unit:"portion" },
@@ -906,7 +917,7 @@ const FOODS = [
   // ── GÂTEAUX APÉRO & SNACKS SALÉS ───────────────────────────────────────────
   { keys:["chips"],                                                   g:50, p:6,   l:35,  portion:40,  unit:"g" },
   { keys:["cacahuètes","cacahuètes salées","cacahuètes grillées"],    g:16, p:25,  l:49,  portion:30,  unit:"g" },
-  { keys:["saucisson","saucisson sec"],                               g:1,  p:24,  l:38,  portion:30,  unit:"g" },
+  { keys:["saucisson","saucisson sec"],                               g:1,  p:24,  l:38,  portion:30,  unit:"g", ing:true },
   { keys:["olives"],                                                  g:3,  p:1,   l:15,  portion:30,  unit:"g" },
   { keys:["bretzels","bretzel"],                                      g:75, p:10,  l:4,   portion:30,  unit:"g" },
   { keys:["gressins"],                                                g:70, p:10,  l:10,  portion:25,  unit:"g" },
@@ -984,6 +995,65 @@ const FOODS = [
   { keys:["guacamole"], g:6, p:2, l:14, portion:50, unit:"g" },
   { keys:["tzatziki"], g:4, p:3.5, l:5, portion:50, unit:"g" },
   { keys:["bruschetta"], g:14, p:3, l:5, portion:2, unit:"unité" },
+  // ── CHARCUTERIE SÈCHE / VIANDES SÉCHÉES ──
+  { keys:["chorizo","pepperoni","fuet","salami","salchichon","soppressata","saucisse sèche","saucisson italien","saucisson à l'ail","rosette","rosette de lyon","lomo","figatelli"], g:2, p:24, l:38, portion:30, unit:"g", ing:true },
+  { keys:["bresaola","viande des grisons","viande séchée","boeuf séché","bœuf séché","jerky","carne secca"], g:1, p:33, l:4, portion:40, unit:"g", ing:true },
+  { keys:["jambon cru","jambon de bayonne","jambon de pays","jambon ibérique","jambon iberique","jambon de parme","jambon fumé","jamon","pata negra","speck","coppa","lonzo","magret séché","magret fumé"], g:0, p:26, l:14, portion:40, unit:"g", ing:true },
+  { keys:["pancetta","guanciale","poitrine fumée","poitrine salée","lard","lard fumé","lardon fumé"], g:0, p:14, l:37, portion:30, unit:"g", ing:true },
+  { keys:["mortadelle","cervelas","knacki","saucisse de strasbourg","saucisse de francfort"], g:1.5, p:14, l:27, portion:50, unit:"g", ing:true },
+  { keys:["andouille","andouillette"], g:1, p:18, l:20, portion:100, unit:"g", ing:true },
+  { keys:["boudin noir","boudin"], g:3, p:14, l:25, portion:100, unit:"g", ing:true },
+  { keys:["boudin blanc"], g:5, p:10, l:17, portion:100, unit:"g", ing:true },
+  { keys:["bloc de foie gras","mousse de foie"], g:3, p:7, l:45, portion:40, unit:"g", ing:true },
+  { keys:["pâté de campagne","pâté de foie","pâté de porc","pâté de tête","terrine","terrine de campagne","terrine de canard"], g:1.5, p:13, l:27, portion:40, unit:"g", ing:true },
+  // ── LÉGUMES ÉLARGIS ──
+  { keys:["betterave","betteraves"], g:7, p:1.5, l:0.1, portion:100, unit:"g", ing:true },
+  { keys:["radis"], g:2, p:0.7, l:0.1, portion:50, unit:"g", ing:true },
+  { keys:["navet","panais","rutabaga","topinambour","salsifis"], g:5, p:1, l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["potiron","courge","butternut","potimarron","citrouille","courge spaghetti"], g:6, p:1, l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["fenouil"], g:4, p:1.2, l:0.2, portion:100, unit:"g", ing:true },
+  { keys:["endive","endives"], g:3, p:1, l:0.1, portion:100, unit:"g", ing:true },
+  { keys:["artichaut","artichauts","cœur d'artichaut"], g:8, p:3, l:0.3, portion:120, unit:"g", ing:true },
+  { keys:["asperge","asperges"], g:2, p:2.2, l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["chou de bruxelles","choux de bruxelles","chou kale","kale","chou chinois","chou-rave"], g:5, p:4, l:0.4, portion:150, unit:"g", ing:true },
+  { keys:["pak choï","pak choi","bok choy"], g:2, p:1.5, l:0.2, portion:100, unit:"g", ing:true },
+  { keys:["blette","blettes"], g:3, p:2, l:0.2, portion:150, unit:"g", ing:true },
+  { keys:["cornichon","cornichons"], g:1.5, p:0.5, l:0.1, portion:20, unit:"g", ing:true },
+  { keys:["flageolet","flageolets","haricot beurre","haricots beurre","fèves"], g:12, p:7, l:1, portion:120, unit:"g", ing:true },
+  { keys:["petit pois carotte","petits pois carottes"], g:9, p:4, l:0.5, portion:200, unit:"g", ing:true },
+  { keys:["julienne de légumes","julienne","brunoise","brunoise de légumes"], g:5, p:1.8, l:0.3, portion:150, unit:"g", ing:true },
+  { keys:["jardinière de légumes","jardinière","macédoine de légumes","macédoine"], g:6, p:2.5, l:0.4, portion:150, unit:"g", ing:true },
+  { keys:["poêlée de légumes","poêlée","poêlée campagnarde","poêlée provençale","légumes sautés","légumes poêlés","légumes grillés","légumes rôtis","légumes du soleil","légumes au four"], g:5, p:2, l:2.5, portion:200, unit:"g", ing:true },
+  { keys:["mélange de légumes","mélange de légumes surgelés","légumes surgelés","légumes verts","légumes vapeur","crudités","crudité","petits légumes","légume"], g:5, p:2, l:0.3, portion:150, unit:"g", ing:true },
+  // ── POISSONS & FRUITS DE MER élargis (cuissons, pané, cru, fumé, conserves) ──
+  { keys:["thon frais","steak de thon","thon grillé","thon poêlé","thon mi-cuit","thon cru","tataki de thon","thon blanc","germon"], g:0, p:26, l:3, portion:150, unit:"g", ing:true },
+  { keys:["thon à l'huile","thon a l'huile","thon huile"], g:0, p:25, l:14, portion:80, unit:"g", ing:true },
+  { keys:["sole","limande","lotte","turbot","raie","haddock","églefin","flétan","merlan","rouget","sandre","brochet","perche","loup","tilapia","pangasius","dorade","lingue","morue","morue salée","poisson blanc","poisson fumé"], g:0, p:18, l:1.5, portion:150, unit:"g", ing:true },
+  { keys:["poisson","poisson grillé","poisson poêlé","poisson vapeur","poisson cuit","poisson cru","poisson au four","filet de poisson"], g:0, p:18, l:3, portion:150, unit:"g", ing:true },
+  { keys:["truite","omble","saumonette","espadon","truite saumonée"], g:0, p:20, l:6, portion:150, unit:"g", ing:true },
+  { keys:["hareng","hareng fumé","rollmops","hareng mariné","sprat"], g:1, p:17, l:14, portion:80, unit:"g", ing:true },
+  { keys:["anchois","anchois à l'huile","filet d'anchois","anchoïade"], g:0, p:25, l:10, portion:20, unit:"g", ing:true },
+  { keys:["sardine à l'huile","sardines à l'huile","sardine a l'huile","sardines a l'huile"], g:0, p:24, l:11, portion:90, unit:"g", ing:true },
+  { keys:["tartare de saumon","tartare de thon","tartare de poisson","carpaccio de saumon","carpaccio de poisson","carpaccio de thon","sashimi","sashimi de saumon","ceviche","gravlax","saumon gravlax","saumon mariné"], g:1, p:21, l:8, portion:100, unit:"g", ing:true },
+  { keys:["poisson pané","poissons panés","colin pané","cabillaud pané","filet de poisson pané","filet de colin pané","croquette de poisson","poisson frit","filet pané"], g:17, p:12, l:10, portion:120, unit:"g", ing:true },
+  { keys:["fish and chips"], g:28, p:10, l:12, portion:350, unit:"g", ing:true, name:"fish and chips" },
+  { keys:["rillettes de saumon","rillettes de thon","rillettes de maquereau","rillettes de poisson","mousse de poisson"], g:1, p:15, l:25, portion:30, unit:"g", ing:true },
+  { keys:["tarama","caviar","oeufs de saumon","œufs de saumon","oeufs de poisson","oeufs de lump"], g:4, p:12, l:25, portion:20, unit:"g", ing:true },
+  { keys:["brandade","brandade de morue"], g:12, p:9, l:9, portion:250, unit:"g", ing:true },
+  { keys:["bouillabaisse"], g:3, p:8, l:3, portion:350, unit:"g", ing:true },
+  { keys:["surimi","bâtonnet de surimi","bâtonnets de surimi","bâtonnet de crabe","bâtonnets de crabe"], g:9, p:9, l:1, portion:50, unit:"g", ing:true },
+  { keys:["crabe","chair de crabe","miettes de crabe","tourteau","araignée de mer","homard","langouste","langoustine","écrevisse","gambas","crevette rose"], g:0.5, p:18, l:1.2, portion:100, unit:"g", ing:true },
+  { keys:["crevettes panées","crevette panée","beignet de crevette","beignets de crevettes","tempura de crevettes","crevettes frites","crevettes tempura"], g:20, p:12, l:14, portion:100, unit:"g", ing:true },
+  { keys:["calamar","encornet","seiche","poulpe","pieuvre","chipiron","supion"], g:2, p:16, l:1.5, portion:100, unit:"g", ing:true },
+  { keys:["calamar frit","calamars frits","rondelles de calamar","anneaux de calamar","calamars à la romaine","calamar à la romaine","beignet de calamar","beignets de calamars"], g:10, p:13, l:12, portion:120, unit:"g", ing:true },
+  { keys:["palourde","bigorneau","bulot","praire","pétoncle","coquillage","coquillages"], g:3, p:12, l:1.5, portion:120, unit:"g", ing:true },
+  { keys:["saint-jacques","noix de saint-jacques","noix de st jacques","saint jacques"], g:2, p:17, l:1, portion:120, unit:"g", ing:true },
+  { keys:["coquille saint-jacques","coquilles saint-jacques"], g:8, p:9, l:8, portion:150, unit:"g", ing:true, name:"coquille Saint-Jacques" },
+  { keys:["saumon fumé"], g:0, p:23, l:12, portion:50, unit:"g", ing:true },
+  { keys:["truite fumée"], g:0, p:22, l:5, portion:60, unit:"g", ing:true },
+  { keys:["huître","huîtres"], g:0.5, p:1.2, l:0.3, portion:6, unit:"unité", name:"huîtres", ing:true },
+  { keys:["bâtonnet de poisson","bâtonnets de poisson","fish stick","fish finger","fish fingers"], g:3.5, p:2.5, l:2, portion:4, unit:"unité", name:"bâtonnets de poisson", ing:true },
+  { keys:["fruits de mer","plateau de fruits de mer","cocktail de fruits de mer","poêlée de fruits de mer","mélange de fruits de mer","salade de fruits de mer"], g:2, p:14, l:1.5, portion:200, unit:"g", ing:true },
 ];
 
 // ── Analyse de la description : la quantite placee devant un aliment lui est associee ──
@@ -1026,6 +1096,24 @@ function getFoodIndex() {
   return pairs;
 }
 
+var DISH_WORDS = ["pizza","quiche","tarte","tourte","lasagne","gratin","tajine","curry","soupe","veloute","potage","bouillon","couscous","paella","risotto","wok","ratatouille","croque","tacos","taco","hachis","parmentier","clafoutis","feuillete","tartiflette","raclette","fondue","bruschetta","puree","gaspacho","chili","cassoulet","blanquette","potee","cake"];
+var DISH_STOP = ["et","avec","plus","puis","sans","apres","avant"];
+// Vrai si l'ingredient est juste apres un nom de plat (4 mots max, sans ponctuation ni "et")
+function isInsideDish(t, start) {
+  var seg = t.slice(Math.max(0, start - 60), start);
+  seg = seg.slice(Math.max(seg.lastIndexOf("+"), seg.lastIndexOf(","), seg.lastIndexOf(";"), seg.lastIndexOf("(")) + 1);
+  var tokens = seg.trim().split(/\s+/).filter(Boolean);
+  for (var i = tokens.length - 1, n = 0; i >= 0 && n < 4; i--, n++) {
+    if (DISH_STOP.indexOf(tokens[i]) !== -1) return false;
+    var parts = tokens[i].split("-");
+    for (var j = 0; j < parts.length; j++) {
+      var w = parts[j].replace(/s$/, "");
+      if (DISH_WORDS.indexOf(w) !== -1) return true;
+    }
+  }
+  return false;
+}
+
 function findFoodMatches(t) {
   var claimed = [];
   var matches = [];
@@ -1048,6 +1136,8 @@ function findFoodMatches(t) {
       if (m[0].length === 0) pair.re.lastIndex++;
     }
   });
+  // Ingredient deja compris dans un plat cuisine ("pizza chorizo", "quiche aux poireaux") : ignore
+  matches = matches.filter(function (m) { return !(m.food.ing && isInsideDish(t, m.start)); });
   matches.sort(function (a, b) { return a.start - b.start; });
 
   // Deux synonymes du meme aliment cote a cote ("flocons d avoine") = une seule mention

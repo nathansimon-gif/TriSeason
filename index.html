@@ -3,10 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#080c14">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -292,9 +288,10 @@
         <div id="wkgDisplay" style="flex:1"></div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div class="form-group">
-            <label class="form-label">Poids (kg)</label>
-            <div style="display:flex;gap:6px">
+            <label class="form-label">Poids (kg) et date</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
               <input class="form-input" type="number" step="0.1" id="weightInput" placeholder="70.5" style="width:80px">
+              <input class="form-input" type="date" id="weightDate" style="width:140px">
               <button class="btn btn--primary btn--sm" onclick="saveWeightEntry()">+</button>
             </div>
           </div>
@@ -306,6 +303,8 @@
       </div>
       <!-- Courbe de poids -->
       <div style="position:relative;height:90px;overflow:hidden"><canvas id="chartWeight"></canvas></div>
+      <!-- Historique des pesées -->
+      <div id="weightHistory" style="margin-top:10px"></div>
     </div>
 
     <div class="card">
@@ -927,6 +926,11 @@ function renderWeight() {
   const w=TS.getLatestWeight();
   const p=TS.getProfile();
   document.getElementById('weightDisplay').textContent = w?w.toFixed(1):'—';
+  document.getElementById('bmiDisplay').textContent = '';
+  document.getElementById('wkgDisplay').innerHTML = '';
+  renderWeightHistory();
+  const wd=document.getElementById('weightDate');
+  if(wd){ wd.max=localToday(); if(!wd.value) wd.value=localToday(); }
   if(p.height) document.getElementById('heightInput').value=p.height;
 
   // BMI
@@ -978,13 +982,44 @@ function renderWeight() {
   });
 }
 
+function localToday(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function saveWeightEntry(){
-  const val=parseFloat(document.getElementById('weightInput').value);
+  const val=parseFloat(String(document.getElementById('weightInput').value).replace(',','.'));
   if(!val||val<20||val>250){TS.toast('Poids invalide','error');return;}
-  TS.saveWeight({date:new Date().toISOString().split('T')[0],value:val});
+  const dateEl=document.getElementById('weightDate');
+  const date=dateEl.value||localToday();
+  if(date>localToday()){TS.toast('La date ne peut pas être dans le futur','error');return;}
+  const exists=TS.getWeight().some(w=>w.date===date);
+  TS.saveWeight({date:date,value:val});
   document.getElementById('weightInput').value='';
-  TS.toast('Poids enregistré');
+  dateEl.value=localToday();
+  TS.toast(exists?'Pesée du jour remplacée':'Poids enregistré');
   renderWeight();
+}
+function deleteWeightEntry(date){
+  if(!confirm('Supprimer la pesée du '+new Date(date+'T12:00:00').toLocaleDateString('fr-FR')+' ?')) return;
+  TS.deleteWeight(date);
+  TS.toast('Pesée supprimée');
+  renderWeight();
+}
+let weightShowAll=false;
+function toggleWeightHistory(){ weightShowAll=!weightShowAll; renderWeightHistory(); }
+function renderWeightHistory(){
+  const el=document.getElementById('weightHistory');
+  if(!el) return;
+  const all=TS.getWeight().filter(w=>w.value>0).slice().reverse();
+  if(!all.length){ el.innerHTML=''; return; }
+  const list=weightShowAll?all:all.slice(0,4);
+  el.innerHTML='<div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Dernières pesées</div>'
+    + list.map(w=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-top:1px solid var(--border);font-size:12px">'
+      + '<span style="color:var(--text-2)">'+new Date(w.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})+'</span>'
+      + '<span style="font-weight:700;font-family:var(--mono)">'+Number(w.value).toFixed(1)+' kg</span>'
+      + '<button class="btn btn--ghost btn--sm" title="Supprimer cette pesée" aria-label="Supprimer cette pesée" onclick="deleteWeightEntry(\''+w.date+'\')" style="padding:2px 8px">✕</button>'
+      + '</div>').join('')
+    + (all.length>4?'<button class="btn btn--ghost btn--sm" onclick="toggleWeightHistory()" style="margin-top:6px">'+(weightShowAll?'Voir moins':'Voir tout ('+all.length+')')+'</button>':'');
 }
 function saveProfileField(){
   const h=parseFloat(document.getElementById('heightInput').value);
