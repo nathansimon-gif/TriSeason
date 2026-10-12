@@ -80,8 +80,11 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 3. **Firebase sur chaque page** (sauf exceptions voulues) : les 3 scripts
    `firebase-*-compat.js` puis `auth-guard.js`, dans le `<head>`, avant
    `app.js`. Sans eux, la page ne lit plus les données du compte.
-4. **Design** : rester sobre (graphite, IBM Plex, pas de dégradés ni d'emojis
-   décoratifs). Utiliser les variables de `style.css` (`--nat`, `--velo`,
+4. **Design** : pro mais coloré sans excès. Fond ardoise légèrement bleuté,
+   IBM Plex, accent citron vert (`--accent`) pour les boutons principaux et
+   l'élément actif, couleurs de sport vives (natation bleu, vélo orange, course
+   framboise) en touches : barres, fonds teintés `--*-dim`. Pas de dégradés,
+   de halos ni d'emojis décoratifs. Utiliser les variables de `style.css` (`--nat`, `--velo`,
    `--run`, `--text-2`…) et le repère `.sport-dot` plutôt que des emojis de sport.
    Les 3 couleurs de sport ont été validées (daltonisme compris) sur le fond
    sombre : ne pas les modifier sans revérifier qu'elles restent distinguables.

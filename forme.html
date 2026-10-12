@@ -6,13 +6,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -20,9 +20,9 @@
       font-size: 10px; font-weight: 700; text-transform: uppercase;
       letter-spacing: .06em; padding: 3px 9px; border-radius: 20px;
     }
-    .confidence-badge--high   { background: rgba(95,179,127,.15); color: var(--green); }
-    .confidence-badge--medium { background: rgba(212,178,76,.15); color: var(--yellow); }
-    .confidence-badge--low    { background: rgba(217,87,79,.15);  color: var(--red); }
+    .confidence-badge--high   { background: rgba(52,196,139,.15); color: var(--green); }
+    .confidence-badge--medium { background: rgba(240,185,65,.15); color: var(--yellow); }
+    .confidence-badge--low    { background: rgba(239,83,80,.15);  color: var(--red); }
     .pred-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 0; border-bottom: 1px solid var(--border);
@@ -57,7 +57,7 @@
     .ni-legend { display:flex; gap:14px; font-size:11px; color:var(--text-2); margin-bottom:6px; flex-wrap:wrap; }
     .ni-legend span { display:inline-flex; align-items:center; }
     .disclaimer-box {
-      background: rgba(212,178,76,.08); border: 1px solid rgba(212,178,76,.25);
+      background: rgba(240,185,65,.08); border: 1px solid rgba(240,185,65,.25);
       border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
       color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
     }
@@ -185,7 +185,7 @@
   <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 
-<script src="app.js?v=20261013a"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -372,17 +372,17 @@ function renderPMC() {
     data: {
       labels: recent.map(s => new Date(s.day+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
       datasets: [
-        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#ebeae6', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#c4443f', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#5fb37f', backgroundColor:'rgba(95,179,127,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
+        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#2fb8a6', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#dc3d6a', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#34c48b', backgroundColor:'rgba(52,196,139,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
       ]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#9b9ca1', font:{size:11}, boxWidth:8 } } },
+      plugins:{ legend:{ labels:{ color:'#a3abb9', font:{size:11}, boxWidth:8 } } },
       scales:{
-        x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:9}, maxTicksLimit:10, maxRotation:0} },
-        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:10}} }
+        x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383', font:{size:9}, maxTicksLimit:10, maxRotation:0} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383', font:{size:10}} }
       }
     }
   });
@@ -590,7 +590,7 @@ function renderNutritionImpact() {
   const sports = ['nat', 'velo', 'run'].filter(sp => pts.some(p => p.sport === sp));
   document.getElementById('niLegend').innerHTML = sports.map(sp =>
     `<span><span class="sport-dot sport-dot--${sp}"></span>${NI_SPORT_LABELS[sp]}</span>`).join('');
-  const surface = niCss('--surface') || '#16171a';
+  const surface = niCss('--surface') || '#151a22';
   makeChart('chartNutriImpact', {
     type: 'scatter',
     data: {
@@ -623,10 +623,10 @@ function renderNutritionImpact() {
         },
       },
       scales: {
-        x: { title: { display: true, text: factor.label + ' (' + factor.unit + ')', color: '#9b9ca1', font: { size: 11 } },
-             grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#64666d', font: { size: 10 } } },
-        y: { title: { display: true, text: TS.NUTRI_OUTCOMES[o].label + ' (' + TS.NUTRI_OUTCOMES[o].unit + ')', color: '#9b9ca1', font: { size: 11 } },
-             grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#64666d', font: { size: 10 } },
+        x: { title: { display: true, text: factor.label + ' (' + factor.unit + ')', color: '#a3abb9', font: { size: 11 } },
+             grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 10 } } },
+        y: { title: { display: true, text: TS.NUTRI_OUTCOMES[o].label + ' (' + TS.NUTRI_OUTCOMES[o].unit + ')', color: '#a3abb9', font: { size: 11 } },
+             grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 10 } },
              ...(o === 'sensation' ? { min: 0.5, max: 5.5, afterBuildTicks: axis => { axis.ticks = [1, 2, 3, 4, 5].map(v => ({ value: v })); } } : {}) },
       },
     },

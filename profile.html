@@ -6,15 +6,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -124,7 +124,7 @@
     <div class="stack">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div style="font-size:13px;color:var(--text-2)">Connecté en tant que <span id="accountEmail" style="color:var(--text);font-weight:600">—</span></div>
-        <button class="data-export-btn" style="width:auto;padding:8px 16px;color:var(--red);border-color:rgba(217,87,79,.25)" onclick="TS_logout()">
+        <button class="data-export-btn" style="width:auto;padding:8px 16px;color:var(--red);border-color:rgba(239,83,80,.25)" onclick="TS_logout()">
           <span>🚪</span><div>Se déconnecter</div>
         </button>
       </div>
@@ -150,7 +150,7 @@
         </div>
         <input type="file" accept=".json" style="display:none" onchange="handleImport(event)">
       </label>
-      <button class="data-export-btn" onclick="clearAllData()" style="color:var(--red);border-color:rgba(217,87,79,.25)">
+      <button class="data-export-btn" onclick="clearAllData()" style="color:var(--red);border-color:rgba(239,83,80,.25)">
         <span style="font-size:18px">🗑</span>
         <div>
           <div>Effacer toutes les données</div>
@@ -233,7 +233,7 @@
 </div>
 
 
-<script src="app.js?v=20261013a"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -382,11 +382,11 @@ function renderFCZones() {
     return;
   }
   const zones = [
-    { num:1, name:'Récupération',   pct:[50,60],  color:'#5fb37f' },
-    { num:2, name:'Endurance fond.', pct:[60,70], color:'#ebeae6' },
-    { num:3, name:'Aérobie',        pct:[70,80],  color:'#b0922c' },
-    { num:4, name:'Seuil',          pct:[80,90],  color:'#c4443f' },
-    { num:5, name:'VO2max',         pct:[90,100], color:'#d9574f' },
+    { num:1, name:'Récupération',   pct:[50,60],  color:'#34c48b' },
+    { num:2, name:'Endurance fond.', pct:[60,70], color:'#2fb8a6' },
+    { num:3, name:'Aérobie',        pct:[70,80],  color:'#d8791a' },
+    { num:4, name:'Seuil',          pct:[80,90],  color:'#dc3d6a' },
+    { num:5, name:'VO2max',         pct:[90,100], color:'#ef5350' },
   ];
   el.innerHTML = zones.map(z => {
     const lo = Math.round(fcmax * z.pct[0]/100);

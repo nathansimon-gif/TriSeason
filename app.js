@@ -797,20 +797,20 @@ function calcWkg(powerW, date = null) {
 
 function wkgLevel(wkg) {
   if (!wkg) return null;
-  if (wkg < 2)   return { label: 'Débutant',          color: '#9b9ca1' };
-  if (wkg < 2.5) return { label: 'Amateur débutant',   color: '#5fb37f' };
-  if (wkg < 3)   return { label: 'Amateur régulier',   color: '#5fb37f' };
-  if (wkg < 3.5) return { label: 'Bon niveau',         color: '#d4b24c' };
-  if (wkg < 4)   return { label: 'Très bon amateur',   color: '#c4443f' };
-  if (wkg < 5)   return { label: 'Élite amateur',      color: '#d9574f' };
-  return              { label: 'Professionnel',        color: '#9d86cf' };
+  if (wkg < 2)   return { label: 'Débutant',          color: '#a3abb9' };
+  if (wkg < 2.5) return { label: 'Amateur débutant',   color: '#34c48b' };
+  if (wkg < 3)   return { label: 'Amateur régulier',   color: '#34c48b' };
+  if (wkg < 3.5) return { label: 'Bon niveau',         color: '#f0b941' };
+  if (wkg < 4)   return { label: 'Très bon amateur',   color: '#dc3d6a' };
+  if (wkg < 5)   return { label: 'Élite amateur',      color: '#ef5350' };
+  return              { label: 'Professionnel',        color: '#a48be0' };
 }
 
 function tssLevel(tss) {
-  if (tss < 50)  return { label: '🟢 Récupération', color: '#5fb37f' };
-  if (tss < 150) return { label: '🟡 Normal',        color: '#d4b24c' };
-  if (tss < 300) return { label: '🟠 Élevé',         color: '#c4443f' };
-  return              { label: '🔴 Très élevé',    color: '#d9574f' };
+  if (tss < 50)  return { label: '🟢 Récupération', color: '#34c48b' };
+  if (tss < 150) return { label: '🟡 Normal',        color: '#f0b941' };
+  if (tss < 300) return { label: '🟠 Élevé',         color: '#dc3d6a' };
+  return              { label: '🔴 Très élevé',    color: '#ef5350' };
 }
 
 // ── Season stats ──────────────────────────────────────────────────────────────
@@ -1047,9 +1047,9 @@ function initTooltips() {
 
 // ── Sport config ─────────────────────────────────────────────────────────────
 const SPORTS = {
-  nat:  { label: 'Natation',  emoji: '<span class="sport-dot sport-dot--nat"></span>', color: '#4b9cd3', unit: 'km', paceLabel: 'Allure', paceUnit: '/100m' },
-  velo: { label: 'Vélo',      emoji: '<span class="sport-dot sport-dot--velo"></span>', color: '#b0922c', unit: 'km', paceLabel: 'Vitesse', paceUnit: 'km/h' },
-  run:  { label: 'Course',    emoji: '<span class="sport-dot sport-dot--run"></span>', color: '#c4443f', unit: 'km', paceLabel: 'Allure', paceUnit: '/km' },
+  nat:  { label: 'Natation',  emoji: '<span class="sport-dot sport-dot--nat"></span>', color: '#2f95e6', unit: 'km', paceLabel: 'Allure', paceUnit: '/100m' },
+  velo: { label: 'Vélo',      emoji: '<span class="sport-dot sport-dot--velo"></span>', color: '#d8791a', unit: 'km', paceLabel: 'Vitesse', paceUnit: 'km/h' },
+  run:  { label: 'Course',    emoji: '<span class="sport-dot sport-dot--run"></span>', color: '#dc3d6a', unit: 'km', paceLabel: 'Allure', paceUnit: '/km' },
 };
 
 const COMP_TYPES = ['TRI', 'RUN', 'VELO', 'NAT', 'DUATH', 'AQUA'];
