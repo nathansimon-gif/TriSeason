@@ -11,7 +11,10 @@
 // Écrit le rapport en Markdown sur la sortie standard et le détail dans
 // report-<lundi>.json.
 // --email : envoie aussi le rapport par e-mail via l'API Resend, à l'adresse
-// REPORT_EMAIL_TO, avec la clé RESEND_API_KEY (voir README).
+// REPORT_EMAIL_TO. La clé Resend est normalement un « secret réseau » de
+// l'environnement Claude : le proxy l'ajoute lui-même à la requête vers
+// api.resend.com, le script ne la voit pas. RESEND_API_KEY reste possible
+// pour un lancement ailleurs (voir README).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -202,7 +205,7 @@ export function markdownToHtml(md) {
 export async function sendReportEmail({ subject, markdown, to, apiKey, from = 'TriSeason <onboarding@resend.dev>', fetchImpl = fetch }) {
   const res = await fetchImpl('https://api.resend.com/emails', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    headers: { ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}), 'Content-Type': 'application/json' },
     body: JSON.stringify({ from, to: [to], subject, html: markdownToHtml(markdown), text: markdown }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status} : ${(await res.text()).slice(0, 200)}`);
@@ -210,9 +213,18 @@ export async function sendReportEmail({ subject, markdown, to, apiKey, from = 'T
 }
 
 // ── Accès Firebase (lecture seule) ──────────────────────────────────────────
-function loadServiceAccount() {
-  if (process.env.FIREBASE_SA_KEY) return JSON.parse(process.env.FIREBASE_SA_KEY);
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) return JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8'));
+export function loadServiceAccount(env = process.env) {
+  // Forme simple pour les réglages de l'environnement : deux valeurs sur une ligne
+  // chacune, copiées du fichier JSON (client_email et private_key).
+  if (env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY) {
+    return {
+      project_id: env.FIREBASE_PROJECT_ID || 'triseason-3c80c',
+      client_email: env.FIREBASE_CLIENT_EMAIL.trim(),
+      private_key: env.FIREBASE_PRIVATE_KEY.trim().replace(/^"|"$/g, '').replace(/\\n/g, '\n'),
+    };
+  }
+  if (env.FIREBASE_SA_KEY) return JSON.parse(env.FIREBASE_SA_KEY);
+  if (env.GOOGLE_APPLICATION_CREDENTIALS) return JSON.parse(readFileSync(env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8'));
   return null;
 }
 
@@ -277,7 +289,7 @@ async function main() {
   const weekStart = argWeek > 0 ? process.argv[argWeek + 1] : lastFullWeekMonday();
   const sa = loadServiceAccount();
   if (!sa) {
-    console.error('Aucune clé Firebase trouvée : ajoute la variable FIREBASE_SA_KEY (contenu JSON de la clé de compte de service) aux réglages de l’environnement.');
+    console.error('Aucune clé Firebase trouvée : ajoute FIREBASE_CLIENT_EMAIL et FIREBASE_PRIVATE_KEY (ou FIREBASE_SA_KEY) aux variables d’environnement (voir README).');
     process.exit(2);
   }
   const { initializeApp, cert } = await import('firebase-admin/app');
@@ -299,8 +311,8 @@ async function main() {
   console.log(md);
   if (process.argv.includes('--email')) {
     const to = process.env.REPORT_EMAIL_TO, apiKey = process.env.RESEND_API_KEY;
-    if (!to || !apiKey) {
-      console.error('\nE-mail non envoyé : il manque REPORT_EMAIL_TO ou RESEND_API_KEY dans les réglages de l’environnement.');
+    if (!to) {
+      console.error('\nE-mail non envoyé : il manque l’adresse REPORT_EMAIL_TO.');
     } else {
       try {
         await sendReportEmail({ subject: `TriSeason — rapport de la semaine du ${fmtDay(weekStart)}`, markdown: md, to, apiKey, from: process.env.REPORT_EMAIL_FROM });

@@ -15,9 +15,15 @@ compte. Il n'est jamais servi par le site.
    - *Lecteur Monitoring* (`roles/monitoring.viewer`)
 2. Sur ce compte : *Clés → Ajouter une clé → JSON*. Un fichier se télécharge.
 3. Dans les réglages de l'environnement Claude Code (menu de l'environnement
-   cloud → *Modifier*), ajouter une variable **`FIREBASE_SA_KEY`** dont la valeur
-   est **tout le contenu** du fichier JSON. Ne jamais coller cette clé dans une
-   conversation ni dans le dépôt.
+   cloud → *Modifier*), section **Variables d'environnement** (pas *Ajouter un
+   secret* : cette clé n'est pas un simple en-tête, le script doit la lire).
+   Ouvrir le fichier JSON avec un éditeur de texte et ajouter deux variables :
+   - `FIREBASE_CLIENT_EMAIL` = la valeur de `"client_email"` (sans les guillemets) ;
+   - `FIREBASE_PRIVATE_KEY` = la valeur de `"private_key"`, de
+     `-----BEGIN PRIVATE KEY-----` jusqu'à `-----END PRIVATE KEY-----\n`,
+     telle quelle sur une seule ligne (avec les `\n`).
+   (Variante : `FIREBASE_SA_KEY` = tout le contenu JSON sur une seule ligne.)
+   Ne jamais coller ces valeurs dans une conversation ni dans le dépôt.
 4. Supprimer le fichier téléchargé de ton ordinateur une fois ajouté.
 
 Pour couper l'accès à tout moment : supprimer la clé (ou le compte de service)
@@ -33,9 +39,12 @@ qui fonctionne par le web.
    rapport** (ex. tri.season.tracker@gmail.com). Sans domaine à soi, Resend
    n'envoie qu'à l'adresse du compte : c'est exactement ce qu'on veut.
 2. Dans Resend : *API Keys → Create API Key*, permission **Sending access**.
-3. Dans les réglages de l'environnement Claude Code :
-   - *Accès réseau* : ajouter `api.resend.com` aux domaines autorisés ;
-   - variables : `RESEND_API_KEY` = la clé, `REPORT_EMAIL_TO` = l'adresse.
+3. Dans les réglages de l'environnement Claude Code, *Ajouter un secret* :
+   - Nom : `RESEND_API_KEY` · Type : **Bearer**
+   - Sites web autorisés : `api.resend.com` · Préfixe de chemin : `/emails`
+   - En-tête : `Authorization`, préfixe `Bearer`, valeur = la clé Resend.
+   Le proxy de l'environnement ajoute la clé à la requête : le script ne la voit
+   jamais. L'adresse de destination est passée par `REPORT_EMAIL_TO`.
 4. Le rapport part alors avec `node report.mjs --email`.
 
 ## Lancer à la main
@@ -44,7 +53,7 @@ qui fonctionne par le web.
 cd tools/weekly-report
 npm install
 node report.mjs                 # dernière semaine complète
-node report.mjs --email         # idem + envoi par e-mail
+REPORT_EMAIL_TO=adresse@exemple.fr node report.mjs --email   # idem + e-mail
 node report.mjs --week 2026-10-05   # semaine commençant ce lundi
 npm test                        # tests du calcul, sans accès à Firebase
 ```

@@ -98,8 +98,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 ## Rapport hebdomadaire
 
 `tools/weekly-report/` : script Node en lecture seule (clé de compte de service
-dans la variable d'environnement `FIREBASE_SA_KEY`), lancé chaque lundi matin
-par une tâche planifiée Claude. Voir son README. Tests : `npm test` dans ce
+dans les variables d'environnement `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`,
+clé Resend en secret réseau injecté par le proxy), lancé chaque lundi matin par
+une tâche planifiée Claude qui affiche le rapport dans la conversation du
+propriétaire et l'envoie par e-mail. Jamais visible dans l'appli. Voir son README. Tests : `npm test` dans ce
 dossier.
 
 ## Vérifier un changement
