@@ -6,15 +6,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Compétitions</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -181,7 +181,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013a"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 let editId = null;
 let currentFilter = 'all';
@@ -267,15 +267,15 @@ function renderCharts() {
       data: {
         labels,
         datasets: [
-          { label:'Objectif', data: comps.map(c=>timeToSec(c.goal_time)/60), backgroundColor:'rgba(138,141,148,0.5)', borderRadius:4 },
+          { label:'Objectif', data: comps.map(c=>timeToSec(c.goal_time)/60), backgroundColor:'rgba(125,138,160,0.5)', borderRadius:4 },
           { label:'Réalisé',  data: comps.map(c=>timeToSec(c.actual_time)/60),
-            backgroundColor: comps.map(c=>timeToSec(c.actual_time)<=timeToSec(c.goal_time)?'rgba(95,179,127,0.7)':'rgba(217,87,79,0.7)'), borderRadius:4 },
+            backgroundColor: comps.map(c=>timeToSec(c.actual_time)<=timeToSec(c.goal_time)?'rgba(52,196,139,0.7)':'rgba(239,83,80,0.7)'), borderRadius:4 },
         ]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ labels:{ color:'#9b9ca1', font:{size:11} } }, tooltip:{ callbacks:{ label: ctx => secToTime(ctx.raw*60) } } },
-        scales:{ x:{grid:{display:false},ticks:{color:'#64666d',font:{size:10}}}, y:{grid:{color:'#26282d'},ticks:{color:'#64666d',font:{size:10},callback:v=>secToTime(v*60)}} }
+        plugins:{ legend:{ labels:{ color:'#a3abb9', font:{size:11} } }, tooltip:{ callbacks:{ label: ctx => secToTime(ctx.raw*60) } } },
+        scales:{ x:{grid:{display:false},ticks:{color:'#6b7383',font:{size:10}}}, y:{grid:{color:'#242b36'},ticks:{color:'#6b7383',font:{size:10},callback:v=>secToTime(v*60)}} }
       }
     });
   }
@@ -288,11 +288,11 @@ function renderCharts() {
       type: 'doughnut',
       data: {
         labels: Object.keys(byType),
-        datasets: [{ data: Object.values(byType), backgroundColor:['#8a8d94','#c4443f','#b0922c','#4b9cd3','#9d86cf','#5fb37f'], borderWidth:0 }]
+        datasets: [{ data: Object.values(byType), backgroundColor:['#7d8aa0','#dc3d6a','#d8791a','#2f95e6','#a48be0','#34c48b'], borderWidth:0 }]
       },
       options: {
         responsive:true, maintainAspectRatio:false, cutout:'65%',
-        plugins:{ legend:{ position:'bottom', labels:{ color:'#9b9ca1',font:{size:11},boxWidth:10 } } }
+        plugins:{ legend:{ position:'bottom', labels:{ color:'#a3abb9',font:{size:11},boxWidth:10 } } }
       }
     });
   }
@@ -347,7 +347,7 @@ function renderCompPrep(c) {
     var mins   = s.duration ? Math.round((s.duration-hrs)*60) : 0;
     var durStr = s.duration ? (hrs?hrs+'h':'')+(mins?String(mins).padStart(2,'0'):'') : '';
     var linked = s.comp_id === c.id;
-    return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 7px;border-radius:10px;background:'+(linked?'rgba(235,234,230,.2)':'rgba(255,255,255,.05)')+';border:1px solid '+(linked?'var(--accent)':'var(--border)')+'">'
+    return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 7px;border-radius:10px;background:'+(linked?'rgba(185,236,74,.2)':'rgba(255,255,255,.05)')+';border:1px solid '+(linked?'var(--accent)':'var(--border)')+'">'
       +(sp.emoji||'')
       +' '+s.date.slice(5)
       +(durStr?' · '+durStr:'')
@@ -443,7 +443,7 @@ function renderList() {
           <span style="font-size:10px;font-weight:700;color:${prioColor};letter-spacing:.08em">${c.priority||'B'}</span>
           <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(${typeColor})">${c.type}${fmtKey ? ' ' + fmtKey : ''}</span>
           <span style="font-size:12px;color:var(--text-2)">${new Date(c.date+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</span>
-          ${!isPast ? `<span style="font-size:11px;color:var(--accent-light);background:rgba(138,141,148,0.12);padding:2px 8px;border-radius:20px">J-${daysLeft}</span>` : ''}
+          ${!isPast ? `<span style="font-size:11px;color:var(--accent-light);background:rgba(125,138,160,0.12);padding:2px 8px;border-radius:20px">J-${daysLeft}</span>` : ''}
         </div>
         <div style="font-size:16px;font-weight:700;margin-bottom:4px">${c.name}</div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-2)">

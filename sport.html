@@ -6,15 +6,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -162,7 +162,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013a"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -244,7 +244,7 @@ function renderSport() {
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function renderSportKPIs(s, weekData) {
-  const color = s==='nat'?'#4b9cd3':s==='velo'?'#b0922c':'#c4443f';
+  const color = s==='nat'?'#2f95e6':s==='velo'?'#d8791a':'#dc3d6a';
   const sp = TS.SPORTS[s];
   const seasonValue = TS.getSeasonFilter();
   const seasonRange = TS.getSeasonRange(seasonValue);
@@ -294,13 +294,13 @@ const GOPTS = (extra={}) => ({
   responsive:true, maintainAspectRatio:false,
   plugins:{ legend:{display:false} },
   scales:{
-    x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d',font:{size:9},maxTicksLimit:12,maxRotation:0} },
-    y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d',font:{size:10}} }
+    x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383',font:{size:9},maxTicksLimit:12,maxRotation:0} },
+    y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383',font:{size:10}} }
   }, ...extra
 });
 
 function renderDistChart(s, weekData, weeks, sp) {
-  const color = s==='nat'?'#4b9cd3':s==='velo'?'#b0922c':'#c4443f';
+  const color = s==='nat'?'#2f95e6':s==='velo'?'#d8791a':'#dc3d6a';
   document.getElementById('chartDistTitle').textContent = `Distance / semaine — ${sp.label} (km)`;
   makeChart('chartDist', {
     type:'line',
@@ -314,7 +314,7 @@ function renderDistChart(s, weekData, weeks, sp) {
 }
 
 function renderPaceChart(s, weekData, weeks, sp) {
-  const color = s==='nat'?'#4b9cd3':s==='velo'?'#b0922c':'#c4443f';
+  const color = s==='nat'?'#2f95e6':s==='velo'?'#d8791a':'#dc3d6a';
 
   // Compute per-week pace as a float for charting, with proper unit
   const values = weekData.map(w => {
@@ -345,11 +345,11 @@ function renderPaceChart(s, weekData, weeks, sp) {
     options:{
       ...GOPTS(),
       scales:{
-        x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d',font:{size:9},maxTicksLimit:12,maxRotation:0} },
+        x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383',font:{size:9},maxTicksLimit:12,maxRotation:0} },
         y:{
           reverse: s !== 'velo', // lower pace = better for swim/run
           grid:{color:'rgba(255,255,255,.06)'},
-          ticks:{ color:'#64666d', font:{size:10}, callback: fmt }
+          ticks:{ color:'#6b7383', font:{size:10}, callback: fmt }
         }
       },
       plugins:{
@@ -361,7 +361,7 @@ function renderPaceChart(s, weekData, weeks, sp) {
 }
 
 function renderMonthlyChart(s, seasonRange) {
-  const color = s==='nat'?'#4b9cd3':s==='velo'?'#b0922c':'#c4443f';
+  const color = s==='nat'?'#2f95e6':s==='velo'?'#d8791a':'#dc3d6a';
   const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to });
   const months = {};
   for (const sess of sessions) {
@@ -433,27 +433,27 @@ function renderMonthlyProgress(s, seasonRange) {
 
 // ── Zones d'intensité ─────────────────────────────────────────────────────────
 const ZONES = [
-  { key:'ef',    label:'Endurance Fond.', range:[1,3],  color:'#5fb37f', tip:'RPE 1-3 : travail aérobie léger, récupération active.' },
-  { key:'aero',  label:'Aérobie',         range:[4,6],  color:'#ebeae6', tip:'RPE 4-6 : zone de développement aérobie, tempo.' },
-  { key:'seuil', label:'Seuil',           range:[7,8],  color:'#b0922c', tip:'RPE 7-8 : travail au seuil anaérobie, lactate.' },
-  { key:'ana',   label:'Anaérobie/Sprint',range:[9,10], color:'#c4443f', tip:'RPE 9-10 : effort maximal, VO2max, sprint.' },
+  { key:'ef',    label:'Endurance Fond.', range:[1,3],  color:'#34c48b', tip:'RPE 1-3 : travail aérobie léger, récupération active.' },
+  { key:'aero',  label:'Aérobie',         range:[4,6],  color:'#2fb8a6', tip:'RPE 4-6 : zone de développement aérobie, tempo.' },
+  { key:'seuil', label:'Seuil',           range:[7,8],  color:'#d8791a', tip:'RPE 7-8 : travail au seuil anaérobie, lactate.' },
+  { key:'ana',   label:'Anaérobie/Sprint',range:[9,10], color:'#dc3d6a', tip:'RPE 9-10 : effort maximal, VO2max, sprint.' },
 ];
 
 const ZONE_RECOMMENDATIONS = {
   nat: [
-    { cond: d=>d.ef<50,    tag:'Endurance', color:'#5fb37f', text:'Augmentez le volume en endurance fondamentale. Visez 60-70% du volume total en EF pour construire votre base aérobie.' },
-    { cond: d=>d.seuil<10, tag:'Seuil',    color:'#b0922c', text:'Ajoutez des séances de seuil (ex: 10×100m à RPE 7-8) pour améliorer votre vitesse de nage.' },
-    { cond: d=>d.ana<5,    tag:'Sprint',   color:'#c4443f', text:'Intégrez quelques sprints courts (15-25m max) pour développer votre poussée et votre efficacité technique.' },
+    { cond: d=>d.ef<50,    tag:'Endurance', color:'#34c48b', text:'Augmentez le volume en endurance fondamentale. Visez 60-70% du volume total en EF pour construire votre base aérobie.' },
+    { cond: d=>d.seuil<10, tag:'Seuil',    color:'#d8791a', text:'Ajoutez des séances de seuil (ex: 10×100m à RPE 7-8) pour améliorer votre vitesse de nage.' },
+    { cond: d=>d.ana<5,    tag:'Sprint',   color:'#dc3d6a', text:'Intégrez quelques sprints courts (15-25m max) pour développer votre poussée et votre efficacité technique.' },
   ],
   velo: [
-    { cond: d=>d.ef<50,    tag:'Endurance', color:'#5fb37f', text:'Le vélo se construit sur une large base en endurance fondamentale. Visez 60-70% du volume total en EF (sortie longue, récupération).' },
-    { cond: d=>d.seuil<10, tag:'FTP',      color:'#b0922c', text:'Ajoutez des intervalles au seuil (2×20min, 3×15min à RPE 7-8) pour progresser en puissance soutenue.' },
-    { cond: d=>d.ana<5,    tag:'VO2max',   color:'#c4443f', text:'Intégrez des efforts courts intenses (4-6×3-5min à RPE 9+) pour développer votre VO2max.' },
+    { cond: d=>d.ef<50,    tag:'Endurance', color:'#34c48b', text:'Le vélo se construit sur une large base en endurance fondamentale. Visez 60-70% du volume total en EF (sortie longue, récupération).' },
+    { cond: d=>d.seuil<10, tag:'FTP',      color:'#d8791a', text:'Ajoutez des intervalles au seuil (2×20min, 3×15min à RPE 7-8) pour progresser en puissance soutenue.' },
+    { cond: d=>d.ana<5,    tag:'VO2max',   color:'#dc3d6a', text:'Intégrez des efforts courts intenses (4-6×3-5min à RPE 9+) pour développer votre VO2max.' },
   ],
   run: [
-    { cond: d=>d.ef<55,    tag:'Endurance', color:'#5fb37f', text:'La course se construit sur un volume élevé en endurance fondamentale. Visez 65-75% du volume en EF pour éviter les blessures.' },
-    { cond: d=>d.seuil<10, tag:'Seuil',    color:'#b0922c', text:'Ajoutez un tempo run hebdomadaire (20-40min à RPE 7) ou des intervalles au seuil pour améliorer votre allure de compétition.' },
-    { cond: d=>d.ana<5,    tag:'Vitesse',  color:'#c4443f', text:'Intégrez une séance de fractionné court par semaine (ex: 10×200m, 8×400m à RPE 9+) pour développer la vitesse.' },
+    { cond: d=>d.ef<55,    tag:'Endurance', color:'#34c48b', text:'La course se construit sur un volume élevé en endurance fondamentale. Visez 65-75% du volume en EF pour éviter les blessures.' },
+    { cond: d=>d.seuil<10, tag:'Seuil',    color:'#d8791a', text:'Ajoutez un tempo run hebdomadaire (20-40min à RPE 7) ou des intervalles au seuil pour améliorer votre allure de compétition.' },
+    { cond: d=>d.ana<5,    tag:'Vitesse',  color:'#dc3d6a', text:'Intégrez une séance de fractionné court par semaine (ex: 10×200m, 8×400m à RPE 9+) pour développer la vitesse.' },
   ],
 };
 

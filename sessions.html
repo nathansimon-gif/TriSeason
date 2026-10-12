@@ -6,15 +6,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -65,7 +65,7 @@
 
   <!-- ── Import zone ── -->
   <div id="importZone" style="display:none;margin-bottom:16px">
-    <div class="card" style="border-color:var(--accent);background:rgba(235,234,230,.06)">
+    <div class="card" style="border-color:var(--accent);background:rgba(185,236,74,.06)">
       <div id="importProgress" style="font-size:13px;color:var(--text)"></div>
       <div id="importResults" style="margin-top:10px"></div>
     </div>
@@ -73,7 +73,7 @@
 
   <!-- ── Similar sessions warning zone (only shown if matches found) ── -->
   <div id="similarZone" style="display:none;margin-bottom:16px">
-    <div class="card" style="border-color:var(--yellow);background:rgba(212,178,76,.06)">
+    <div class="card" style="border-color:var(--yellow);background:rgba(240,185,65,.06)">
       <div class="card__title" style="color:var(--yellow);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span>Séances similaires déjà enregistrées</span>
         <button class="btn btn--ghost btn--sm" onclick="ignoreAllSimilar()">✕ Ignorer tous les doublons</button>
@@ -328,9 +328,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261013a"></script>
-<script src="import.js?v=20261013a"></script>
-<script src="app.js?v=20261013a"></script>
+<script src="fit-parser.js?v=20261013b"></script>
+<script src="import.js?v=20261013b"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -464,7 +464,7 @@ function renderSessions() {
       <td class="td-num">${s.elevation ? s.elevation+' m' : '—'}</td>
       <td style="text-align:center">${s.sensation ? ['','😫','😕','😐','🙂','😄'][s.sensation] : ''}</td>
       <td style="font-size:12px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        ${s.comp_id ? '<span style="font-size:10px;background:rgba(235,234,230,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.notes||''}
+        ${s.comp_id ? '<span style="font-size:10px;background:rgba(185,236,74,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.notes||''}
       </td>
       <td style="white-space:nowrap">
         <button class="btn btn--ghost btn--sm btn--icon" onclick="editSession('${s.id}')" title="Modifier">✏️</button>
@@ -562,8 +562,8 @@ function showChartOrEmpty(id, points, label) {
 }
 
 const CHART_SCALES = {
-  x: { grid:{display:false}, ticks:{ color:'#64666d', font:{size:10}, maxTicksLimit:10, maxRotation:0, autoSkip:true } },
-  y: { grid:{color:'#26282d'}, ticks:{ color:'#64666d', font:{size:10} } },
+  x: { grid:{display:false}, ticks:{ color:'#6b7383', font:{size:10}, maxTicksLimit:10, maxRotation:0, autoSkip:true } },
+  y: { grid:{color:'#242b36'}, ticks:{ color:'#6b7383', font:{size:10} } },
 };
 
 function renderFCChart(sessions, label) {
@@ -575,9 +575,9 @@ function renderFCChart(sessions, label) {
       labels: chartDateLabels(pts),
       datasets: [{
         label:'FC moy (bpm)', data: pts.map(s=>s.fc_avg),
-        borderColor:'#d9574f', backgroundColor:'rgba(217,87,79,0.08)',
+        borderColor:'#ef5350', backgroundColor:'rgba(239,83,80,0.08)',
         tension:0.4, fill:true, pointRadius: pts.length > 80 ? 2 : 3,
-        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#4b9cd3':s.sport==='velo'?'#b0922c':'#c4443f')
+        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#2f95e6':s.sport==='velo'?'#d8791a':'#dc3d6a')
       }]
     },
     options: {
@@ -611,13 +611,13 @@ function renderPowerChart(sessions, label) {
 
 function renderWkgTable() {
   const levels = [
-    { range:'< 2,0', label:'Débutant',          color:'#9b9ca1' },
-    { range:'2,0–2,5', label:'Amateur débutant', color:'#5fb37f' },
-    { range:'2,5–3,0', label:'Amateur régulier', color:'#5fb37f' },
-    { range:'3,0–3,5', label:'Bon niveau — Ironman', color:'#d4b24c' },
-    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#c4443f' },
-    { range:'4,0–5,0', label:'Élite amateur / semi-pro', color:'#d9574f' },
-    { range:'> 5,0',   label:'Professionnel',   color:'#9d86cf' },
+    { range:'< 2,0', label:'Débutant',          color:'#a3abb9' },
+    { range:'2,0–2,5', label:'Amateur débutant', color:'#34c48b' },
+    { range:'2,5–3,0', label:'Amateur régulier', color:'#34c48b' },
+    { range:'3,0–3,5', label:'Bon niveau — Ironman', color:'#f0b941' },
+    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#dc3d6a' },
+    { range:'4,0–5,0', label:'Élite amateur / semi-pro', color:'#ef5350' },
+    { range:'> 5,0',   label:'Professionnel',   color:'#a48be0' },
   ];
   document.getElementById('wkgTable').innerHTML = levels.map(l =>
     `<div class="wkg-row">
@@ -974,7 +974,7 @@ function renderSimilarCard(candidate, existing, container) {
     + '<div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">D\u00e9j\u00e0 enregistr\u00e9e</div>'
     + '<div style="font-size:12px;color:var(--text-2)">' + formatSessionSummary(existing) + '</div>'
     + '</div>'
-    + '<div style="padding:8px 10px;background:rgba(235,234,230,.08);border-radius:var(--r-sm)">'
+    + '<div style="padding:8px 10px;background:rgba(185,236,74,.08);border-radius:var(--r-sm)">'
     + '<div style="font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Fichier import\u00e9</div>'
     + '<div style="font-size:12px;color:var(--text)">' + formatSessionSummary(candidate) + '</div>'
     + '</div>'

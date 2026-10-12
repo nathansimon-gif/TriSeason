@@ -6,15 +6,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -32,12 +32,18 @@
       transition: border-color .12s, background .12s;
       position: relative; overflow: hidden;
     }
-    .hero-sport:hover { border-color: var(--border2); background: var(--surface2); }
-    .hero-sport__bar { height: 2px; width: 24px; margin-bottom: 14px; }
+    .hero-sport:hover { border-color: var(--border2); }
+    .hero-sport--nat:hover  { box-shadow: inset 0 0 0 1px var(--nat); }
+    .hero-sport--velo:hover { box-shadow: inset 0 0 0 1px var(--velo); }
+    .hero-sport--run:hover  { box-shadow: inset 0 0 0 1px var(--run); }
+    .hero-sport__bar { height: 3px; margin: -18px -18px 16px; }
     .hero-sport--nat  .hero-sport__bar { background: var(--nat); }
     .hero-sport--velo .hero-sport__bar { background: var(--velo); }
     .hero-sport--run  .hero-sport__bar { background: var(--run); }
-    .hero-sport__sport { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 10px; }
+    .hero-sport__sport { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+    .hero-sport--nat  .hero-sport__sport { color: var(--nat); }
+    .hero-sport--velo .hero-sport__sport { color: var(--velo); }
+    .hero-sport--run  .hero-sport__sport { color: var(--run); }
     .hero-sport__val  { font-size: 32px; font-weight: 600; letter-spacing: -.025em; line-height: 1; }
     .hero-sport__unit { font-size: 14px; font-weight: 400; color: var(--text-2); margin-left: 2px; }
     .hero-sport__meta { font-size: 12px; color: var(--text-2); margin-top: 8px; line-height: 1.8; }
@@ -71,7 +77,7 @@
       border-radius:var(--r-sm); background:var(--surface2); position:relative;
     }
     .cal-cell--pad { background:transparent; }
-    .cal-cell--today { box-shadow:inset 0 0 0 1px var(--accent2); }
+    .cal-cell--today { box-shadow:inset 0 0 0 1px var(--accent); }
     .cal-cell__num { position:absolute; top:2px; left:4px; font-size:8px; color:var(--text-3); }
     .cal-dot { border-radius:50%; transition:width .2s,height .2s; }
     .cal-legend { display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap; font-size:11px; color:var(--text-2); }
@@ -349,7 +355,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013a"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -426,7 +432,7 @@ function updateGreeting() {
 // ── Week navigation ───────────────────────────────────────────────────────────
 function updateWeekNav() {
   const fmt   = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
-  const badge = txt => ` <span style="font-size:10px;color:var(--accent2);background:rgba(235,234,230,.15);padding:1px 7px;border-radius:20px;font-weight:600">${txt}</span>`;
+  const badge = txt => ` <span style="font-size:10px;color:var(--accent2);background:rgba(185,236,74,.15);padding:1px 7px;border-radius:20px;font-weight:600">${txt}</span>`;
 
   // Update "Cette semaine" button label
   const backBtn = document.getElementById('backToNowBtn');
@@ -746,10 +752,10 @@ function renderTotals() {
 // ── Charts ────────────────────────────────────────────────────────────────────
 const CO = {
   responsive:true, maintainAspectRatio:false, resizeDelay:0,
-  plugins:{ legend:{ labels:{ color:'#9b9ca1', font:{size:11}, boxWidth:8, padding:12 } } },
+  plugins:{ legend:{ labels:{ color:'#a3abb9', font:{size:11}, boxWidth:8, padding:12 } } },
   scales:{
-    x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:10}, maxRotation:0} },
-    y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d', font:{size:10}} }
+    x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383', font:{size:10}, maxRotation:0} },
+    y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383', font:{size:10}} }
   }
 };
 
@@ -766,9 +772,9 @@ function renderWeeklyChart() {
   charts['chartWeekly'] = makeChart('chartWeekly', {
     type:'line',
     data:{ labels, datasets:[
-      { label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#4b9cd3', backgroundColor:'rgba(75,156,211,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#b0922c', backgroundColor:'rgba(176,146,44,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#c4443f', backgroundColor:'rgba(196,68,63,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#2f95e6', backgroundColor:'rgba(47,149,230,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#d8791a', backgroundColor:'rgba(216,121,26,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#dc3d6a', backgroundColor:'rgba(220,61,106,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
     ]},
     options:{ ...CO, onClick:(e,el)=>{ if(el.length){ const ds=['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } } }
   });
@@ -780,9 +786,9 @@ function renderFrequencyChart() {
   charts['chartFrequency'] = makeChart('chartFrequency', {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#4b9cd3' },
-      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#b0922c' },
-      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#c4443f' },
+      { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#2f95e6' },
+      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#d8791a' },
+      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#dc3d6a' },
     ]},
     options: {
       ...CO,
@@ -807,9 +813,9 @@ function renderMonthlyChart() {
   charts['chartMonthly'] = makeChart('chartMonthly', {
     type:'bar',
     data:{ labels, datasets:[
-      {label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(75,156,211,.75)',  borderRadius:4},
-      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(176,146,44,.75)', borderRadius:4},
-      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(196,68,63,.75)',  borderRadius:4},
+      {label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(47,149,230,.75)',  borderRadius:4},
+      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(216,121,26,.75)', borderRadius:4},
+      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(220,61,106,.75)',  borderRadius:4},
     ]},
     options:CO
   });
@@ -823,12 +829,12 @@ function renderDonutChart() {
     type:'doughnut',
     data:{
       labels:['Natation','Vélo','Course'],
-      datasets:[{data:vals,backgroundColor:['#4b9cd3','#b0922c','#c4443f'],borderWidth:0,hoverOffset:8}]
+      datasets:[{data:vals,backgroundColor:['#2f95e6','#d8791a','#dc3d6a'],borderWidth:0,hoverOffset:8}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw.toFixed(1)}h (${total?Math.round(ctx.raw/total*100):0}%)`}}}}
   });
   // legend manual
-  const colors=['#4b9cd3','#b0922c','#c4443f'];
+  const colors=['#2f95e6','#d8791a','#dc3d6a'];
   const labels=['Natation','Vélo','Course'];
   document.getElementById('donutLegend').innerHTML=labels.map((l,i)=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
@@ -950,17 +956,17 @@ function renderWeight() {
       labels:weights.map(w=>new Date(w.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})),
       datasets:[{
         data:weights.map(w=>w.value),
-        borderColor:'#5fb37f', backgroundColor:'rgba(95,179,127,.06)',
+        borderColor:'#34c48b', backgroundColor:'rgba(52,196,139,.06)',
         tension:.4, pointRadius:3, pointHoverRadius:6, fill:true,
-        pointBackgroundColor:'#5fb37f', pointBorderColor:'var(--bg)',pointBorderWidth:2
+        pointBackgroundColor:'#34c48b', pointBorderColor:'var(--bg)',pointBorderWidth:2
       }]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw} kg`}}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#64666d',font:{size:10}}},
-        y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#64666d',font:{size:10}}}
+        x:{grid:{display:false},ticks:{color:'#6b7383',font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#6b7383',font:{size:10}}}
       }
     }
   });
@@ -1028,7 +1034,7 @@ function renderNextRace(){
     <div style="margin-bottom:14px">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <span style="font-size:10px;font-weight:700;color:${prioColor};background:${prioColor}22;padding:2px 7px;border-radius:20px">${next.priority||'B'}</span>
-        <span style="font-size:11px;color:var(--accent2);background:rgba(235,234,230,.12);padding:2px 9px;border-radius:20px;font-weight:600">J − ${diff}</span>
+        <span style="font-size:11px;color:var(--accent2);background:rgba(185,236,74,.12);padding:2px 9px;border-radius:20px;font-weight:600">J − ${diff}</span>
       </div>
       <div style="font-size:18px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px">${next.name}</div>
       <div style="font-size:12px;color:var(--text-2)">${new Date(next.date+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>

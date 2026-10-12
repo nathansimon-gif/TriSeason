@@ -6,15 +6,15 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013a"></script>
+  <script src="auth-guard.js?v=20261013b"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0e0f11">
+  <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261013a">
+  <link rel="stylesheet" href="style.css?v=20261013b">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -75,7 +75,7 @@
     .nutri-kpi__val { font-size:22px; font-weight:600; letter-spacing:-.02em; }
     .nutri-kpi__label { font-size:10px; color:var(--text-2); text-transform:uppercase; letter-spacing:.07em; margin-top:3px; }
     .disclaimer-box {
-      background: rgba(212,178,76,.08); border: 1px solid rgba(212,178,76,.25);
+      background: rgba(240,185,65,.08); border: 1px solid rgba(240,185,65,.25);
       border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
       color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
     }
@@ -385,7 +385,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013a"></script>
+<script src="app.js?v=20261013b"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -437,7 +437,7 @@ function updateDayNav() {
     const btn   = document.getElementById('todayBtn');
     if (label) {
       const dateStr = date.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-      const badge   = isNow ? '<span style="font-size:10px;color:var(--accent2);background:rgba(235,234,230,.15);padding:1px 7px;border-radius:20px;font-weight:600">Aujourd’hui</span>' : '';
+      const badge   = isNow ? '<span style="font-size:10px;color:var(--accent2);background:rgba(185,236,74,.15);padding:1px 7px;border-radius:20px;font-weight:600">Aujourd’hui</span>' : '';
       label.innerHTML = dateStr + (badge ? ' ' + badge : '');
     }
     const dp = document.getElementById('dayPicker');
@@ -555,7 +555,7 @@ function renderMealsList() {
   }
   el.innerHTML = meals.map(m => {
     const hasM = m.glucides || m.proteines || m.lipides;
-    const tags = (m.tags||[]).map(t=>`<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:rgba(235,234,230,.15);color:var(--accent2)">${t}</span>`).join('');
+    const tags = (m.tags||[]).map(t=>`<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:rgba(185,236,74,.15);color:var(--accent2)">${t}</span>`).join('');
     return `<div class="meal-card">
       <div class="meal-card__header">
         <div class="meal-card__title">
@@ -621,14 +621,14 @@ function renderCharts() {
   makeChart('chartHydro', {
     type:'bar',
     data:{ labels, datasets:[
-      { label:'Hydratation (ml)', data:hydroData, backgroundColor:'rgba(75,156,211,.6)', borderRadius:4 },
+      { label:'Hydratation (ml)', data:hydroData, backgroundColor:'rgba(47,149,230,.6)', borderRadius:4 },
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, annotation:{} },
       scales:{
-        x:{ grid:{display:false}, ticks:{color:'#64666d',font:{size:10}} },
-        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d',font:{size:10}} }
+        x:{ grid:{display:false}, ticks:{color:'#6b7383',font:{size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383',font:{size:10}} }
       }
     }
   });
@@ -636,14 +636,14 @@ function renderCharts() {
   makeChart('chartMeals', {
     type:'bar',
     data:{ labels, datasets:[
-      { label:'Repas', data:mealData, backgroundColor:'rgba(235,234,230,.6)', borderRadius:4 }
+      { label:'Repas', data:mealData, backgroundColor:'rgba(185,236,74,.6)', borderRadius:4 }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
       scales:{
-        x:{ grid:{display:false}, ticks:{color:'#64666d',font:{size:10}} },
-        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#64666d',font:{size:10},stepSize:1} }
+        x:{ grid:{display:false}, ticks:{color:'#6b7383',font:{size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383',font:{size:10},stepSize:1} }
       }
     }
   });
