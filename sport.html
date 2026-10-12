@@ -537,19 +537,19 @@ function getGoalProgress(sport, type, target) {
     return { current: wk.sessions||0, unit:'' };
   }
   if (type === 'dist_month') {
-    const cur = sessions.filter(s=>{ const d=new Date(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
+    const cur = sessions.filter(s=>{ const d=TS.parseLocalDate(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
     return { current: cur.reduce((a,s)=>a+(s.distance||0),0), unit:'km' };
   }
   if (type === 'dur_month') {
-    const cur = sessions.filter(s=>{ const d=new Date(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
+    const cur = sessions.filter(s=>{ const d=TS.parseLocalDate(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
     return { current: cur.reduce((a,s)=>a+(s.duration||0),0), unit:'h' };
   }
   if (type === 'sessions_month') {
-    const cur = sessions.filter(s=>{ const d=new Date(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
+    const cur = sessions.filter(s=>{ const d=TS.parseLocalDate(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
     return { current: cur.length, unit:'' };
   }
   if (type === 'dist_year') {
-    const cur = sessions.filter(s=>new Date(s.date).getFullYear()===year);
+    const cur = sessions.filter(s=>TS.parseLocalDate(s.date).getFullYear()===year);
     return { current: cur.reduce((a,s)=>a+(s.distance||0),0), unit:'km' };
   }
   return { current:0, unit:'' };

@@ -354,7 +354,7 @@ const _initNow = new Date();
 let currentDay = _initNow.getFullYear() + '-' +
   String(_initNow.getMonth() + 1).padStart(2, '0') + '-' +
   String(_initNow.getDate()).padStart(2, '0');
-let currentMonth = new Date().toISOString().slice(0,7);
+let currentMonth = TS.localDateStr().slice(0,7);
 
 // ── Chart.js global defaults (prevent canvas growing bug) ──
 Chart.defaults.animation = false;
@@ -452,7 +452,7 @@ function updateWeekNav() {
   } else { // month
     const [y, m] = currentMonth.split('-');
     const d      = new Date(+y, +m - 1, 1);
-    const isNow  = currentMonth === new Date().toISOString().slice(0, 7);
+    const isNow  = currentMonth === TS.localDateStr().slice(0, 7);
     document.getElementById('weekNavLabel').innerHTML =
       d.toLocaleDateString('fr-FR', {month:'long', year:'numeric'}) +
       (isNow ? badge('Ce mois') : '');
@@ -506,7 +506,7 @@ function goToCurrentWeek() {
   currentDay = _now.getFullYear() + '-' +
     String(_now.getMonth() + 1).padStart(2, '0') + '-' +
     String(_now.getDate()).padStart(2, '0');
-  currentMonth = new Date().toISOString().slice(0, 7);
+  currentMonth = TS.localDateStr().slice(0, 7);
   updateWeekNav();
   renderHeroStrip();
   renderTotals();
@@ -530,8 +530,8 @@ function getSessionsForPeriod(sport) {
   // week — filter by Monday→Sunday of currentWeek
   const monday = TS.getWeekMonday(currentWeek);
   const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-  const from = monday.toISOString().split('T')[0];
-  const to   = sunday.toISOString().split('T')[0];
+  const from = TS.localDateStr(monday);
+  const to   = TS.localDateStr(sunday);
   return all.filter(s => s.date >= from && s.date <= to);
 }
 
@@ -1010,7 +1010,7 @@ function saveProfileField(){
 // ── Next race ─────────────────────────────────────────────────────────────────
 function renderNextRace(){
   const comps=TS.getCompetitions();
-  const today=new Date().toISOString().split('T')[0];
+  const today=TS.localDateStr();
   const next=comps.find(c=>c.date>=today);
   const el=document.getElementById('nextRaceDisplay');
   if(!next){

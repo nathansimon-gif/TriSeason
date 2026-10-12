@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populateSeasonFilter();
   updateDistOptions();
   renderAllRecords();
-  document.getElementById('r_date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('r_date').value = TS.localDateStr();
   ['r_time','r_dist','r_sport'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', calcPaceFromRecord)
   );
@@ -514,7 +514,7 @@ function openRecordModal(record=null, defaultSport=null) {
   }
   distSel.value = record?.dist || '';
   document.getElementById('r_time').value     = record?.time     || '';
-  document.getElementById('r_date').value     = record?.date     || new Date().toISOString().split('T')[0];
+  document.getElementById('r_date').value     = record?.date     || TS.localDateStr();
   document.getElementById('r_location').value = record?.location || '';
   document.getElementById('r_notes').value    = record?.notes    || '';
   document.getElementById('r_calc').textContent = '';

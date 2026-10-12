@@ -51,7 +51,7 @@ function parseGPX(xmlText) {
   // Date from first point
   const firstTime = trkpts[0].querySelector('time')?.textContent;
   const lastTime  = trkpts[trkpts.length - 1].querySelector('time')?.textContent;
-  const date      = firstTime ? firstTime.split('T')[0] : new Date().toISOString().split('T')[0];
+  const date      = TS.localDateStr(firstTime ? new Date(firstTime) : new Date());
 
   // Duration in hours
   let durationH = null;
@@ -124,8 +124,8 @@ function parseFIT(buffer) {
         // Date
         const startTime = session?.start_time || data.activity?.timestamp;
         const date = startTime
-          ? new Date(startTime).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0];
+          ? TS.localDateStr(new Date(startTime))
+          : TS.localDateStr();
 
         // Duration
         const totalElapsed = session?.total_elapsed_time;
@@ -301,7 +301,8 @@ function parseTCX(xmlText) {
   const laps     = [...doc.querySelectorAll('Lap')];
   const firstLap = laps[0];
 
-  const date = firstLap?.getAttribute('StartTime')?.split('T')[0] || new Date().toISOString().split('T')[0];
+  const lapStart = firstLap?.getAttribute('StartTime');
+  const date = TS.localDateStr(lapStart ? new Date(lapStart) : new Date());
 
   // Totals from laps
   let totalSec = 0, totalDist = 0, totalCal = 0;

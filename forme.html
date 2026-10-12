@@ -285,7 +285,7 @@ function renderPMC() {
   const end   = new Date();
   const days  = [];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    days.push(d.toISOString().split('T')[0]);
+    days.push(TS.localDateStr(d));
   }
 
   // Exponentially weighted CTL (42d) / ATL (7d)
