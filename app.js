@@ -91,10 +91,31 @@ function pushToCloud(data) {
   if (!cloudLoaded) return; // données cloud pas encore récupérées : ne pas les écraser
   const ref = getUserDocRef(user.uid);
   if (!ref) return;
-  ref.set({ data: data, updatedAt: Date.now() })
+  // mergeFields : remplace entièrement data et updatedAt, sans toucher aux autres
+  // champs du document (ex. activeDays, utilisé pour le rapport d'activité).
+  ref.set({ data: data, updatedAt: Date.now() }, { mergeFields: ['data', 'updatedAt'] })
     .catch(err => {
       console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
     });
+}
+
+// Note le jour où l'utilisateur ouvre l'appli (une écriture par jour et par
+// appareil au plus). Sert uniquement au rapport d'activité : utilisateurs
+// actifs par jour (~4 Ko par an et par utilisateur).
+const ACTIVE_KEY = 'triseason_active_day';
+function markActiveToday(uid) {
+  const today = localDateStr();
+  try { if (localStorage.getItem(ACTIVE_KEY) === uid + ':' + today) return; } catch {}
+  const ref = getUserDocRef(uid);
+  if (!ref || !firebase.firestore.FieldValue) return;
+  ref.set({
+    activeDays: firebase.firestore.FieldValue.arrayUnion(today),
+    lastActive: Date.now(),
+  }, { merge: true }).then(() => {
+    try { localStorage.setItem(ACTIVE_KEY, uid + ':' + today); } catch {}
+  }).catch(err => {
+    console.warn('[TriSeason] Suivi d’activité non enregistré :', err.message);
+  });
 }
 
 function syncFromCloud(uid) {
@@ -117,6 +138,7 @@ function syncFromCloud(uid) {
       const localData = getData();
       pushToCloud(localData);
     }
+    markActiveToday(uid);
   }).catch(err => {
     // cloudLoaded reste à false : pas d'envoi vers le cloud pour ne pas l'écraser.
     console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);

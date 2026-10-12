@@ -53,6 +53,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - `pushToCloud` n'envoie rien tant que les données du compte n'ont pas été lues
   (`cloudLoaded`) : un navigateur vide ne doit jamais écraser le cloud.
 - Les séances ne stockent que des résumés (pas de traces GPS).
+- Le document `users/{uid}` contient aussi `activeDays` (jours d'ouverture de
+  l'appli, via `markActiveToday`) et `lastActive`. `pushToCloud` écrit avec
+  `mergeFields: ['data', 'updatedAt']` pour ne pas les effacer : ne jamais
+  revenir à un `set()` qui remplace tout le document.
 - Durées en **heures décimales**, à la seconde près (`Math.round(sec) / 3600`).
   Temps de course et records en texte `h:mm:ss`.
 - Limite à garder en tête : un document Firestore fait **1 Mo maximum**. Avec
@@ -90,6 +94,13 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
    sombre : ne pas les modifier sans revérifier qu'elles restent distinguables.
 5. **Records automatiques** : créés depuis les compétitions (`compRefreshRecordsInData`),
    marqués `auto` + `comp_id`. Ne jamais toucher aux records saisis à la main.
+
+## Rapport hebdomadaire
+
+`tools/weekly-report/` : script Node en lecture seule (clé de compte de service
+dans la variable d'environnement `FIREBASE_SA_KEY`), lancé chaque lundi matin
+par une tâche planifiée Claude. Voir son README. Tests : `npm test` dans ce
+dossier.
 
 ## Vérifier un changement
 
