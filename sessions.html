@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012d"></script>
+  <script src="auth-guard.js?v=20261013a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261012d">
+  <link rel="stylesheet" href="style.css?v=20261013a">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -328,9 +328,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261012d"></script>
-<script src="import.js?v=20261012d"></script>
-<script src="app.js?v=20261012d"></script>
+<script src="fit-parser.js?v=20261013a"></script>
+<script src="import.js?v=20261013a"></script>
+<script src="app.js?v=20261013a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -577,7 +577,7 @@ function renderFCChart(sessions, label) {
         label:'FC moy (bpm)', data: pts.map(s=>s.fc_avg),
         borderColor:'#d9574f', backgroundColor:'rgba(217,87,79,0.08)',
         tension:0.4, fill:true, pointRadius: pts.length > 80 ? 2 : 3,
-        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#4b9cd3':s.sport==='velo'?'#d3a24a':'#d6683f')
+        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#4b9cd3':s.sport==='velo'?'#b0922c':'#c4443f')
       }]
     },
     options: {
@@ -615,7 +615,7 @@ function renderWkgTable() {
     { range:'2,0–2,5', label:'Amateur débutant', color:'#5fb37f' },
     { range:'2,5–3,0', label:'Amateur régulier', color:'#5fb37f' },
     { range:'3,0–3,5', label:'Bon niveau — Ironman', color:'#d4b24c' },
-    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#d6683f' },
+    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#c4443f' },
     { range:'4,0–5,0', label:'Élite amateur / semi-pro', color:'#d9574f' },
     { range:'> 5,0',   label:'Professionnel',   color:'#9d86cf' },
   ];
