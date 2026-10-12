@@ -75,6 +75,10 @@ function migrateWeeksToSessions() {
 //  - un envoi vers Firestore à chaque sauvegarde (saveData), en tâche de fond
 //  - une récupération unique depuis Firestore juste après la connexion
 let cloudSyncing = false;
+// Tant que les données du compte n'ont pas été lues depuis Firestore, on n'envoie
+// rien : sinon un appareil au localStorage vide pourrait écraser la saison
+// enregistrée dans le cloud avec des données vides.
+let cloudLoaded = false;
 
 function getUserDocRef(uid) {
   if (!window.firebase || !firebase.firestore) return null;
@@ -84,6 +88,7 @@ function getUserDocRef(uid) {
 function pushToCloud(data) {
   const user = window.TS_USER;
   if (!user) return; // pas connecté (ou pas encore su) : rien à envoyer
+  if (!cloudLoaded) return; // données cloud pas encore récupérées : ne pas les écraser
   const ref = getUserDocRef(user.uid);
   if (!ref) return;
   ref.set({ data: data, updatedAt: Date.now() })
@@ -102,15 +107,18 @@ function syncFromCloud(uid) {
     if (doc.exists && doc.data() && doc.data().data) {
       // Un compte cloud existe déjà : ses données font foi sur cet appareil.
       const cloudData = doc.data().data;
+      cloudLoaded = true;
       localStorage.setItem(DB_KEY, JSON.stringify(cloudData));
       window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
     } else {
       // Premier login : on envoie ce qu'il y avait déjà en local (saison déjà
       // saisie avant la mise en place des comptes) pour l'attacher au compte.
+      cloudLoaded = true;
       const localData = getData();
       pushToCloud(localData);
     }
   }).catch(err => {
+    // cloudLoaded reste à false : pas d'envoi vers le cloud pour ne pas l'écraser.
     console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);
   }).finally(() => {
     cloudSyncing = false;
