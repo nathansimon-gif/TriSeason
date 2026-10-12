@@ -57,7 +57,7 @@ function parseGPX(xmlText) {
   let durationH = null;
   if (firstTime && lastTime) {
     const ms  = new Date(lastTime) - new Date(firstTime);
-    durationH = Math.round(ms / 36000) / 100; // 2 decimal places
+    durationH = Math.round(ms / 1000) / 3600; // à la seconde près
   }
 
   // Distance via Haversine
@@ -129,7 +129,7 @@ function parseFIT(buffer) {
 
         // Duration
         const totalElapsed = session?.total_elapsed_time;
-        const durationH = totalElapsed ? Math.round(totalElapsed / 36) / 100 : null;
+        const durationH = totalElapsed ? Math.round(totalElapsed) / 3600 : null; // à la seconde près
 
         // Distance — total_distance is now in meters (lengthUnit: 'm'), convert to km
         const totalDist = session?.total_distance;
@@ -326,7 +326,7 @@ function parseTCX(xmlText) {
 
   return {
     date, sport,
-    duration: Math.round(totalSec / 36) / 100,
+    duration: Math.round(totalSec) / 3600, // à la seconde près
     distance: Math.round(totalDist / 10) / 100,
     fc_avg:   hrCount ? Math.round(hrSum / hrCount) : null,
     fc_max:   maxHR || null,

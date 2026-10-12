@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261012b"></script>
+  <script src="auth-guard.js?v=20261012d"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f11">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261012b">
+  <link rel="stylesheet" href="style.css?v=20261012d">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -246,8 +246,8 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" data-tip="Format accepté : 1h30, 1:30, ou 1.5">Durée</label>
-          <input class="form-input" type="text" id="s_dur" placeholder="ex: 1h30, 1:30 ou 1.5">
+          <label class="form-label" data-tip="Formats acceptés : 1:30:15 (h:mm:ss), 1h30'15, 45min20s, 1h30, 1:30 ou 1.5">Durée</label>
+          <input class="form-input" type="text" id="s_dur" placeholder="ex: 1:30:15 ou 1h30'15">
         </div>
         <div class="form-group">
           <label class="form-label">Distance (km)</label>
@@ -328,9 +328,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261012b"></script>
-<script src="import.js?v=20261012b"></script>
-<script src="app.js?v=20261012b"></script>
+<script src="fit-parser.js?v=20261012d"></script>
+<script src="import.js?v=20261012d"></script>
+<script src="app.js?v=20261012d"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -659,9 +659,7 @@ function openSessionModal(session = null) {
   document.getElementById('s_date').value     = session?.date     || TS.localDateStr();
   document.getElementById('s_sport').value    = session?.sport    || 'velo';
   if (session?.duration) {
-    const hrs  = Math.floor(session.duration);
-    const mins = Math.round((session.duration - hrs) * 60);
-    document.getElementById('s_dur').value = hrs + 'h' + (mins ? String(mins).padStart(2,'0') : '');
+    document.getElementById('s_dur').value = formatHMS(session.duration);
   } else {
     document.getElementById('s_dur').value = '';
   }
@@ -1047,12 +1045,7 @@ function confirmImport(btn, sessionData) {
 }
 
 function formatDuration(h) {
-  if (!h) return '—';
-  const hours = Math.floor(h);
-  const mins  = Math.round((h - hours) * 60);
-  if (hours === 0) return mins + 'min';
-  if (mins === 0)  return hours + 'h';
-  return hours + 'h' + String(mins).padStart(2,'0');
+  return h ? formatHMS(h) : '—';
 }
 
 function quickDeleteSession(id) {
@@ -1062,27 +1055,34 @@ function quickDeleteSession(id) {
   TS.toast('Séance supprimée');
 }
 
+// Durée saisie → heures décimales, à la seconde près.
+// Accepte : "1:30:15" (h:mm:ss), "1:30" (h:mm), "1h30", "1h", "1h30'15", "1h30m15s",
+// "1h30:15", "45min", "45min20", "45'20", "90s" et le décimal "1.5".
 function parseDurInput(val) {
   if (!val) return null;
-  val = val.trim();
-  // Format "1h30" ou "1h" ou "30min"
-  var hm = val.match(/^(\d+)h(\d{0,2})$/i);
-  if (hm) return parseInt(hm[1]) + (hm[2] ? parseInt(hm[2])/60 : 0);
-  // Format "1:30" (H:MM)
-  var colon = val.match(/^(\d+):(\d{2})$/);
-  if (colon) return parseInt(colon[1]) + parseInt(colon[2])/60;
-  // Format décimal "1.5"
-  var dec = parseFloat(val);
-  return isNaN(dec) ? null : dec;
+  val = String(val).trim().toLowerCase().replace(/\s+/g, '').replace(',', '.');
+  var toH = function (h, m, s) { return Math.round((+h || 0) * 3600 + (+m || 0) * 60 + (+s || 0)) / 3600; };
+  var r;
+  if ((r = val.match(/^(\d+):(\d{1,2}):(\d{1,2})$/)))            return toH(r[1], r[2], r[3]); // 1:30:15
+  if ((r = val.match(/^(\d+):(\d{2})$/)))                         return toH(r[1], r[2], 0);    // 1:30
+  if ((r = val.match(/^(\d+)h(\d{1,2})?$/)))                       return toH(r[1], r[2], 0);    // 1h30, 1h
+  if ((r = val.match(/^(\d+)h(\d{1,2})[:'](\d{1,2})(?:"|''|s)?$/))) return toH(r[1], r[2], r[3]); // 1h30:15, 1h30'15
+  if ((r = val.match(/^(?:(\d+)h)?(\d{1,3})(?:min|mn|m|')(?:(\d{1,2})(?:s|"|'')?)?$/))) return toH(r[1], r[2], r[3]); // 1h30m15s, 45min20
+  if ((r = val.match(/^(\d+)(?:s|sec)$/)))                         return toH(0, 0, r[1]);       // 90s
+  if (/^\d+(\.\d+)?$/.test(val))                                  return toH(parseFloat(val), 0, 0); // 1.5
+  return null;
+}
+
+// Heures décimales → "h:mm:ss" (ex : 1.5 → "1:30:00", 0.7575 → "0:45:27").
+function formatHMS(h) {
+  if (!h) return '';
+  var sec = Math.round(h * 3600);
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  return Math.floor(sec / 3600) + ':' + pad(Math.floor((sec % 3600) / 60)) + ':' + pad(sec % 60);
 }
 
 function formatDur(h) {
-  if (!h) return '—';
-  const hrs  = Math.floor(h);
-  const mins = Math.round((h - hrs) * 60);
-  if (hrs === 0) return mins + 'min';
-  if (mins === 0) return hrs + 'h';
-  return hrs + 'h' + String(mins).padStart(2, '0');
+  return h ? formatHMS(h) : '—';
 }
 
 function quickDelete(id) {
