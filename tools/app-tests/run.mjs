@@ -253,6 +253,113 @@ async function main() {
     return 'recherche, code-barres et enregistrement';
   });
 
+  // Strava (faux Strava et faux serveur TriSeason : aucun vrai compte n'est utilisé)
+  async function stravaUser() {
+    const v = await newUser();
+    const calls = [];
+    // Réglages Strava remplis pour le test (vides dans le dépôt tant que Nathan ne les a pas)
+    await v.ctx.route(/\/app\.js/, async r => {
+      const res = await r.fetch();
+      const body = (await res.text()).replace("const STRAVA_CLIENT_ID = '';", "const STRAVA_CLIENT_ID = '12345';")
+        .replace("const TS_SERVER_URL = '';", "const TS_SERVER_URL = 'https://serveur.test';");
+      r.fulfill({ response: res, body });
+    });
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' };
+    await v.ctx.route(/serveur\.test/, r => {
+      calls.push(r.request().url().replace('https://serveur.test', '') + ' ' + (r.request().postData() || ''));
+      if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
+      const path = new URL(r.request().url()).pathname;
+      const body = path === '/strava/token'
+        ? { access_token: 'acces-1', refresh_token: 'renouv-1', expires_at: Math.floor(Date.now() / 1000) + 21600, athlete: { id: 99, firstname: 'Léa', lastname: 'Test' } }
+        : { ok: true };
+      r.fulfill({ body: JSON.stringify(body), contentType: 'application/json', headers: cors });
+    });
+    await v.ctx.route(/strava\.com\/api\/v3\/athlete\/activities/, r => {
+      calls.push('strava ' + r.request().headers().authorization);
+      const acts = [
+        { id: 501, sport_type: 'Ride', start_date: day(-1) + 'T06:00:00Z', start_date_local: day(-1) + 'T08:00:00Z', elapsed_time: 5400, distance: 42100 },
+        { id: 502, sport_type: 'Run', name: 'Sortie <b>du soir</b>', start_date: day(-2) + 'T21:30:00Z', start_date_local: day(-2) + 'T23:30:00Z',
+          elapsed_time: 3615, moving_time: 3500, distance: 10012.3, total_elevation_gain: 85.4, average_heartrate: 151.6, max_heartrate: 178 },
+        { id: 503, sport_type: 'Walk', start_date: day(-3) + 'T10:00:00Z', start_date_local: day(-3) + 'T12:00:00Z', elapsed_time: 1800, distance: 2000 },
+      ];
+      r.fulfill({ body: JSON.stringify(acts), contentType: 'application/json', headers: cors });
+    });
+    return { ...v, calls };
+  }
+
+  await test('Strava : connexion, séances ajoutées sans doublon (date locale, durée à la seconde)', async () => {
+    const v = await stravaUser();
+    await v.ctx.addInitScript(() => sessionStorage.setItem('triseason_strava_state', 'etat-ok'));
+    await v.page.goto(`${BASE}/profile.html?state=etat-ok&code=code-1&scope=read,activity:read_all`);
+    await v.page.waitForFunction(() => TS.getData().strava && TS.getData().strava.last_sync, null, { timeout: 8000 });
+    const r = await v.page.evaluate(() => ({ d: TS.getData(), url: location.search, card: document.getElementById('stravaBody').textContent }));
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    const fromStrava = r.d.sessions.filter(s => s.strava_id);
+    const run = r.d.sessions.find(s => s.strava_id === 502);
+    const ride = r.d.sessions.find(s => s.strava_id === 501);
+    assert(r.d.sessions.length === 41, `${r.d.sessions.length} séances au lieu de 41 (40 + la course ; le vélo existait déjà, la marche est ignorée)`);
+    assert(ride && ride.id === 's1', 'le vélo n’a pas été relié à la séance déjà importée');
+    assert(run && run.date === day(-2), 'date de la course : ' + (run && run.date) + ' au lieu de ' + day(-2) + ' (heure locale 23:30)');
+    assert(run.duration === 3615 / 3600 && run.distance === 10.01 && run.elevation === 85 && run.fc_avg === 152, 'valeurs : ' + JSON.stringify(run));
+    assert(fromStrava.length === 2 && !r.d.sessions.some(s => s.strava_id === 503), 'séances liées : ' + fromStrava.length);
+    assert(r.d.strava.refresh_token === 'renouv-1' && r.d.strava.name === 'Léa Test', 'connexion non enregistrée');
+    assert(!r.url.includes('code='), 'le code est resté dans l’adresse');
+    assert(r.card.includes('Léa Test'), 'carte Profil : ' + r.card.slice(0, 80));
+    assert(v.calls.some(c => c.startsWith('/strava/token') && c.includes('code-1')) && v.calls.some(c => c === 'strava Bearer acces-1'), 'appels : ' + v.calls.join(' | '));
+    return '1 ajoutée, 1 reliée, 1 ignorée';
+  });
+
+  await test('Strava : connexion refusée si le lien ne vient pas de TriSeason', async () => {
+    const v = await stravaUser();
+    await v.ctx.addInitScript(() => sessionStorage.setItem('triseason_strava_state', 'etat-ok'));
+    await v.page.goto(`${BASE}/profile.html?state=autre&code=code-pirate&scope=read,activity:read_all`);
+    await v.page.waitForTimeout(1500);
+    const st = await v.page.evaluate(() => TS.getData().strava);
+    await v.ctx.close();
+    assert(!st && !v.calls.some(c => c.includes('code-pirate')), 'le code a été utilisé');
+  });
+
+  await test('Strava : déconnexion (séances gardées ou supprimées au choix)', async () => {
+    const v = await stravaUser();
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(async () => {
+      const seed = (d) => { d.strava = { access_token: 'a', refresh_token: 'r', expires_at: Date.now() / 1000 + 9999, after: 0 };
+        d.sessions[0].strava_id = 1; d.sessions[1].strava_id = 2; TS.saveData(d); };
+      seed(TS.getData());
+      await TS.stravaDisconnect({ deleteSessions: false });
+      const kept = TS.getData();
+      seed(TS.getData());
+      await TS.stravaDisconnect({ deleteSessions: true });
+      const del = TS.getData();
+      return { kept: kept.sessions.length, keptIds: kept.sessions.filter(s => s.strava_id).length, keptConn: !!kept.strava, del: del.sessions.length };
+    });
+    await v.ctx.close();
+    assert(r.kept === 40 && r.keptIds === 0 && !r.keptConn, 'garder : ' + JSON.stringify(r));
+    assert(r.del === 38, 'supprimer : ' + r.del + ' séances au lieu de 38');
+    assert(v.calls.filter(c => c.startsWith('/strava/deauthorize')).length === 2, 'Strava non prévenu');
+  });
+
+  await test('Serveur TriSeason : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
+    const { default: worker } = await import('../server/worker.js');
+    const env = { STRAVA_CLIENT_ID: '12345', STRAVA_CLIENT_SECRET: 'SECRET-XYZ', ALLOWED_ORIGIN: 'https://site.test' };
+    const realFetch = globalThis.fetch;
+    const sent = [];
+    globalThis.fetch = async (url, init) => { sent.push({ url: String(url), body: init && init.body });
+      return new Response(JSON.stringify({ access_token: 'a', refresh_token: 'r', expires_at: 1, athlete: { id: 1, firstname: 'X', email: 'x@y.z' } }), { status: 200 }); };
+    try {
+      const req = (origin) => new Request('https://w.test/strava/token', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ code: 'c' }) });
+      const bad = await worker.fetch(req('https://pirate.test'), env);
+      const sentByBad = sent.length;
+      const good = await worker.fetch(req('https://site.test'), env);
+      const text = await good.text();
+      assert(bad.status === 403 && !sentByBad, 'site pirate : ' + bad.status);
+      assert(good.status === 200 && good.headers.get('Access-Control-Allow-Origin') === 'https://site.test', 'site autorisé : ' + good.status);
+      assert(!text.includes('SECRET') && !text.includes('email'), 'réponse : ' + text);
+      assert(sent[0].url === 'https://www.strava.com/oauth/token' && JSON.parse(sent[0].body).client_secret === 'SECRET-XYZ', 'appel Strava : ' + JSON.stringify(sent[0]));
+    } finally { globalThis.fetch = realFetch; }
+  });
+
   // 5. Données personnelles
   await test('RGPD : déconnexion → plus aucune donnée dans le navigateur', async () => {
     const v = await newUser();

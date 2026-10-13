@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261014b"></script>
+  <script src="auth-guard.js?v=20261015a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261014b">
+  <link rel="stylesheet" href="style.css?v=20261015a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -340,9 +340,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261014b"></script>
-<script src="import.js?v=20261014b"></script>
-<script src="app.js?v=20261014b"></script>
+<script src="fit-parser.js?v=20261015a"></script>
+<script src="import.js?v=20261015a"></script>
+<script src="app.js?v=20261015a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -477,7 +477,7 @@ function renderSessions() {
       <td class="td-num">${s.elevation ? s.elevation+' m' : '—'}</td>
       <td style="text-align:center">${s.sensation ? ['','😫','😕','😐','🙂','😄'][s.sensation] : ''}</td>
       <td style="font-size:12px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        ${s.comp_id ? '<span style="font-size:10px;background:rgba(185,236,74,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.notes||''}
+        ${s.comp_id ? '<span style="font-size:10px;background:rgba(185,236,74,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.strava_id ? '<a href="https://www.strava.com/activities/' + encodeURIComponent(s.strava_id) + '" target="_blank" rel="noopener" style="color:#fc5200;font-size:11px;margin-right:4px" title="Voir sur Strava">Voir sur Strava</a>' : ''}${escHtml(s.notes||'')}
       </td>
       <td style="white-space:nowrap">
         <button class="btn btn--ghost btn--sm btn--icon" onclick="editSession('${s.id}')" title="Modifier">✏️</button>
@@ -744,6 +744,7 @@ function saveSessionForm() {
   // Course à laquelle la séance était reliée avant cette modification (si on édite)
   const previous = editId ? TS.getSessions().find(s => s.id === editId) : null;
   const previousCompId = previous ? previous.comp_id : null;
+  if (previous && previous.strava_id) session.strava_id = previous.strava_id; // reste liée à Strava (pas de doublon)
 
   TS.saveSession(session);
 

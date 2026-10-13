@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261014b"></script>
+  <script src="auth-guard.js?v=20261015a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261014b">
+  <link rel="stylesheet" href="style.css?v=20261015a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -51,6 +51,12 @@
       transition: all .15s;
     }
     .data-export-btn:hover { background: var(--surface3); border-color: var(--border2); }
+    .btn--strava { background: #fc5200; border: 1px solid #fc5200; color: #fff; font-weight: 600; }
+    .btn--strava:hover { background: #e34a00; }
+    .strava-note { font-size: 12px; color: var(--text-2); line-height: 1.55; }
+    .strava-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .strava-powered { font-size: 11px; color: var(--text-3); margin-top: 12px; }
+    .strava-powered b { color: #fc5200; font-weight: 600; }
     .zone-chip {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
@@ -117,6 +123,12 @@
       <span class="tip-icon" data-tip="Basé sur votre FC max. Renseignez-la dans 'Modifier le profil'.">?</span>
     </div>
     <div id="fcZones"></div>
+  </div>
+
+  <!-- ── Strava ── -->
+  <div class="section-card" id="stravaCard" hidden>
+    <div class="section-card__title">Strava</div>
+    <div id="stravaBody"></div>
   </div>
 
   <!-- ── Compte ── -->
@@ -270,7 +282,7 @@
 </div>
 
 
-<script src="app.js?v=20261014b"></script>
+<script src="app.js?v=20261015a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -284,9 +296,71 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPBs();
   renderSeasonStats();
   renderFCZones();
+  renderStrava();
+  handleStravaReturn();
   loadEditForm();
   TS.initTooltips();
 });
+
+// ── Strava ────────────────────────────────────────────────────────────────────
+let stravaBusy = '';
+function renderStrava() {
+  const card = document.getElementById('stravaCard');
+  if (!TS.stravaAvailable()) { card.hidden = true; return; }
+  card.hidden = false;
+  const st = TS.getStrava();
+  const body = document.getElementById('stravaBody');
+  const powered = '<div class="strava-powered">Séances fournies par <b>Strava</b> (Powered by Strava)</div>';
+  if (!st) {
+    body.innerHTML = `<div class="strava-note">Connecte ton compte Strava : tes nouvelles séances de natation, vélo et course
+      arrivent toutes seules dans TriSeason, sans fichier à importer. Ta montre (Garmin, Coros, Polar…) doit déjà envoyer ses séances à Strava.
+      TriSeason lit seulement tes activités, ne publie rien sur Strava et tu peux te déconnecter à tout moment.</div>
+      <div class="strava-actions"><button class="btn btn--strava" onclick="TS.stravaConnect()" ${stravaBusy ? 'disabled' : ''}>${stravaBusy || 'Connecter avec Strava'}</button></div>`;
+    return;
+  }
+  const n = TS.getData().sessions.filter(s => s.strava_id).length;
+  const last = st.last_sync ? new Date(st.last_sync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'jamais';
+  body.innerHTML = `<div class="strava-note">Connecté${st.name ? ' en tant que <b style="color:var(--text)">' + st.name.replace(/</g, '&lt;') + '</b>' : ''}.
+      ${n} séance${n > 1 ? 's' : ''} liée${n > 1 ? 's' : ''} à Strava · dernière vérification : ${last}.<br>
+      Les nouvelles séances arrivent quand tu ouvres TriSeason. La marche et la musculation ne sont pas importées.</div>
+    <div class="strava-actions">
+      <button class="btn btn--sm" onclick="stravaCheckNow(false)" ${stravaBusy ? 'disabled' : ''}>${stravaBusy || 'Vérifier maintenant'}</button>
+      <button class="btn btn--ghost btn--sm" onclick="stravaCheckNow(true)" ${stravaBusy ? 'disabled' : ''}>Récupérer tout l’historique</button>
+      <button class="btn btn--ghost btn--sm" onclick="stravaDisconnectAsk()" ${stravaBusy ? 'disabled' : ''}>Déconnecter Strava</button>
+    </div>${powered}`;
+}
+
+async function handleStravaReturn() {
+  if (!/[?&](code|error)=/.test(location.search)) return;
+  stravaBusy = 'Connexion à Strava…'; renderStrava();
+  try {
+    const r = await TS.stravaHandleRedirect();
+    if (r) TS.toast(r.msg, r.ok ? 'success' : 'error');
+  } catch (err) {
+    TS.toast('Connexion à Strava impossible : ' + err.message, 'error');
+  }
+  stravaBusy = ''; renderStrava(); renderSeasonStats();
+}
+
+async function stravaCheckNow(full) {
+  stravaBusy = full ? 'Récupération de l’historique…' : 'Vérification…'; renderStrava();
+  try {
+    const r = await TS.stravaSync({ force: true, full });
+    TS.toast(TS.stravaSyncMessage(r, true));
+  } catch (err) { TS.toast(err.message, 'error'); }
+  stravaBusy = ''; renderStrava(); renderSeasonStats();
+}
+
+async function stravaDisconnectAsk() {
+  if (!confirm('Déconnecter Strava ? Les nouvelles séances n’arriveront plus toutes seules.')) return;
+  const del = confirm('Supprimer aussi de TriSeason les séances venues de Strava ?\n\nOK : les supprimer · Annuler : les garder');
+  stravaBusy = 'Déconnexion…'; renderStrava();
+  await TS.stravaDisconnect({ deleteSessions: del });
+  stravaBusy = ''; renderStrava(); renderSeasonStats();
+  TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
+}
+
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); });
 
 // ── Profile render ────────────────────────────────────────────────────────────
 function renderProfile() {

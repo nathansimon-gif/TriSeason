@@ -44,6 +44,15 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   records automatiques, formats FFTri, helpers de dates et d'allure,
   `getNutritionImpact` : croisement nutrition × séances affiché dans Forme).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx.
+- **Strava** (dans `app.js`) : connexion depuis Profil, puis à chaque ouverture
+  de l'appli (au plus toutes les 15 min par appareil) le navigateur lit les
+  nouvelles activités chez Strava et crée les séances (`strava_id` sur la
+  séance, doublons avec un import .fit reliés). Réglages publics
+  `STRAVA_CLIENT_ID` et `TS_SERVER_URL` en haut du bloc Strava : vides = carte
+  Strava cachée. Jetons dans `data.strava` (retirés de l'export).
+- `tools/server/` : petit serveur Cloudflare Workers (gratuit) qui garde la clé
+  secrète Strava (échange et renouvellement des jetons, déconnexion) et relaie
+  la recherche Open Food Facts. N'enregistre rien. Mise en place : son README.
 - `auth-guard.js` : connexion Firebase, redirige vers `login.html` si personne
   n'est connecté.
 - `style.css` : design system (variables sur `:root`).
@@ -134,6 +143,8 @@ le dire dans `confidentialite.html` et sans accord explicite.
   (gstatic.com) restent externes. Exception voulue : la recherche de produits
   (Nutrition) appelle Open Food Facts, uniquement quand l'utilisateur cherche,
   avec seulement le texte tapé ou le code-barres (écrit dans `confidentialite.html`).
+  Même chose pour Strava (api.strava.com, seulement si l'utilisateur l'a connecté)
+  et le serveur TriSeason sur Cloudflare.
 
 ## Rapport hebdomadaire
 

@@ -9,13 +9,16 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #17 (recherche et scan de produits, phrase sur Strava) puis recharger le site
-- [ ] 🧑 Tester sur ton téléphone : Nutrition → Ajouter un repas → chercher un produit, puis « Scanner » un code-barres (iPhone et Android). La recherche n'a pas pu être essayée sur le vrai Open Food Facts depuis l'environnement de Claude
-- [ ] 🧑 **Décider pour la synchronisation Strava** (voir ci-dessous) : depuis juin 2026, Strava demande au développeur d'avoir un **abonnement Strava** (environ 60 €/an) ; 10 utilisateurs possibles tout de suite, au-delà il faut une validation par Strava
+- [ ] 🧑 Fusionner la PR #18 (connexion Strava prête, recherche d'aliments plus fiable) puis recharger le site
+- [ ] 🧑 **Mettre en place Strava** en suivant `tools/server/README.md` (Claude guide pas à pas) : créer l'appli sur strava.com/settings/api, créer le serveur gratuit Cloudflare, y mettre le secret Strava. Puis envoyer à Claude l'**ID client** et l'adresse du serveur (jamais le secret)
+- [ ] 🤖 Remplir `STRAVA_CLIENT_ID` et `TS_SERVER_URL` dans `app.js` ; la carte « Strava » apparaît alors dans Profil
+- [ ] 🧑 Tester avec ton compte, puis jusqu'à 9 testeurs (limite Strava sans validation)
+- [ ] 🧑 Tester sur ton téléphone la recherche et le scan de produits (Nutrition → Ajouter un repas)
 
 ## Bientôt (dans le mois)
 
-- [ ] 🤖 **Synchronisation automatique avec Strava** (si Nathan valide) : bouton « Connecter Strava » dans Profil, les nouvelles séances arrivent seules. Demande : une appli créée sur strava.com/settings/api par Nathan, un petit serveur pour garder la clé secrète (Cloudflare Workers, gratuit), la mise à jour de la politique de confidentialité, le logo « Powered by Strava »
+- [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti) : avant, remplacer le bouton et la mention « Powered by Strava » par les images officielles de Strava (guide de marque sur developers.strava.com), puis captures d'écran + texte préparés par Claude
+- [ ] 🤖 *Plus tard* : séances en temps réel avec les alertes Strava (« webhooks »), au lieu d'attendre l'ouverture de l'appli. Demande que le serveur puisse écrire dans Firestore
 - [ ] 🤖 *Sans attendre Strava* : importer d'un coup **toute l'archive Strava** (le fichier .zip que Strava envoie quand on demande ses données) pour récupérer tout l'historique
 - [ ] 🤖 *Facultatif* : lancer aussi les tests automatiques sur GitHub à chaque pull request (coche verte / croix rouge avant la fusion). Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
@@ -61,6 +64,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 15/10/2026 | #18 | **Connexion Strava** prête (Profil → « Connecter avec Strava », séances ajoutées à l'ouverture de l'appli, doublons reliés, lien « Voir sur Strava », déconnexion) + petit serveur Cloudflare (`tools/server`) ; recherche d'aliments : 3 essais et passage par le serveur (Open Food Facts souvent saturé) |
 | 14/10/2026 | #17 | Nutrition : recherche de produits du commerce et **scan du code-barres** (Open Food Facts) ; phrase « Strava et Garmin suivent tes séances, TriSeason les relie à ce que tu manges et à ta forme » (connexion + Aide) ; nouvelle simulation des 100 clients |
 | 14/10/2026 | #16 | Tests automatiques (20 vérifications) chaque lundi à 6h53, résultat dans le rapport ; page « Aide et contact » (FAQ + e-mail) |
 | 14/10/2026 | #15 | Repas habituels plus compacts : 2 affichés, « Voir tous les repas habituels » pour la liste complète |
