@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1016">
+  <title>TriSeason — Confidentialité et mentions légales</title>
+  <link rel="stylesheet" href="style.css?v=20261013e">
+  <style>
+    .legal { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; color: var(--text-2); font-size: 14px; line-height: 1.7; }
+    .legal h1 { color: var(--text); font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+    .legal h2 { color: var(--text); font-size: 17px; font-weight: 600; margin: 32px 0 10px; }
+    .legal h3 { color: var(--text); font-size: 14px; font-weight: 600; margin: 18px 0 6px; }
+    .legal p, .legal ul { margin-bottom: 10px; }
+    .legal ul { padding-left: 20px; }
+    .legal li { margin-bottom: 4px; }
+    .legal b { color: var(--text); font-weight: 600; }
+    .legal a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+    .legal table { width: 100%; font-size: 13px; margin: 8px 0 14px; }
+    .legal td, .legal th { padding: 8px 10px; vertical-align: top; }
+    .legal th { color: var(--text-2); }
+    .legal .meta { color: var(--text-3); font-size: 12px; margin-bottom: 24px; }
+    .legal .back { display: inline-block; margin-bottom: 20px; font-size: 13px; color: var(--text-2); }
+    .legal nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 16px; margin-bottom: 8px; }
+    .legal nav.toc a { color: var(--text); text-decoration: none; display: block; padding: 2px 0; }
+  </style>
+</head>
+<body>
+<main class="legal">
+  <a class="back" href="index.html">← Retour à TriSeason</a>
+  <h1>Confidentialité et mentions légales</h1>
+  <div class="meta">Version 1 — dernière mise à jour : 13 octobre 2026</div>
+
+  <nav class="toc" aria-label="Sommaire">
+    <a href="#confidentialite">1. Politique de confidentialité</a>
+    <a href="#mentions">2. Mentions légales</a>
+    <a href="#conditions">3. Conditions d'utilisation</a>
+  </nav>
+
+  <!-- ─────────────────────────────────────────────────────────────────────── -->
+  <h2 id="confidentialite">1. Politique de confidentialité</h2>
+  <p>TriSeason est une application de suivi d'entraînement (natation, vélo, course à pied) et de nutrition.
+  Cette page explique quelles données sont enregistrées, pourquoi, où, combien de temps, et comment tu
+  peux les contrôler, conformément au Règlement général sur la protection des données (RGPD).</p>
+
+  <h3>Responsable du traitement</h3>
+  <p>Nathan SIMON, éditeur de TriSeason.
+  Contact pour toute question sur tes données : <a href="mailto:tri.season.tracker@gmail.com">tri.season.tracker@gmail.com</a>.</p>
+
+  <h3>Données enregistrées</h3>
+  <table>
+    <tr><th>Catégorie</th><th>Exemples</th></tr>
+    <tr><td><b>Compte</b></td><td>Adresse e-mail, mode de connexion (e-mail ou Google). Le mot de passe est géré par Google Firebase : TriSeason n'y a jamais accès.</td></tr>
+    <tr><td><b>Entraînement</b></td><td>Séances (date, sport, durée, distance, dénivelé), compétitions, records, objectifs, fichiers importés depuis ta montre (seul un résumé est conservé, pas les traces GPS).</td></tr>
+    <tr><td><b>Données de santé</b></td><td>Poids, taille, fréquence cardiaque, puissance, ressenti et effort perçu (RPE), repas (glucides, protéines, lipides, calories), hydratation, ravitaillements.</td></tr>
+    <tr><td><b>Utilisation</b></td><td>Les jours où tu ouvres l'appli, pour compter le nombre d'utilisateurs actifs.</td></tr>
+  </table>
+  <p>Les données de santé sont des « données sensibles » au sens de l'article 9 du RGPD : elles ne sont
+  enregistrées qu'avec ton <b>accord explicite</b>, demandé à la création du compte.</p>
+
+  <h3>Pourquoi ces données sont utilisées</h3>
+  <ul>
+    <li><b>Te fournir ton suivi</b> : tableaux de bord, graphiques, records, forme, croisement nutrition et performance.
+      Base légale : ton consentement explicite (art. 6.1.a et 9.2.a du RGPD) et l'exécution du service que tu as demandé (art. 6.1.b).</li>
+    <li><b>Faire fonctionner et améliorer l'appli</b> : statistiques globales et anonymes (nombre de comptes, d'utilisateurs actifs, de séances saisies).
+      Ces statistiques ne contiennent jamais les données d'une personne en particulier. Base légale : intérêt légitime de l'éditeur (art. 6.1.f).</li>
+  </ul>
+  <p>Tes données ne sont <b>ni vendues, ni louées, ni utilisées pour de la publicité</b>, et ne sont pas
+  utilisées pour entraîner une intelligence artificielle. TriSeason ne donne pas d'avis médical ni de conseil
+  nutritionnel personnalisé : les chiffres affichés décrivent tes propres données.</p>
+
+  <h3>Où sont stockées les données, et qui y a accès</h3>
+  <ul>
+    <li><b>Google Firebase</b> (Google Ireland Ltd / Google LLC), sous-traitant, héberge les comptes (Firebase Authentication)
+      et les données (Cloud Firestore). Les données sont stockées <b>dans l'Union européenne</b>
+      (région multirégionale « eur3 » : Belgique et Pays-Bas). Google peut ponctuellement traiter certaines données
+      hors de l'Union européenne, par exemple pour l'authentification ; ces transferts sont encadrés par le cadre
+      de protection des données UE–États-Unis et les clauses contractuelles types de la Commission européenne.</li>
+    <li><b>L'éditeur de TriSeason</b> peut, pour des raisons techniques (maintenance, correction d'un problème, assistance à ta demande),
+      accéder aux données stockées. Il ne le fait qu'en cas de nécessité et ne les communique à personne.</li>
+    <li>Une copie de tes données est aussi gardée <b>dans ton navigateur</b> (stockage local) pour que l'appli soit rapide et fonctionne hors connexion.
+      Elle est effacée quand tu te déconnectes.</li>
+  </ul>
+  <p>Le site est servi par GitHub Pages (GitHub, Inc.), qui reçoit comme tout hébergeur l'adresse IP des visiteurs.
+  Le chargement de la page fait aussi appel aux serveurs de Google pour la connexion (bibliothèque Firebase).
+  Les polices de caractères et les graphiques sont servis directement par TriSeason.</p>
+
+  <h3>Durée de conservation</h3>
+  <ul>
+    <li>Tant que ton compte existe. Tu peux tout supprimer à tout moment (voir ci-dessous) : la suppression est immédiate et définitive.</li>
+    <li>Compte inactif : supprimé après <b>3 ans</b> sans connexion, après un e-mail de prévenance.</li>
+  </ul>
+
+  <h3>Cookies et stockage local</h3>
+  <p>TriSeason n'utilise <b>aucun cookie publicitaire ni traceur</b>. L'appli enregistre dans ton navigateur
+  uniquement ce qui est nécessaire à son fonctionnement (tes données, ta session de connexion, tes préférences
+  d'affichage, les fichiers de l'appli pour le mode hors connexion). Ce stockage strictement nécessaire ne
+  demande pas de bandeau de consentement.</p>
+
+  <h3>Tes droits</h3>
+  <ul>
+    <li><b>Accès et portabilité</b> : Profil → « Exporter mes données » (fichier complet au format JSON).</li>
+    <li><b>Rectification</b> : directement dans l'appli (chaque séance, repas, record est modifiable).</li>
+    <li><b>Effacement</b> : Profil → « Effacer toutes mes données » (le compte reste ouvert) ou « Supprimer mon compte » (tout est supprimé).</li>
+    <li><b>Retrait du consentement</b> : à tout moment, en supprimant ton compte. Le retrait ne remet pas en cause ce qui a été fait avant.</li>
+    <li><b>Opposition et limitation</b>, et toute autre demande : écris à <a href="mailto:tri.season.tracker@gmail.com">tri.season.tracker@gmail.com</a>. Réponse sous un mois.</li>
+    <li><b>Réclamation</b> : tu peux saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr/fr/plaintes</a>).</li>
+  </ul>
+
+  <h3>Sécurité</h3>
+  <p>Les échanges sont chiffrés (HTTPS). Chaque compte ne peut lire et modifier que ses propres données
+  (règles de sécurité Firebase). En cas de violation de données présentant un risque, les personnes concernées
+  et la CNIL seront prévenues dans les délais prévus par la loi.</p>
+
+  <h3>Âge minimum</h3>
+  <p>TriSeason est réservé aux personnes de <b>15 ans et plus</b>. En dessous, l'accord d'un parent est nécessaire.</p>
+
+  <h3>Modifications</h3>
+  <p>En cas de changement important de cette politique, ton accord te sera redemandé à ta prochaine connexion.</p>
+
+  <!-- ─────────────────────────────────────────────────────────────────────── -->
+  <h2 id="mentions">2. Mentions légales</h2>
+  <ul>
+    <li><b>Éditeur</b> : Nathan SIMON, particulier</li>
+    <li><b>Adresse</b> : éditeur non professionnel ; ses coordonnées ont été communiquées à l'hébergeur
+      (article 6, III, 2 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique).</li>
+    <li><b>Contact</b> : <a href="mailto:tri.season.tracker@gmail.com">tri.season.tracker@gmail.com</a></li>
+    <li><b>Directeur de la publication</b> : Nathan SIMON</li>
+    <li><b>Hébergeur du site</b> : GitHub, Inc. (GitHub Pages), 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis — <a href="https://support.github.com" target="_blank" rel="noopener">support.github.com</a></li>
+    <li><b>Hébergeur des données</b> : Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irlande (Firebase).</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────────────────────────────────── -->
+  <h2 id="conditions">3. Conditions d'utilisation</h2>
+  <ul>
+    <li>TriSeason est un outil de suivi personnel, fourni gratuitement et « en l'état », sans garantie de disponibilité.</li>
+    <li>Les chiffres, analyses et tendances affichés sont <b>descriptifs</b> et calculés à partir de tes propres saisies.
+      Ils ne constituent <b>ni un avis médical, ni un conseil nutritionnel</b>. Consulte un professionnel de santé
+      avant de modifier ton entraînement ou ton alimentation.</li>
+    <li>Tu es responsable des informations que tu saisis et de la confidentialité de ton mot de passe.</li>
+    <li>L'éditeur peut faire évoluer ou arrêter le service ; en cas d'arrêt, tu seras prévenu pour pouvoir exporter tes données.</li>
+    <li>Ces conditions sont soumises au droit français.</li>
+  </ul>
+</main>
+</body>
+</html>

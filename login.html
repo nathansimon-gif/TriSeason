@@ -6,9 +6,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013d"></script>
+  <script src="auth-guard.js?v=20261013e"></script>
   <title>TriSeason — Connexion</title>
-  <link rel="stylesheet" href="style.css?v=20261013d">
+  <link rel="stylesheet" href="style.css?v=20261013e">
   <style>
     body {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -44,6 +44,20 @@
     }
     .btn--google:hover { opacity: .9; }
     .auth-switch { text-align: center; font-size: 12px; color: var(--text-2); margin-top: 18px; }
+    .auth-info {
+      display: none; background: var(--green-dim); border: 1px solid rgba(52,196,139,.35);
+      color: var(--text); font-size: 12px; padding: 9px 12px; border-radius: var(--r-sm);
+      margin-bottom: 14px; line-height: 1.5;
+    }
+    .auth-forgot { text-align: right; margin-top: -4px; margin-bottom: 4px; }
+    .auth-forgot a, .auth-legal a { color: var(--text-2); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .auth-consent {
+      display: none; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--text-2);
+      line-height: 1.5; margin: 6px 0 4px; cursor: pointer;
+    }
+    .auth-consent input { margin-top: 2px; accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+    .auth-consent a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+    .auth-legal { text-align: center; margin-top: 14px; }
     .auth-switch a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; font-weight: 500; cursor: pointer; }
   </style>
 </head>
@@ -59,6 +73,12 @@
     <div class="auth-sub" id="authSub">Accède à ton suivi de saison</div>
 
     <div class="auth-error" id="authError"></div>
+    <div class="auth-info" id="authInfo"></div>
+
+    <label class="auth-consent" id="authConsent">
+      <input type="checkbox" id="authConsentCheck">
+      <span>J'accepte que TriSeason enregistre et utilise mes données de santé (poids, fréquence cardiaque, nutrition…) pour me fournir mon suivi. <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></span>
+    </label>
 
     <button class="btn--google" onclick="signInGoogle()">
       <svg width="17" height="17" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.85 2.09-1.8 2.73v2.27h2.92c1.71-1.57 2.68-3.88 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.29-1.11-.29-1.71s.11-1.17.29-1.71V4.95H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.05l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
@@ -76,16 +96,23 @@
         <label class="form-label">Mot de passe</label>
         <input class="form-input" type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" required>
       </div>
+      <div class="auth-forgot" id="authForgot"><a onclick="resetPassword()">Mot de passe oublié ?</a></div>
       <button class="btn btn--primary" style="width:100%;margin-top:6px" onclick="submitEmailAuth()" id="authSubmitBtn">Se connecter</button>
     </form>
 
     <div class="auth-switch" id="authSwitch">
       Pas encore de compte ? <a onclick="toggleMode()">Créer un compte</a>
     </div>
+    <div class="auth-legal"><a href="confidentialite.html">Confidentialité et mentions légales</a></div>
   </div>
 
 <script>
 let mode = 'signin'; // 'signin' | 'signup'
+if (window.firebase && firebase.auth) firebase.auth().languageCode = 'fr'; // e-mails Firebase en français
+
+if (new URLSearchParams(location.search).get('deleted') === '1') {
+  showInfo('Ton compte et toutes tes données ont été supprimés.');
+}
 
 function toggleMode() {
   mode = mode === 'signin' ? 'signup' : 'signin';
@@ -94,10 +121,56 @@ function toggleMode() {
   document.getElementById('authSub').textContent = isSignup ? 'Rejoins TriSeason en quelques secondes' : 'Accède à ton suivi de saison';
   document.getElementById('authSubmitBtn').textContent = isSignup ? 'Créer mon compte' : 'Se connecter';
   document.getElementById('authForm').querySelector('input[type=password]').autocomplete = isSignup ? 'new-password' : 'current-password';
+  document.getElementById('authConsent').style.display = isSignup ? 'flex' : 'none';
+  document.getElementById('authForgot').style.display = isSignup ? 'none' : 'block';
   document.getElementById('authSwitch').innerHTML = isSignup
     ? 'Déjà un compte ? <a onclick="toggleMode()">Se connecter</a>'
     : 'Pas encore de compte ? <a onclick="toggleMode()">Créer un compte</a>';
   hideError();
+  hideInfo();
+}
+
+function showInfo(msg) {
+  const el = document.getElementById('authInfo');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideInfo() {
+  document.getElementById('authInfo').style.display = 'none';
+}
+
+// À l'inscription, la case doit être cochée. L'accord est enregistré dans le
+// compte juste après sa création (voir checkConsent dans app.js).
+function consentOk() {
+  if (mode !== 'signup') return true;
+  if (!document.getElementById('authConsentCheck').checked) {
+    showError('Pour créer un compte, coche la case d’accord sur l’utilisation de tes données.');
+    return false;
+  }
+  try { localStorage.setItem('triseason_pending_consent', String(Date.now())); } catch (e) {}
+  return true;
+}
+
+// Mot de passe oublié : Firebase envoie un e-mail avec un lien de
+// réinitialisation. Message identique que le compte existe ou non, pour ne pas
+// révéler quelles adresses sont inscrites.
+function resetPassword() {
+  hideError(); hideInfo();
+  const email = document.getElementById('authEmail').value.trim();
+  if (!email) {
+    showError('Saisis ton adresse e-mail ci-dessus, puis clique à nouveau sur « Mot de passe oublié ? ».');
+    document.getElementById('authEmail').focus();
+    return;
+  }
+  firebase.auth().sendPasswordResetEmail(email)
+    .then(() => showInfo('Si un compte existe pour ' + email + ', un e-mail pour choisir un nouveau mot de passe vient d’être envoyé. Pense à regarder dans les spams.'))
+    .catch(err => {
+      if (err.code === 'auth/user-not-found') {
+        showInfo('Si un compte existe pour ' + email + ', un e-mail pour choisir un nouveau mot de passe vient d’être envoyé. Pense à regarder dans les spams.');
+      } else {
+        showError(friendlyError(err));
+      }
+    });
 }
 
 function showError(msg) {
@@ -120,6 +193,7 @@ function friendlyError(err) {
     'auth/too-many-requests':        'Trop de tentatives — réessaie dans quelques minutes.',
     'auth/popup-closed-by-user':     'Fenêtre Google fermée avant la fin de connexion.',
     'auth/network-request-failed':   'Problème de connexion internet.',
+    'auth/missing-email':            'Saisis ton adresse e-mail.',
   };
   return map[err.code] || ('Une erreur est survenue (' + (err.code || err.message) + ').');
 }
@@ -129,6 +203,7 @@ function submitEmailAuth() {
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   if (!email || !password) { showError('Renseigne un email et un mot de passe.'); return; }
+  if (!consentOk()) return;
 
   const btn = document.getElementById('authSubmitBtn');
   btn.disabled = true;
@@ -141,6 +216,7 @@ function submitEmailAuth() {
   action
     .then(() => { /* auth-guard.js gère la redirection */ })
     .catch(err => {
+      try { localStorage.removeItem('triseason_pending_consent'); } catch (e) {}
       showError(friendlyError(err));
       btn.disabled = false;
       btn.textContent = mode === 'signup' ? 'Créer mon compte' : 'Se connecter';
@@ -149,10 +225,12 @@ function submitEmailAuth() {
 
 function signInGoogle() {
   hideError();
+  if (!consentOk()) return;
   const provider = new firebase.auth.GoogleAuthProvider();
   firebase.auth().signInWithPopup(provider)
     .then(() => { /* auth-guard.js gère la redirection */ })
     .catch(err => {
+      try { localStorage.removeItem('triseason_pending_consent'); } catch (e) {}
       if (err.code !== 'auth/popup-closed-by-user') showError(friendlyError(err));
     });
 }

@@ -95,6 +95,33 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 5. **Records automatiques** : créés depuis les compétitions (`compRefreshRecordsInData`),
    marqués `auto` + `comp_id`. Ne jamais toucher aux records saisis à la main.
 
+## RGPD et données personnelles
+
+Les données de santé (poids, FC, puissance, ressenti, repas, hydratation) sont
+des données sensibles (art. 9) : ne rien ajouter qui les envoie à un tiers sans
+le dire dans `confidentialite.html` et sans accord explicite.
+
+- **Copie locale liée à un compte** : `triseason_owner` dans le localStorage.
+  `claimLocalData` efface la copie si un autre compte se connecte ;
+  `TS_logout` (auth-guard.js) efface les données locales à la déconnexion.
+- **Consentement** : `users/{uid}.consent = {healthData, version, at}`. Sans
+  consentement à jour, `showConsentGate` bloque l'appli. Augmenter
+  `CONSENT_VERSION` (app.js) redemande l'accord à tous, par ex. après une
+  modification importante de la politique de confidentialité.
+- **Effacement** : `TS.resetAllData()` (données à zéro, compte gardé) et
+  `TS.deleteAccount(password)` (réauthentification, suppression du document
+  Firestore puis du compte Auth). Profil → « Supprimer mon compte ».
+- **Mot de passe oublié** : `sendPasswordResetEmail` sur login.html (message
+  identique que le compte existe ou non).
+- `confidentialite.html` : politique de confidentialité, mentions légales,
+  conditions d'utilisation. Page publique : **ne pas** y inclure auth-guard.js.
+  Éditeur : Nathan SIMON (particulier) ; site sur GitHub Pages ; Firestore en
+  région eur3 (UE) ; comptes inactifs supprimés après 3 ans (engagement écrit
+  dans la politique, pas encore automatisé).
+- **Pas de ressource tierce inutile** : polices IBM Plex servies depuis
+  `fonts/` (pas de Google Fonts) et Chart.js depuis `vendor/` (pas de CDN).
+  Seuls les scripts Firebase (gstatic.com) restent externes.
+
 ## Rapport hebdomadaire
 
 `tools/weekly-report/` : script Node en lecture seule (clé de compte de service
