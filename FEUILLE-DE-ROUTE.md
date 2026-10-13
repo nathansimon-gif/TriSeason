@@ -9,10 +9,9 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #18 (connexion Strava prête, recherche d'aliments plus fiable) puis recharger le site
-- [ ] 🧑 **Mettre en place Strava** en suivant `tools/server/README.md` (Claude guide pas à pas) : créer l'appli sur strava.com/settings/api, créer le serveur gratuit Cloudflare, y mettre le secret Strava. Puis envoyer à Claude l'**ID client** et l'adresse du serveur (jamais le secret)
-- [ ] 🤖 Remplir `STRAVA_CLIENT_ID` et `TS_SERVER_URL` dans `app.js` ; la carte « Strava » apparaît alors dans Profil
-- [ ] 🧑 Tester avec ton compte, puis jusqu'à 9 testeurs (limite Strava sans validation)
+- [ ] 🧑 Fusionner la PR #19 (connexion Strava activée) puis recharger le site
+- [ ] 🧑 Vérifier sur strava.com/settings/api que le **domaine du rappel d'autorisation** est `nathansimon-gif.github.io`, et dans Cloudflare que `ALLOWED_ORIGIN` est `https://nathansimon-gif.github.io` (sans `/TriSeason`)
+- [ ] 🧑 Tester : Profil → « Connecter avec Strava », puis vérifier les séances des 30 derniers jours. Ensuite jusqu'à 9 testeurs (limite Strava sans validation)
 - [ ] 🧑 Tester sur ton téléphone la recherche et le scan de produits (Nutrition → Ajouter un repas)
 
 ## Bientôt (dans le mois)
@@ -64,6 +63,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 15/10/2026 | #19 | Connexion Strava activée (ID client 287261, serveur Cloudflare `triseason.tri-season-tracker.workers.dev`) ; recherche d'aliments par le serveur |
 | 15/10/2026 | #18 | **Connexion Strava** prête (Profil → « Connecter avec Strava », séances ajoutées à l'ouverture de l'appli, doublons reliés, lien « Voir sur Strava », déconnexion) + petit serveur Cloudflare (`tools/server`) ; recherche d'aliments : 3 essais et passage par le serveur (Open Food Facts souvent saturé) |
 | 14/10/2026 | #17 | Nutrition : recherche de produits du commerce et **scan du code-barres** (Open Food Facts) ; phrase « Strava et Garmin suivent tes séances, TriSeason les relie à ce que tu manges et à ta forme » (connexion + Aide) ; nouvelle simulation des 100 clients |
 | 14/10/2026 | #16 | Tests automatiques (20 vérifications) chaque lundi à 6h53, résultat dans le rapport ; page « Aide et contact » (FAQ + e-mail) |

@@ -215,7 +215,7 @@ async function main() {
   await test('Nutrition : produit Open Food Facts ajouté au repas, sans compter deux fois', async () => {
     const v = await newUser();
     const asked = [];
-    await v.ctx.route(/openfoodfacts\.org/, r => {
+    await v.ctx.route(/openfoodfacts\.org|workers\.dev\/off\//, r => {
       const url = r.request().url(); asked.push(url);
       const compote = { code: '3045320001570', product_name: 'Compote pomme', brands: 'Andros, Andros SAS', serving_quantity: '100',
         nutriments: { carbohydrates_100g: 14, proteins_100g: 0.3, fat_100g: 0.2, 'energy-kcal_100g': 60 } };
@@ -249,7 +249,7 @@ async function main() {
     assert(gluc === '70', `glucides ${gluc} au lieu de 70 (riz 42 + compote 28 ; « pomme » ne doit pas être recompté)`);
     assert(gluc2 === '87', `glucides ${gluc2} au lieu de 87 après le code-barres`);
     assert(saved.glucides === 87 && saved.products?.length === 2 && saved.products[0].qty === 200 && !saved.products[0].label, 'repas enregistré : ' + JSON.stringify(saved));
-    assert(asked.length === 2 && asked[1].includes('/api/v2/product/3017620422003'), 'requêtes : ' + asked.join(' | '));
+    assert(asked.length === 2 && asked[0].includes('workers.dev/off/search?q=compote') && asked[1].includes('openfoodfacts.org/api/v2/product/3017620422003'), 'requêtes : ' + asked.join(' | '));
     return 'recherche, code-barres et enregistrement';
   });
 
@@ -257,11 +257,11 @@ async function main() {
   async function stravaUser() {
     const v = await newUser();
     const calls = [];
-    // Réglages Strava remplis pour le test (vides dans le dépôt tant que Nathan ne les a pas)
+    // Réglages Strava remplacés par ceux du test (faux serveur)
     await v.ctx.route(/\/app\.js/, async r => {
       const res = await r.fetch();
-      const body = (await res.text()).replace("const STRAVA_CLIENT_ID = '';", "const STRAVA_CLIENT_ID = '12345';")
-        .replace("const TS_SERVER_URL = '';", "const TS_SERVER_URL = 'https://serveur.test';");
+      const body = (await res.text()).replace(/const STRAVA_CLIENT_ID = '[^']*';/, "const STRAVA_CLIENT_ID = '12345';")
+        .replace(/const TS_SERVER_URL = '[^']*';/, "const TS_SERVER_URL = 'https://serveur.test';");
       r.fulfill({ response: res, body });
     });
     const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' };
