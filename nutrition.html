@@ -1524,6 +1524,22 @@ function timeToSec(str) {
   return 0;
 }
 
+// Nombre d'éléments affichés dans chaque liste (4 par défaut, +4 par clic sur « Afficher plus »)
+var PERF_STEP = 4;
+var perfShown = { sess: PERF_STEP, comp: PERF_STEP };
+function perfShowMore(key) { perfShown[key] += PERF_STEP; renderPerfComparison(); }
+function perfShowLess(key) { perfShown[key] = PERF_STEP; renderPerfComparison(); }
+
+// Garde les n premiers éléments + boutons « Afficher plus » / « Réduire »
+function perfLimited(items, key) {
+  var shown = items.slice(0, perfShown[key]).join('');
+  var left  = items.length - perfShown[key];
+  var btns  = '';
+  if (left > 0) btns += '<button class="btn btn--ghost btn--sm" onclick="perfShowMore(\'' + key + '\')">Afficher plus (' + left + ' de plus)</button>';
+  if (perfShown[key] > PERF_STEP && items.length > PERF_STEP) btns += '<button class="btn btn--ghost btn--sm" onclick="perfShowLess(\'' + key + '\')">Réduire</button>';
+  return shown + (btns ? '<div style="display:flex;gap:8px;margin-top:10px">' + btns + '</div>' : '');
+}
+
 function renderPerfComparison() {
   var el = document.getElementById('perfComparison');
   if (!el) return;
@@ -1562,28 +1578,30 @@ function renderPerfComparison() {
       + '<span>Jours &lt;2L : <b style="color:var(--red)">'+rpePH+'/10</b></span>'
       + '</div><div style="font-size:11px;color:'+color+'">'+msg+'</div></div>';
   }
-  var best = sessions.slice().sort(function(a,b){return (a.rpe||10)-(b.rpe||10);}).slice(0,3);
-  var rows = '';
+  // Classées par RPE le plus bas, puis de la plus récente à la plus ancienne
+  var best = sessions.slice().sort(function(a,b){ return ((a.rpe||10)-(b.rpe||10)) || b.date.localeCompare(a.date); });
+  var rows = [];
   best.forEach(function(s) {
     var hydro = allHydro[s.date]||0;
     var kcal  = allMeals.filter(function(m){return m.date===s.date;}).reduce(function(a,m){return a+(m.kcal||0);},0);
     var sp    = TS.SPORTS[s.sport]||{};
-    rows += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:12px">'
+    rows.push('<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:12px">'
       +'<span>'+(sp.emoji||'')+' '+s.date+'</span>'
       +'<span style="color:var(--green);font-weight:700">RPE '+s.rpe+'/10</span>'
       +'<span style="color:var(--text-2)">'+(hydro?hydro+'ml':'non saisie')+'</span>'
       +(kcal?'<span style="color:var(--text-2)">'+Math.round(kcal)+' kcal</span>':'')
       +(s.kcal?'<span style="color:var(--run)">'+s.kcal+' kcal brulees</span>':'')
-      +'</div>';
+      +'</div>');
   });
   out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm)">'
     +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">Meilleures seances (RPE le plus bas)</div>'
-    +rows+'</div>';
+    +perfLimited(rows, 'sess')+'</div>';
   // Analyse préparation nutritionnelle avant les courses associées
-  var comps = TS.getCompetitions().filter(function(c){ return c.actual_time; });
+  // De la plus récente à la plus ancienne
+  var comps = TS.getCompetitions().filter(function(c){ return c.actual_time; })
+    .sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
   if (comps.length > 0) {
-    var prepBlock = '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-top:8px">'
-      + '<div style="font-size:12px;font-weight:700;margin-bottom:10px">Preparation nutritionnelle avant vos courses</div>';
+    var compRows = [];
     comps.forEach(function(c) {
       // Sessions liées à cette course dans les 7 jours avant
       var raceDate = new Date(c.date + 'T00:00:00');
@@ -1614,7 +1632,7 @@ function renderPerfComparison() {
       var actualSec = timeToSec(c.actual_time);
       var objectif  = goalSec && actualSec ? (actualSec <= goalSec ? 'Objectif atteint' : 'Objectif non atteint') : null;
       var objColor  = objectif === 'Objectif atteint' ? 'var(--green)' : 'var(--red)';
-      prepBlock += '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+      compRows.push('<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
         + '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">'
         + '<span style="font-size:12px;font-weight:700">' + c.date + ' · ' + (c.name||c.type||'Course') + '</span>'
         + (objectif ? '<span style="font-size:11px;color:'+objColor+';font-weight:700">'+objectif+'</span>' : '')
@@ -1623,10 +1641,13 @@ function renderPerfComparison() {
         + '<span>Hydratation moy. J-7 : <b style="color:var(--nat)">' + (avgHydro||'--') + ' ml</b></span>'
         + '<span>Kcal moy. J-7 : <b style="color:var(--run)">' + (avgKcal||'--') + ' kcal</b></span>'
         + '<span>Jours de donnees : <b>' + count + '</b></span>'
-        + '</div></div>';
+        + '</div></div>');
     });
-    prepBlock += '</div>';
-    out += prepBlock;
+    if (compRows.length) {
+      out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-top:8px">'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:10px">Preparation nutritionnelle avant vos courses</div>'
+        + perfLimited(compRows, 'comp') + '</div>';
+    }
   }
 
   el.innerHTML = out;
