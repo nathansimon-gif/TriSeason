@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261014b"></script>
+  <script src="auth-guard.js?v=20261015a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261014b">
+  <link rel="stylesheet" href="style.css?v=20261015a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -437,7 +437,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261014b"></script>
+<script src="app.js?v=20261015a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -890,20 +890,30 @@ function offProduct(p) {
            serving: offNum(p.serving_quantity) };
 }
 
-async function offFetch(url) {
+async function offFetchOnce(url, ms) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 9000);
+  const timer = setTimeout(() => ctrl.abort(), ms);
   try {
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return await res.json();
   } finally { clearTimeout(timer); }
 }
+// Open Food Facts est souvent saturé (erreur 503, que le navigateur montre comme
+// une coupure réseau) : jusqu'à 3 essais, espacés de 1 puis 2 secondes.
+async function offFetch(url, tries = 3) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    if (i) await new Promise(r => setTimeout(r, i * 1000));
+    try { return await offFetchOnce(url, 12000); } catch (e) { last = e; }
+  }
+  throw last;
+}
 
 function offStatus(html) {
   document.getElementById('off_results').innerHTML = '<div class="off-status">' + html + '</div>';
 }
-const OFF_ERROR = 'Recherche impossible pour le moment (connexion ?). Tu peux écrire l’aliment dans la description ou saisir les macros.';
+const OFF_ERROR = 'La recherche Open Food Facts est saturée pour le moment. Réessaie dans quelques minutes, essaie avec le code-barres (plus fiable), ou écris l’aliment dans la description.';
 
 async function offSearch() {
   const q = document.getElementById('off_q').value.trim();
@@ -911,10 +921,13 @@ async function offSearch() {
   if (/^\d{8,14}$/.test(q)) return offLookup(q);
   offStatus('Recherche…');
   try {
-    const url = OFF_BASE + '/cgi/search.pl?action=process&json=1&search_simple=1&page_size=20&lc=fr'
-      + '&tagtype_0=countries&tag_contains_0=contains&tag_0=france'
-      + '&fields=' + OFF_FIELDS + '&search_terms=' + encodeURIComponent(q);
-    const data = await offFetch(url);
+    // Par le serveur TriSeason s'il est en place (nouvelle recherche, plus rapide),
+    // sinon directement l'ancienne recherche d'Open Food Facts.
+    const url = TS.SERVER_URL
+      ? TS.SERVER_URL + '/off/search?q=' + encodeURIComponent(q)
+      : OFF_BASE + '/cgi/search.pl?action=process&json=1&search_simple=1&page_size=20&lc=fr'
+        + '&fields=' + OFF_FIELDS + '&search_terms=' + encodeURIComponent(q);
+    const data = await offFetch(url, TS.SERVER_URL ? 1 : 3);
     offFound = (data.products || []).map(offProduct).filter(Boolean).slice(0, 8);
     renderOffResults(q);
   } catch (e) { offStatus(OFF_ERROR); }

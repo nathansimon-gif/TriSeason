@@ -1,5 +1,5 @@
 // TriSeason Tracker — Service Worker
-const CACHE = 'triseason-v8';
+const CACHE = 'triseason-v9';
 const ASSETS = [
   '/', '/index.html', '/sport.html', '/sessions.html',
   '/competitions.html', '/nutrition.html', '/records.html',

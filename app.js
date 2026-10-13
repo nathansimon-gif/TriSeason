@@ -213,7 +213,10 @@ function checkConsent(uid, doc) {
 // ── Effacer ses données / supprimer son compte ──────────────────────────────
 // Garde le compte mais remet les données à zéro (cloud compris).
 function resetAllData() {
-  saveData(structuredClone(DEFAULT_DATA));
+  const fresh = structuredClone(DEFAULT_DATA);
+  const st = getData().strava;  // la connexion Strava reste, sans réimporter l'ancien historique
+  if (st) fresh.strava = { ...st, after: Math.floor(Date.now() / 1000) };
+  saveData(fresh);
 }
 
 // Supprime définitivement les données cloud puis le compte de connexion.
@@ -258,6 +261,7 @@ function syncFromCloud(uid) {
       pushToCloud(localData);
     }
     markActiveToday(uid);
+    setTimeout(stravaAutoSync, 1500);
   }).catch(err => {
     // cloudLoaded reste à false : pas d'envoi vers le cloud pour ne pas l'écraser.
     console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);
@@ -1129,6 +1133,7 @@ function getNutritionImpact(filters = {}) {
 // ── Export / Import ───────────────────────────────────────────────────────────
 function exportData() {
   const data = getData();
+  if (data.strava) data.strava = { name: data.strava.name, connected_at: data.strava.connected_at }; // pas les clés d'accès
   data._exported = new Date().toISOString();
   data._version = '1.0';
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1144,12 +1149,229 @@ function importData(file) {
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target.result);
-        saveData({ ...structuredClone(DEFAULT_DATA), ...data });
+        delete data.strava;  // la connexion Strava de ce compte est gardée telle quelle
+        const current = getData().strava;
+        saveData({ ...structuredClone(DEFAULT_DATA), ...data, ...(current ? { strava: current } : {}) });
         resolve(data);
       } catch { reject(new Error('Fichier invalide')); }
     };
     reader.readAsText(file);
   });
+}
+
+// ── Strava : les séances arrivent toutes seules ─────────────────────────────
+// Réglages publics (ils ne sont pas secrets). La clé secrète de l'appli Strava
+// est gardée par le petit serveur TriSeason (tools/server, Cloudflare), jamais
+// dans le site : il échange le code d'autorisation et renouvelle les jetons.
+// Les séances sont lues directement chez Strava par le navigateur, à
+// l'ouverture de l'appli (au plus toutes les 15 minutes par appareil).
+const STRAVA_CLIENT_ID = '';
+const TS_SERVER_URL = '';   // ex. https://triseason.<nom>.workers.dev (sans / à la fin)
+const STRAVA_API = 'https://www.strava.com/api/v3';
+const STRAVA_CHECK_KEY = 'triseason_strava_check';
+const STRAVA_STATE_KEY = 'triseason_strava_state';
+const STRAVA_EVERY_MS = 15 * 60 * 1000;
+const STRAVA_FIRST_DAYS = 30;  // à la connexion : les 30 derniers jours
+LOCAL_USER_KEYS.push(STRAVA_CHECK_KEY);
+
+const STRAVA_SPORTS = {
+  Run: 'run', TrailRun: 'run', VirtualRun: 'run',
+  Ride: 'velo', VirtualRide: 'velo', GravelRide: 'velo', MountainBikeRide: 'velo',
+  EBikeRide: 'velo', EMountainBikeRide: 'velo', Velomobile: 'velo', Handcycle: 'velo',
+  Swim: 'nat',
+};
+
+function stravaAvailable() { return !!(STRAVA_CLIENT_ID && TS_SERVER_URL); }
+function getStrava() { return getData().strava || null; }
+
+async function serverPost(path, body) {
+  const res = await fetch(TS_SERVER_URL + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || ('Serveur TriSeason : erreur ' + res.status));
+  return json;
+}
+
+// Ouvre la page Strava « Autoriser TriSeason ? » ; Strava renvoie ensuite vers
+// la page Profil avec un code (domaine autorisé réglé dans l'appli Strava).
+function stravaConnect() {
+  const state = newId();
+  try { sessionStorage.setItem(STRAVA_STATE_KEY, state); } catch {}
+  const back = location.origin + location.pathname.replace(/[^/]*$/, '') + 'profile.html';
+  location.href = 'https://www.strava.com/oauth/authorize?' + new URLSearchParams({
+    client_id: STRAVA_CLIENT_ID, redirect_uri: back, response_type: 'code',
+    approval_prompt: 'auto', scope: 'read,activity:read_all', state,
+  });
+}
+
+// Attend que les données du compte soient lues (sinon une écriture locale
+// serait remplacée par la copie du cloud).
+function whenCloudLoaded(timeoutMs = 20000) {
+  return new Promise((resolve, reject) => {
+    if (cloudLoaded) return resolve();
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if (cloudLoaded) { clearInterval(iv); resolve(); }
+      else if (Date.now() - t0 > timeoutMs) { clearInterval(iv); reject(new Error('Données du compte pas encore chargées. Recharge la page.')); }
+    }, 100);
+  });
+}
+
+// Retour de Strava sur la page Profil (?code=…&state=…&scope=…).
+// Renvoie null s'il n'y a rien à traiter, sinon un message pour l'utilisateur.
+async function stravaHandleRedirect() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('code') && !q.has('error')) return null;
+  history.replaceState(null, '', location.pathname);
+  let expected = null;
+  try { expected = sessionStorage.getItem(STRAVA_STATE_KEY); sessionStorage.removeItem(STRAVA_STATE_KEY); } catch {}
+  if (q.get('error')) return { ok: false, msg: 'Connexion à Strava annulée.' };
+  if (!expected || q.get('state') !== expected) return { ok: false, msg: 'Connexion à Strava refusée (lien expiré). Réessaie.' };
+  if (!/activity:read/.test(q.get('scope') || '')) {
+    return { ok: false, msg: 'Pour importer tes séances, laisse cochée la case « Voir les données de vos activités » sur la page Strava.' };
+  }
+  const tok = await serverPost('/strava/token', { code: q.get('code') });
+  await whenCloudLoaded();
+  const data = getData();
+  const a = tok.athlete || {};
+  data.strava = {
+    athlete_id: a.id || null, name: [a.firstname, a.lastname].filter(Boolean).join(' '),
+    access_token: tok.access_token, refresh_token: tok.refresh_token, expires_at: tok.expires_at,
+    connected_at: Date.now(), after: Math.floor(Date.now() / 1000) - STRAVA_FIRST_DAYS * 86400,
+  };
+  saveData(data);
+  const r = await stravaSync({ force: true });
+  return { ok: true, msg: 'Strava connecté. ' + stravaSyncMessage(r, true) };
+}
+
+async function stravaAccessToken() {
+  const st = getStrava();
+  if (!st) throw new Error('Strava n’est pas connecté.');
+  if (st.expires_at && st.expires_at - 120 > Date.now() / 1000) return st.access_token;
+  const tok = await serverPost('/strava/refresh', { refresh_token: st.refresh_token });
+  const data = getData();
+  if (!data.strava) throw new Error('Strava n’est pas connecté.');
+  Object.assign(data.strava, { access_token: tok.access_token, refresh_token: tok.refresh_token, expires_at: tok.expires_at });
+  saveData(data);
+  return tok.access_token;
+}
+
+// Activité Strava (résumé) → séance TriSeason. null si le sport n'est pas suivi.
+// La date vient de start_date_local (heure locale de la séance) : pas de
+// passage par l'UTC. Durée totale (comme l'import .fit), à la seconde.
+function stravaToSession(a) {
+  const sport = STRAVA_SPORTS[a.sport_type] || STRAVA_SPORTS[a.type];
+  if (!sport || !a.start_date_local) return null;
+  const r = (v) => (v == null || isNaN(v) ? null : Math.round(v));
+  const sec = a.elapsed_time || a.moving_time || 0;
+  return {
+    date: String(a.start_date_local).slice(0, 10),
+    sport,
+    duration: sec ? Math.round(sec) / 3600 : null,
+    distance: a.distance ? Math.round(a.distance / 10) / 100 : null,
+    elevation: r(a.total_elevation_gain) || null,
+    fc_avg: r(a.average_heartrate), fc_max: r(a.max_heartrate),
+    power_avg: a.device_watts ? r(a.average_watts) : null,
+    power_max: a.device_watts ? r(a.max_watts) : null,
+    np: a.device_watts ? r(a.weighted_average_watts) : null,
+    kcal: r(a.calories) || null,
+    notes: (a.name ? a.name + ' · ' : '') + 'Strava',
+    strava_id: a.id,
+  };
+}
+
+// Même jour, même sport, distance et durée proches : déjà importée (fichier .fit…)
+function stravaFindSimilar(sessions, c) {
+  return sessions.find(s => {
+    if (s.strava_id || s.date !== c.date || s.sport !== c.sport) return false;
+    const distOk = !c.distance || !s.distance || Math.abs(c.distance - s.distance) <= Math.max(0.3, s.distance * 0.1);
+    const durOk = !c.duration || !s.duration || Math.abs(c.duration - s.duration) <= Math.max(0.08, s.duration * 0.1);
+    return distOk && durOk;
+  });
+}
+
+let stravaRunning = null;
+// Va chercher les nouvelles activités Strava. { force } : ignore le délai de 15 min ;
+// { full } : reprend tout l'historique. Renvoie { added, linked, ignored }.
+function stravaSync(opts = {}) {
+  if (stravaRunning) return stravaRunning;
+  stravaRunning = stravaSyncRun(opts).finally(() => { stravaRunning = null; });
+  return stravaRunning;
+}
+
+async function stravaSyncRun({ force = false, full = false } = {}) {
+  if (!stravaAvailable() || !getStrava()) return null;
+  if (!force) {
+    let last = 0;
+    try { last = +localStorage.getItem(STRAVA_CHECK_KEY) || 0; } catch {}
+    if (Date.now() - last < STRAVA_EVERY_MS) return null;
+  }
+  await whenCloudLoaded();
+  try { localStorage.setItem(STRAVA_CHECK_KEY, String(Date.now())); } catch {}
+  const token = await stravaAccessToken();
+  // 3 jours de marge : une montre synchronisée en retard envoie parfois une
+  // séance plus ancienne que la dernière reçue (les doublons sont écartés).
+  const after = full ? 0 : Math.max(0, (getStrava().after || 0) - 3 * 86400);
+  const acts = [];
+  for (let page = 1; page <= (full ? 30 : 3); page++) {
+    const res = await fetch(STRAVA_API + '/athlete/activities?per_page=100&page=' + page + '&after=' + after,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil.');
+    if (res.status === 429) throw new Error('Strava est très sollicité : nouvel essai automatique plus tard.');
+    if (!res.ok) throw new Error('Strava ne répond pas (erreur ' + res.status + ').');
+    const list = await res.json();
+    acts.push(...list);
+    if (list.length < 100) break;
+  }
+  const data = getData();
+  if (!data.strava) return null;
+  const known = new Set(data.sessions.map(s => s.strava_id).filter(Boolean));
+  let added = 0, linked = 0, ignored = 0, newest = data.strava.after || 0;
+  acts.forEach(a => {
+    const start = Math.floor(Date.parse(a.start_date) / 1000);
+    if (start > newest) newest = start;
+    if (known.has(a.id)) return;
+    const s = stravaToSession(a);
+    if (!s) { ignored++; return; }
+    const twin = stravaFindSimilar(data.sessions, s);
+    if (twin) { twin.strava_id = a.id; linked++; }
+    else { s.id = newId(); data.sessions.push(s); added++; }
+    known.add(a.id);
+  });
+  data.strava.after = newest;
+  data.strava.last_sync = Date.now();
+  saveData(data);
+  return { added, linked, ignored };
+}
+
+function stravaSyncMessage(r, always) {
+  if (!r) return always ? 'Aucune nouvelle séance.' : '';
+  if (!r.added) return always ? 'Aucune nouvelle séance' + (r.linked ? ' (' + r.linked + ' déjà présente' + (r.linked > 1 ? 's' : '') + ')' : '') + '.' : '';
+  return r.added + ' séance' + (r.added > 1 ? 's' : '') + ' ajoutée' + (r.added > 1 ? 's' : '') + ' depuis Strava.';
+}
+
+// Synchro silencieuse à l'ouverture de l'appli (message seulement s'il y a du nouveau).
+function stravaAutoSync() {
+  if (!stravaAvailable() || !getStrava()) return;
+  stravaSync().then(r => { const m = stravaSyncMessage(r, false); if (m) toast(m); })
+    .catch(err => console.warn('[TriSeason] Synchro Strava :', err.message));
+}
+
+// Déconnexion : Strava retire l'autorisation ; les séances venues de Strava
+// sont gardées ou supprimées selon le choix de l'utilisateur.
+async function stravaDisconnect({ deleteSessions = false } = {}) {
+  const st = getStrava();
+  if (st) {
+    try { await serverPost('/strava/deauthorize', { access_token: await stravaAccessToken() }); }
+    catch (err) { console.warn('[TriSeason] Déconnexion Strava :', err.message); }
+  }
+  const data = getData();
+  delete data.strava;
+  if (deleteSessions) data.sessions = data.sessions.filter(s => !s.strava_id);
+  else data.sessions.forEach(s => { delete s.strava_id; });
+  saveData(data);
+  try { localStorage.removeItem(STRAVA_CHECK_KEY); } catch {}
 }
 
 // ── Toast notifications ───────────────────────────────────────────────────────
@@ -1266,5 +1488,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
+  stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
+  stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   SPORTS, COMP_TYPES,
 };

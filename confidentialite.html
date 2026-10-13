@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0d1016">
   <title>TriSeason — Confidentialité et mentions légales</title>
-  <link rel="stylesheet" href="style.css?v=20261014b">
+  <link rel="stylesheet" href="style.css?v=20261015a">
   <style>
     .legal { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; color: var(--text-2); font-size: 14px; line-height: 1.7; }
     .legal h1 { color: var(--text); font-size: 26px; font-weight: 600; margin-bottom: 4px; }
@@ -51,7 +51,7 @@
   <table>
     <tr><th>Catégorie</th><th>Exemples</th></tr>
     <tr><td><b>Compte</b></td><td>Adresse e-mail, mode de connexion (e-mail ou Google). Le mot de passe est géré par Google Firebase : TriSeason n'y a jamais accès.</td></tr>
-    <tr><td><b>Entraînement</b></td><td>Séances (date, sport, durée, distance, dénivelé), compétitions, records, objectifs, fichiers importés depuis ta montre (seul un résumé est conservé, pas les traces GPS).</td></tr>
+    <tr><td><b>Entraînement</b></td><td>Séances (date, sport, durée, distance, dénivelé), compétitions, records, objectifs, fichiers importés depuis ta montre ou séances reçues de Strava si tu le connectes (seul un résumé est conservé, pas les traces GPS).</td></tr>
     <tr><td><b>Données de santé</b></td><td>Poids, taille, fréquence cardiaque, puissance, ressenti et effort perçu (RPE), repas (glucides, protéines, lipides, calories), hydratation, ravitaillements.</td></tr>
     <tr><td><b>Utilisation</b></td><td>Les jours où tu ouvres l'appli, pour compter le nombre d'utilisateurs actifs.</td></tr>
   </table>
@@ -85,9 +85,20 @@
   Le chargement de la page fait aussi appel aux serveurs de Google pour la connexion (bibliothèque Firebase).
   Les polices de caractères et les graphiques sont servis directement par TriSeason.</p>
 
+  <h3>Connexion à Strava (facultative)</h3>
+  <p>Si tu connectes ton compte Strava (Profil → « Connecter avec Strava »), TriSeason lit le <b>résumé de tes
+  activités</b> de natation, vélo et course (date, durée, distance, dénivelé, fréquence cardiaque, puissance, nom de
+  l'activité) pour créer tes séances. TriSeason ne publie rien sur Strava et ne lit ni tes traces GPS, ni tes photos,
+  ni tes abonnés. Les clés d'accès Strava sont enregistrées dans ton compte TriSeason. Un petit serveur TriSeason,
+  hébergé par <b>Cloudflare, Inc.</b>, sert uniquement à obtenir et renouveler ces clés auprès de Strava : il n'enregistre
+  rien. Tu peux te déconnecter à tout moment (Profil → « Déconnecter Strava »), en gardant ou en supprimant les séances
+  venues de Strava. Tes données Strava ne servent qu'à ton propre suivi et ne sont jamais montrées à d'autres
+  utilisateurs. Base légale : ton consentement (art. 6.1.a et 9.2.a du RGPD).</p>
+
   <h3>Recherche de produits alimentaires</h3>
   <p>Quand tu cherches un produit du commerce dans la page Nutrition (par son nom ou son code-barres), le texte tapé
   ou le numéro du code-barres est envoyé à <b>Open Food Facts</b> (association française, base de données ouverte),
+  parfois en passant par le serveur TriSeason (Cloudflare), qui ne l'enregistre pas,
   qui reçoit aussi, comme tout site, l'adresse IP de ton appareil. Rien d'autre n'est envoyé : ni ton compte, ni tes
   repas, ni tes autres données. Pour scanner un code-barres, l'image de la caméra est analysée <b>sur ton appareil</b>
   et n'est ni enregistrée ni envoyée. Cette recherche n'a lieu que si tu l'utilises.</p>
