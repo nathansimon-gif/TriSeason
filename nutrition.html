@@ -38,6 +38,20 @@
     .fav-btn { background:none; border:1px solid var(--border2); color:var(--text-3); border-radius:var(--r-sm); width:28px; height:28px; font-size:15px; line-height:1; cursor:pointer; }
     .fav-btn.on { color:var(--accent); border-color:rgba(185,236,74,.4); background:var(--accent-dim); }
     .quick-meals { margin-bottom:12px; }
+    .off-search { display:flex; gap:6px; }
+    .off-search .form-input { flex:1; min-width:0; }
+    .off-hint { font-size:11px; color:var(--text-3); margin-top:5px; line-height:1.5; }
+    .off-status { font-size:12px; color:var(--text-2); margin-top:6px; }
+    .off-list { margin-top:6px; max-height:230px; overflow-y:auto; }
+    .off-item { display:flex; justify-content:space-between; gap:10px; width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:6px 10px; margin-bottom:4px; color:var(--text); font-size:12px; cursor:pointer; }
+    .off-item:hover, .off-item.sel { border-color:var(--accent); }
+    .off-item__brand { color:var(--text-2); }
+    .off-item__macros { color:var(--text-3); white-space:nowrap; font-family:var(--mono); font-size:11px; }
+    .off-qty { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:2px 0 8px; font-size:12px; color:var(--text-2); }
+    .off-qty .form-input { width:90px; }
+    .scan-box { position:relative; background:#000; border-radius:var(--r-sm); overflow:hidden; aspect-ratio:4/3; max-width:100%; }
+    .scan-box video { width:100%; height:100%; object-fit:cover; display:block; }
+    .scan-box::after { content:''; position:absolute; left:12%; right:12%; top:42%; height:16%; border:2px solid var(--accent); border-radius:6px; }
     .quick-meals__title { font-size:11px; color:var(--text-2); margin-bottom:5px; }
     .quick-meals__list { max-height:260px; overflow-y:auto; }
     .quick-meal { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:6px 10px; margin-bottom:4px; color:var(--text); font-size:12px; cursor:pointer; }
@@ -301,6 +315,18 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label" for="off_q">Produit du commerce</label>
+        <div class="off-search">
+          <input class="form-input" id="off_q" type="search" enterkeyhint="search" autocomplete="off"
+                 placeholder="Nom ou code-barres (ex. compote Andros)" onkeydown="if(event.key==='Enter'){event.preventDefault();offSearch();}">
+          <button type="button" class="btn btn--sm" onclick="offSearch()">Chercher</button>
+          <button type="button" class="btn btn--sm" onclick="offOpenScanner()">Scanner</button>
+        </div>
+        <div id="off_results"></div>
+        <div class="off-hint">Plat maison (pâtes carbonara, burger, hot-dog…) : écris-le simplement dans la description, plus de 300 aliments et plats sont reconnus.</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">
           Description libre
           <span style="font-size:10px;color:var(--accent2);font-weight:400;margin-left:6px">→ macros estimées automatiquement</span>
@@ -352,6 +378,18 @@
 </div>
 
 <!-- Fuel modal -->
+<div class="modal-overlay" id="scanModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal__header">
+      <div class="modal__title">Scanner un code-barres</div>
+      <button class="modal__close" onclick="offCloseScanner()">×</button>
+    </div>
+    <div class="scan-box"><video id="scanVideo" playsinline muted></video></div>
+    <div class="off-status" id="scanStatus">Place le code-barres dans le cadre.</div>
+    <div class="off-hint">L'image de la caméra reste sur ton téléphone : seul le numéro du code-barres est envoyé à Open Food Facts.</div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="fuelModal">
   <div class="modal" style="max-width:460px">
     <div class="modal__header">
@@ -566,7 +604,8 @@ function mealKey(m) {
 }
 function mealTemplate(m) {
   return { type:m.type, desc:m.desc||'', glucides:m.glucides||null, proteines:m.proteines||null,
-           lipides:m.lipides||null, kcal:m.kcal||null, tags:(m.tags||[]).slice() };
+           lipides:m.lipides||null, kcal:m.kcal||null, tags:(m.tags||[]).slice(),
+           ...(m.products && m.products.length ? { products: m.products.map(p => ({ ...p })) } : {}) };
 }
 function getFavorites() { return getNutrition().favorites || []; }
 function isFavorite(m) { const k = mealKey(m); return getFavorites().some(f => mealKey(f) === k); }
@@ -643,6 +682,7 @@ function useQuickMeal(i) {
   document.getElementById('m_proteines').value = m.proteines || '';
   document.getElementById('m_lipides').value   = m.lipides   || '';
   document.getElementById('m_kcal').value      = m.kcal      || '';
+  resetOffSearch(m.products);
   ['m_glucides','m_proteines','m_lipides'].forEach(id => { document.getElementById(id).dataset.manual = 'true'; });
   document.querySelectorAll('#mealTagPicker .tag-btn').forEach(btn => btn.classList.toggle('active', (m.tags||[]).includes(btn.dataset.tag)));
   document.getElementById('descAnalysis').textContent = 'Repas repris : vérifie l’heure et les quantités, puis enregistre.';
@@ -815,12 +855,231 @@ function openMealModal(meal=null) {
     document.getElementById(id).dataset.manual = meal ? 'true' : 'false';
   });
   document.getElementById('descAnalysis').textContent = '';
+  resetOffSearch(meal?.products);
   document.querySelectorAll('#mealTagPicker .tag-btn').forEach(btn => {
     btn.classList.toggle('active', (meal?.tags||[]).includes(btn.dataset.tag));
   });
   document.getElementById('mealModal').classList.add('open');
 }
-function closeMealModal() { document.getElementById('mealModal').classList.remove('open'); editMealId=null; }
+function closeMealModal() { offCloseScanner(); document.getElementById('mealModal').classList.remove('open'); editMealId=null; }
+
+// ── Produits du commerce : Open Food Facts ───────────────────────────────────
+// Base ouverte et gratuite (association française). Seul le texte cherché ou le
+// numéro du code-barres lui est envoyé, jamais les données de l'utilisateur.
+// Un produit ajouté s'écrit « [Nom – Marque · 30 g] » dans la description ; ses
+// macros sont gardées dans meal.products (le texte entre crochets n'est pas
+// relu par la reconnaissance des aliments, pour ne pas compter deux fois).
+const OFF_BASE = 'https://world.openfoodfacts.org';
+const OFF_FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity';
+let mealProducts = [];   // produits du repas en cours de saisie
+let offFound = [];       // derniers résultats affichés
+
+function offNum(v) { const n = parseFloat(v); return isFinite(n) && n >= 0 ? n : null; }
+
+// Produit Open Food Facts → valeurs pour 100 g (null si pas de macros utilisables)
+function offProduct(p) {
+  const n = p && p.nutriments || {};
+  const g = offNum(n.carbohydrates_100g), pr = offNum(n.proteins_100g), l = offNum(n.fat_100g);
+  if (g === null && pr === null && l === null) return null;
+  const name = String(p.product_name_fr || p.product_name || '').trim();
+  if (!name) return null;
+  const brand = String(p.brands || '').split(',')[0].trim();
+  const kcal = offNum(n['energy-kcal_100g']);
+  return { code: String(p.code || ''), name, brand, g: g || 0, p: pr || 0, l: l || 0,
+           kcal: kcal !== null ? kcal : (g || 0) * 4 + (pr || 0) * 4 + (l || 0) * 9,
+           serving: offNum(p.serving_quantity) };
+}
+
+async function offFetch(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+
+function offStatus(html) {
+  document.getElementById('off_results').innerHTML = '<div class="off-status">' + html + '</div>';
+}
+const OFF_ERROR = 'Recherche impossible pour le moment (connexion ?). Tu peux écrire l’aliment dans la description ou saisir les macros.';
+
+async function offSearch() {
+  const q = document.getElementById('off_q').value.trim();
+  if (!q) { document.getElementById('off_q').focus(); return; }
+  if (/^\d{8,14}$/.test(q)) return offLookup(q);
+  offStatus('Recherche…');
+  try {
+    const url = OFF_BASE + '/cgi/search.pl?action=process&json=1&search_simple=1&page_size=20&lc=fr'
+      + '&tagtype_0=countries&tag_contains_0=contains&tag_0=france'
+      + '&fields=' + OFF_FIELDS + '&search_terms=' + encodeURIComponent(q);
+    const data = await offFetch(url);
+    offFound = (data.products || []).map(offProduct).filter(Boolean).slice(0, 8);
+    renderOffResults(q);
+  } catch (e) { offStatus(OFF_ERROR); }
+}
+
+async function offLookup(code) {
+  offStatus('Recherche du code-barres ' + code + '…');
+  try {
+    const data = await offFetch(OFF_BASE + '/api/v2/product/' + encodeURIComponent(code) + '.json?fields=' + OFF_FIELDS);
+    const p = data && data.status === 1 ? offProduct({ code, ...data.product }) : null;
+    offFound = p ? [p] : [];
+    if (!p) { offStatus('Produit inconnu ou sans valeurs nutritionnelles (code ' + code + '). Écris-le dans la description ou saisis les macros.'); return; }
+    renderOffResults(code);
+    selectOffProduct(0);
+  } catch (e) { offStatus(OFF_ERROR); }
+}
+
+function escHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function renderOffResults(q) {
+  if (!offFound.length) { offStatus('Aucun produit trouvé pour « ' + escHtml(q) + ' ». Essaie un autre nom, la marque, ou le code-barres.'); return; }
+  document.getElementById('off_results').innerHTML = '<div class="off-list">' + offFound.map((p, i) =>
+    `<button type="button" class="off-item" id="off_item_${i}" onclick="selectOffProduct(${i})">
+      <span>${escHtml(p.name)}${p.brand ? ' <span class="off-item__brand">· ' + escHtml(p.brand) + '</span>' : ''}</span>
+      <span class="off-item__macros">${Math.round(p.g)} g gluc. · ${Math.round(p.kcal)} kcal /100 g</span>
+    </button><div id="off_qty_${i}"></div>`).join('') + '</div>';
+}
+
+function selectOffProduct(i) {
+  const p = offFound[i];
+  if (!p) return;
+  document.querySelectorAll('.off-item').forEach(b => b.classList.toggle('sel', b.id === 'off_item_' + i));
+  document.querySelectorAll('[id^="off_qty_"]').forEach(el => { el.innerHTML = ''; });
+  const qty = Math.round(p.serving || 100);
+  document.getElementById('off_qty_' + i).innerHTML = `<div class="off-qty">
+    <label for="off_qty_input">Quantité</label>
+    <input class="form-input" type="number" min="1" step="1" id="off_qty_input" value="${qty}"> g
+    <button type="button" class="btn btn--primary btn--sm" onclick="addOffProduct(${i})">Ajouter au repas</button>
+  </div>`;
+  const input = document.getElementById('off_qty_input');
+  input.focus(); input.select();
+  input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addOffProduct(i); } };
+}
+
+function productLabel(p) {
+  return '[' + (p.name + (p.brand ? ' – ' + p.brand : '')).replace(/[[\]]/g, '') + ' · ' + p.qty + ' g]';
+}
+function productMacros(p) {
+  const f = p.qty / 100;
+  return { g: Math.round(p.g * f), p: Math.round(p.p * f), l: Math.round(p.l * f), kcal: Math.round(p.kcal * f) };
+}
+// Produits dont le texte est encore dans la description (effacer le texte = retirer le produit)
+function productsInDesc() {
+  const desc = document.getElementById('m_desc').value;
+  return mealProducts.filter(p => desc.includes(p.label));
+}
+
+function addOffProduct(i) {
+  const src = offFound[i];
+  const qty = Math.round(parseFloat(document.getElementById('off_qty_input').value));
+  if (!src || !(qty > 0)) return;
+  const p = { code: src.code, name: src.name, brand: src.brand, qty, g: src.g, p: src.p, l: src.l, kcal: src.kcal };
+  p.label = productLabel(p);
+  mealProducts.push(p);
+  const desc = document.getElementById('m_desc');
+  desc.value = desc.value.trim() ? desc.value.trim() + ' + ' + p.label : p.label;
+  // Macros saisies à la main : on ajoute le produit à ce qui est déjà noté
+  const manual = document.getElementById('m_glucides').dataset.manual === 'true';
+  if (manual) {
+    const m = productMacros(p);
+    [['m_glucides', m.g], ['m_proteines', m.p], ['m_lipides', m.l]].forEach(([id, v]) => {
+      const el = document.getElementById(id);
+      el.value = Math.round((parseFloat(el.value) || 0) + v);
+    });
+    calcKcal();
+  }
+  analyzeDescription();
+  document.getElementById('off_results').innerHTML = '';
+  document.getElementById('off_q').value = '';
+  TS.toast(p.name + ' ajouté au repas');
+}
+
+function resetOffSearch(products) {
+  mealProducts = (products || []).map(p => ({ ...p, label: p.label || productLabel(p) }));
+  offFound = [];
+  document.getElementById('off_q').value = '';
+  document.getElementById('off_results').innerHTML = '';
+}
+
+// ── Scanner : détecteur du navigateur (Android) ou bibliothèque ZXing (iPhone…) ──
+let scanStream = null, scanTimer = null, scanReader = null;
+
+function loadZxing() {
+  if (window.ZXing) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'vendor/zxing.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function nativeDetector() {
+  if (!('BarcodeDetector' in window)) return null;
+  try {
+    const formats = await BarcodeDetector.getSupportedFormats();
+    if (!formats.includes('ean_13')) return null;
+    return new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'].filter(f => formats.includes(f)) });
+  } catch (e) { return null; }
+}
+
+function onBarcode(code) {
+  offCloseScanner();
+  document.getElementById('off_q').value = code;
+  offLookup(code);
+}
+
+async function offOpenScanner() {
+  const status = document.getElementById('scanStatus');
+  const video = document.getElementById('scanVideo');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    offStatus('Ce navigateur ne permet pas d’utiliser la caméra : tape le numéro sous le code-barres puis « Chercher ».');
+    return;
+  }
+  status.textContent = 'Ouverture de la caméra…';
+  document.getElementById('scanModal').classList.add('open');
+  try {
+    const detector = await nativeDetector();
+    if (detector) {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = scanStream;
+      await video.play();
+      status.textContent = 'Place le code-barres dans le cadre.';
+      scanTimer = setInterval(async () => {
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length) onBarcode(codes[0].rawValue);
+        } catch (e) { /* image pas prête */ }
+      }, 250);
+    } else {
+      await loadZxing();
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]);
+      scanReader = new ZXing.BrowserMultiFormatReader(hints);
+      status.textContent = 'Place le code-barres dans le cadre.';
+      await scanReader.decodeFromConstraints({ video: { facingMode: 'environment' }, audio: false }, video, (result) => {
+        if (result) onBarcode(result.getText());
+      });
+    }
+  } catch (e) {
+    offCloseScanner();
+    offStatus(e && e.name === 'NotAllowedError'
+      ? 'Accès à la caméra refusé. Autorise-le dans les réglages du navigateur, ou tape le numéro sous le code-barres.'
+      : 'Impossible d’ouvrir la caméra : tape le numéro sous le code-barres puis « Chercher ».');
+  }
+}
+
+function offCloseScanner() {
+  clearInterval(scanTimer); scanTimer = null;
+  if (scanReader) { try { scanReader.reset(); } catch (e) {} scanReader = null; }
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  const video = document.getElementById('scanVideo');
+  if (video) video.srcObject = null;
+  document.getElementById('scanModal').classList.remove('open');
+}
 
 // ── Food database (per 100g unless noted) ────────────────────────────────────
 const FOODS = [
@@ -1395,7 +1654,13 @@ function analyzeDescription() {
     return;
   }
 
-  var res = parseDescription(desc);
+  var res = parseDescription(desc.replace(/\[[^\]]*\]/g, " "));
+  productsInDesc().forEach(function (p) {
+    var m = productMacros(p);
+    res.items.push({ label: p.name, qtyLabel: p.qty + " g", g: m.g, p: m.p, l: m.l });
+    res.g += m.g; res.p += m.p; res.l += m.l;
+  });
+  res.kcal = res.g * 4 + res.p * 4 + res.l * 9;
   if (!res.items.length) {
     analysisEl.innerHTML = '<span style="color:var(--text-3)">Aliments non reconnus — saisissez les macros manuellement si besoin.</span>';
     return;
@@ -1447,6 +1712,8 @@ function saveMealForm() {
     kcal:      parseFloat(document.getElementById('m_kcal').value)||null,
     tags,
   };
+  const products = productsInDesc().map(({ label, ...p }) => p);
+  if (products.length) meal.products = products;
   const nutri = getNutrition();
   const idx = nutri.meals.findIndex(m=>m.id===meal.id);
   if (idx>=0) nutri.meals[idx]=meal; else nutri.meals.push(meal);
