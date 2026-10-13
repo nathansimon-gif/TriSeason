@@ -6,7 +6,7 @@
 // Rôles nécessaires (lecture seule) : Firebase Authentication Viewer,
 // Cloud Datastore Viewer, Monitoring Viewer.
 //
-// Usage : node report.mjs [--week AAAA-MM-JJ] [--email]   (lundi de la semaine voulue ;
+// Usage : node report.mjs [--week AAAA-MM-JJ] [--email] [--tests ../app-tests/results.json]   (lundi de la semaine voulue ;
 // par défaut la dernière semaine complète, du lundi au dimanche, heure de Paris)
 // Écrit le rapport en Markdown sur la sortie standard et le détail dans
 // report-<lundi>.json.
@@ -53,7 +53,7 @@ export function parisMidnight(day) {
 // users   : [{ uid, creationTime, lastSignInTime, providers: [] }]   (Firebase Auth)
 // docs    : [{ uid, activeDays: [], data: {...}, sizeBytes }]         (Firestore users/{uid})
 // metrics : { reads: {day: n}, writes: {day: n}, deletes: {day: n} } ou null
-export function computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError = null }) {
+export function computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError = null, tests = null }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekEnd = days[6];
   const prevStart = addDays(weekStart, -7);
@@ -114,7 +114,7 @@ export function computeReport({ weekStart, users, docs, metrics, prevMetrics, me
       tracked: docs.some(d => (d.activeDays || []).length > 0),
     },
     content: { sessionsWeek, sessionsTotal, bySport, mealsWeek, compsWeek, usersLoggingSessions, usersLoggingMeals },
-    firestore, prevFirestore, metricsError,
+    firestore, prevFirestore, metricsError, tests,
     storage: { biggestBytes: biggest.sizeBytes, biggestPct: Math.round(biggest.sizeBytes / DOC_LIMIT_BYTES * 1000) / 10 },
   };
 }
@@ -132,6 +132,19 @@ function trend(cur, prev) {
 export function toMarkdown(r) {
   const L = [];
   L.push(`# TriSeason — rapport du ${fmtDay(r.weekStart)} au ${fmtDay(r.weekEnd)}`);
+  L.push('');
+  // Santé de l'appli : résultat des tests automatiques (tools/app-tests), lancés juste avant.
+  L.push('## Santé de l’appli (tests automatiques)');
+  if (r.tests && r.tests.total) {
+    if (r.tests.failed) {
+      L.push(`- **${r.tests.failed} test${r.tests.failed > 1 ? 's' : ''} en échec** sur ${r.tests.total} : un problème est à corriger.`);
+      r.tests.results.filter(t => !t.ok).forEach(t => L.push(`- Échec — ${t.name} : ${t.detail}`));
+    } else {
+      L.push(`- **Tout fonctionne** : ${r.tests.total} tests passés (pages, calculs, données personnelles).`);
+    }
+  } else {
+    L.push('- Tests non lancés cette semaine.' + (r.tests && r.tests.error ? ' Raison : ' + r.tests.error : ''));
+  }
   L.push('');
   L.push('## Utilisateurs');
   L.push(`- Comptes au total : **${nf(r.users.total)}** (dont ${nf(r.users.withData)} avec des données)`);
@@ -312,7 +325,14 @@ async function main() {
     prevMetrics = await fetchFirestoreMetrics(credential, sa.project_id, addDays(weekStart, -7), weekStart);
   } catch (e) { metricsError = e.message; }
 
-  const report = computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError });
+  // --tests chemin/vers/results.json : résultat des tests automatiques à inclure
+  let tests = null;
+  const argTests = process.argv.indexOf('--tests');
+  if (argTests > 0) {
+    try { tests = JSON.parse(readFileSync(process.argv[argTests + 1], 'utf8')); }
+    catch (e) { tests = { error: 'résultat introuvable (' + e.message.slice(0, 80) + ')' }; }
+  }
+  const report = computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError, tests });
   const md = toMarkdown(report);
   console.log(md);
   if (process.argv.includes('--email')) {

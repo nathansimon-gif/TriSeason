@@ -50,7 +50,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - `sw.js` : service worker (réseau d'abord, cache en secours).
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
   `competitions.html`, `nutrition.html`, `records.html`, `forme.html`,
-  `profile.html`, `login.html`.
+  `profile.html`, `login.html`, et deux pages publiques sans connexion :
+  `confidentialite.html` et `aide.html` (FAQ + contact par e-mail vers
+  tri.season.tracker@gmail.com, sans aucune donnée de santé jointe).
 
 ### Données
 
@@ -141,8 +143,12 @@ dossier.
 
 ## Vérifier un changement
 
-Pas de tests automatisés. Servir le dossier (`python3 -m http.server`) et ouvrir
-les pages dans Chromium (Playwright) en bloquant `gstatic.com` (Firebase) et le
-service worker, avec des données de test dans `localStorage`. Vérifier qu'il
-n'y a aucune erreur JavaScript sur chaque page touchée. Pour les dates, tester
-avec le fuseau `Europe/Paris`.
+Lancer les tests automatiques avant chaque pull request :
+`cd tools/app-tests && npm install && node run.mjs` (navigateur invisible,
+Firebase simulé, données de test). Tout doit passer. Ajouter un test dans
+`run.mjs` pour chaque bug corrigé ou chaque règle importante (voir son README).
+Les mêmes tests tournent chaque lundi à 6h53 et leur résultat figure dans le
+rapport hebdomadaire.
+
+Pour un changement visuel, faire aussi une capture d'écran (Playwright) et la
+regarder. Pour les dates, tester avec le fuseau `Europe/Paris`.

@@ -1,0 +1,12 @@
+{
+  "name": "triseason-app-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests automatiques de l'appli TriSeason (navigateur, Firebase simulé, aucune vraie donnée)",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
