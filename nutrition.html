@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013e"></script>
+  <script src="auth-guard.js?v=20261014a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261013e">
+  <link rel="stylesheet" href="style.css?v=20261014a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -35,6 +35,15 @@
       transition:border-color .2s;
     }
     .meal-card:hover { border-color:var(--border2); }
+    .fav-btn { background:none; border:1px solid var(--border2); color:var(--text-3); border-radius:var(--r-sm); width:28px; height:28px; font-size:15px; line-height:1; cursor:pointer; }
+    .fav-btn.on { color:var(--accent); border-color:rgba(185,236,74,.4); background:var(--accent-dim); }
+    .quick-meals { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px; margin-bottom:14px; }
+    .quick-meals__title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:8px; }
+    .quick-meal { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:8px 10px; margin-bottom:6px; color:var(--text); font-size:12px; cursor:pointer; }
+    .quick-meal:hover { border-color:var(--accent); }
+    .quick-meal__star { color:var(--accent); width:14px; flex-shrink:0; }
+    .quick-meal__desc { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .quick-meal__meta { color:var(--text-2); white-space:nowrap; font-size:11px; }
     .meal-card__header {
       display:flex; align-items:center; justify-content:space-between;
       margin-bottom:10px;
@@ -175,6 +184,7 @@
     <!-- Repas du jour -->
     <div>
       <div class="section-title" style="margin-bottom:10px">Repas du jour</div>
+      <div id="mealsActions" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
       <div id="mealsList" class="stack"></div>
     </div>
 
@@ -265,6 +275,7 @@
       <div class="modal__title" id="mealModalTitle">Ajouter un repas</div>
       <button class="modal__close" onclick="closeMealModal()">×</button>
     </div>
+    <div id="quickMeals"></div>
     <div class="stack">
       <div class="form-row">
         <div class="form-group">
@@ -385,7 +396,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013e"></script>
+<script src="app.js?v=20261014a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -544,13 +555,113 @@ const MEAL_ICONS = {
   'journée':'📋'
 };
 
+// ── Saisie rapide : favoris, repas récents, copie de la veille ────────────────
+// Un repas « type » = même type, description et macros. Les favoris sont des
+// modèles indépendants des jours (nutrition.favorites).
+function mealKey(m) {
+  return [m.type, (m.desc||'').trim().toLowerCase(), m.glucides||0, m.proteines||0, m.lipides||0].join('|');
+}
+function mealTemplate(m) {
+  return { type:m.type, desc:m.desc||'', glucides:m.glucides||null, proteines:m.proteines||null,
+           lipides:m.lipides||null, kcal:m.kcal||null, tags:(m.tags||[]).slice() };
+}
+function getFavorites() { return getNutrition().favorites || []; }
+function isFavorite(m) { const k = mealKey(m); return getFavorites().some(f => mealKey(f) === k); }
+
+function toggleFavorite(id) {
+  const nutri = getNutrition();
+  const meal = nutri.meals.find(m => m.id === id);
+  if (!meal) return;
+  const k = mealKey(meal);
+  const favs = nutri.favorites || [];
+  const wasFav = favs.some(f => mealKey(f) === k);
+  nutri.favorites = wasFav ? favs.filter(f => mealKey(f) !== k) : favs.concat([mealTemplate(meal)]);
+  saveNutrition(nutri);
+  renderMealsList();
+  TS.toast(wasFav ? 'Retiré des favoris' : 'Ajouté aux favoris : tu le retrouveras dans « Ajouter un repas »');
+}
+
+// Favoris d'abord, puis les repas récents (60 derniers jours) les plus fréquents, sans doublon.
+function quickMealSuggestions() {
+  const favs = getFavorites().map(f => ({ ...f, fav: true }));
+  const seen = new Set(favs.map(mealKey));
+  const since = TS.localDateStr(new Date(Date.now() - 60 * 86400000));
+  const counts = {};
+  const latest = {};
+  getNutrition().meals.filter(m => m.date >= since && (m.desc || m.glucides || m.kcal)).forEach(m => {
+    const k = mealKey(m);
+    if (seen.has(k)) return;
+    counts[k] = (counts[k] || 0) + 1;
+    if (!latest[k] || m.date > latest[k].date) latest[k] = m;
+  });
+  const recent = Object.keys(latest)
+    .sort((a, b) => (counts[b] - counts[a]) || latest[b].date.localeCompare(latest[a].date))
+    .map(k => ({ ...mealTemplate(latest[k]), uses: counts[k] }));
+  return favs.concat(recent).slice(0, 8);
+}
+
+let quickMealList = [];
+function renderQuickMeals(show) {
+  const el = document.getElementById('quickMeals');
+  quickMealList = show ? quickMealSuggestions() : [];
+  if (!quickMealList.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="quick-meals">
+    <div class="quick-meals__title">Repas habituels — un clic pour remplir</div>
+    ${quickMealList.map((m, i) => {
+      const meta = [m.glucides ? m.glucides + ' g gluc.' : '', m.kcal ? '~' + m.kcal + ' kcal' : ''].filter(Boolean).join(' · ');
+      return `<button type="button" class="quick-meal" onclick="useQuickMeal(${i})">
+        <span class="quick-meal__star">${m.fav ? '★' : ''}</span>
+        <span class="quick-meal__desc"><b>${m.type}</b> — ${(m.desc || 'sans description').replace(/</g, '&lt;')}</span>
+        <span class="quick-meal__meta">${meta}</span>
+      </button>`;
+    }).join('')}
+  </div>`;
+}
+
+function useQuickMeal(i) {
+  const m = quickMealList[i];
+  if (!m) return;
+  document.getElementById('m_type').value      = m.type;
+  document.getElementById('m_desc').value      = m.desc || '';
+  document.getElementById('m_glucides').value  = m.glucides  || '';
+  document.getElementById('m_proteines').value = m.proteines || '';
+  document.getElementById('m_lipides').value   = m.lipides   || '';
+  document.getElementById('m_kcal').value      = m.kcal      || '';
+  ['m_glucides','m_proteines','m_lipides'].forEach(id => { document.getElementById(id).dataset.manual = 'true'; });
+  document.querySelectorAll('#mealTagPicker .tag-btn').forEach(btn => btn.classList.toggle('active', (m.tags||[]).includes(btn.dataset.tag)));
+  document.getElementById('descAnalysis').textContent = 'Repas repris : vérifie l’heure et les quantités, puis enregistre.';
+}
+
+function previousDay(day) {
+  const d = TS.parseLocalDate(day); d.setDate(d.getDate() - 1); return TS.localDateStr(d);
+}
+
+function copyPreviousDayMeals() {
+  const prev = getDayMeals(previousDay(currentDay));
+  if (!prev.length) return;
+  if (getDayMeals(currentDay).length && !confirm('Ajouter les ' + prev.length + ' repas de la veille à ceux déjà saisis ce jour ?')) return;
+  const nutri = getNutrition();
+  prev.forEach(m => nutri.meals.push({ ...m, ...mealTemplate(m), id: TS.newId(), date: currentDay, time: m.time || '' }));
+  saveNutrition(nutri);
+  renderAll();
+  TS.toast(prev.length + ' repas copié' + (prev.length > 1 ? 's' : '') + ' depuis la veille — modifie-les si besoin');
+}
+
+function renderMealsActions() {
+  const el = document.getElementById('mealsActions');
+  if (!el) return;
+  const prevCount = getDayMeals(previousDay(currentDay)).length;
+  el.innerHTML = '<button class="btn btn--primary btn--sm" onclick="openMealModal()">+ Ajouter un repas</button>'
+    + (prevCount ? '<button class="btn btn--ghost btn--sm" onclick="copyPreviousDayMeals()">Reprendre les repas de la veille (' + prevCount + ')</button>' : '');
+}
+
 function renderMealsList() {
+  renderMealsActions();
   const meals = getDayMeals(currentDay);
   const el = document.getElementById('mealsList');
   if (!meals.length) {
     el.innerHTML = `<div class="empty"><div class="empty__icon" style="font-size:24px">🍽</div>
-      <div class="empty__text">Aucun repas enregistré</div>
-      <button class="btn btn--ghost btn--sm" style="margin-top:8px" onclick="openMealModal()">+ Ajouter</button></div>`;
+      <div class="empty__text">Aucun repas enregistré</div></div>`;
     return;
   }
   el.innerHTML = meals.map(m => {
@@ -564,6 +675,7 @@ function renderMealsList() {
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           ${m.time?`<span class="meal-card__time">${m.time}</span>`:''}
+          <button class="fav-btn ${isFavorite(m)?'on':''}" onclick="toggleFavorite('${m.id}')" title="${isFavorite(m)?'Retirer des favoris':'Ajouter aux favoris : le retrouver en un clic'}" aria-label="Favori">${isFavorite(m)?'★':'☆'}</button>
           <button class="btn btn--ghost btn--sm btn--icon" onclick="editMeal('${m.id}')">✏️</button>
         </div>
       </div>
@@ -673,6 +785,7 @@ function resetHydro() {
 function openMealModal(meal=null) {
   editMealId = meal?.id || null;
   document.getElementById('mealModalTitle').textContent = meal ? 'Modifier le repas' : 'Ajouter un repas';
+  renderQuickMeals(!meal);
   document.getElementById('deleteMealBtn').style.display = meal ? 'inline-flex' : 'none';
   document.getElementById('m_type').value     = meal?.type    || 'déjeuner';
   document.getElementById('m_time').value     = meal?.time    || new Date().toTimeString().slice(0,5);
@@ -1307,7 +1420,7 @@ function toggleTag(btn) { btn.classList.toggle('active'); }
 function saveMealForm() {
   const tags = [...document.querySelectorAll('#mealTagPicker .tag-btn.active')].map(b=>b.dataset.tag);
   const meal = {
-    id:        editMealId || Date.now().toString(),
+    id:        editMealId || TS.newId(),
     date:      currentDay,
     type:      document.getElementById('m_type').value,
     time:      document.getElementById('m_time').value,
@@ -1348,7 +1461,7 @@ function closeFuelModal() { document.getElementById('fuelModal').classList.remov
 
 function saveFuelForm() {
   const fuel = {
-    id:     Date.now().toString(),
+    id:     TS.newId(),
     date:   currentDay,
     type:   document.getElementById('f_type').value,
     qty:    parseInt(document.getElementById('f_qty').value)||1,

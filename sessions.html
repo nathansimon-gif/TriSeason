@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013e"></script>
+  <script src="auth-guard.js?v=20261014a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261013e">
+  <link rel="stylesheet" href="style.css?v=20261014a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -24,6 +24,14 @@
     }
     .sensation-btn:hover { background:var(--surface3); }
     .sensation-btn.active { border-color:var(--text-2); background:var(--surface3); }
+    .feeling-nudge { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--accent-dim); border:1px solid rgba(185,236,74,.3); border-radius:var(--r); padding:12px 16px; margin-bottom:12px; font-size:13px; color:var(--text); }
+    .feeling-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border); }
+    .feeling-row:last-child { border-bottom:none; }
+    .feeling-row__info { flex:1; min-width:150px; font-size:13px; }
+    .feeling-row__info small { display:block; color:var(--text-2); font-size:12px; }
+    .feeling-row__btns { display:flex; gap:4px; }
+    .feeling-row__btns .sensation-btn { font-size:20px; padding:4px 7px; }
+    .feeling-row.done { opacity:.6; }
     .sensation-chip {
       font-size:16px; display:inline-flex; align-items:center; gap:4px;
       padding:2px 6px; border-radius:20px; background:var(--surface2);
@@ -187,6 +195,9 @@
     </div>
   </div>
 
+  <!-- ── Rappel : séances récentes sans ressenti ── -->
+  <div id="feelingNudge"></div>
+
   <!-- ── Session list ── -->
   <div class="card">
     <div class="card__title">Historique des séances</div>
@@ -328,9 +339,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261013e"></script>
-<script src="import.js?v=20261013e"></script>
-<script src="app.js?v=20261013e"></script>
+<script src="fit-parser.js?v=20261014a"></script>
+<script src="import.js?v=20261014a"></script>
+<script src="app.js?v=20261014a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -406,6 +417,7 @@ function toggleAdvancedFilters() {
 }
 
 function renderSessions() {
+  renderFeelingNudge();
   const sport = document.getElementById('filterSport').value;
   const from  = document.getElementById('filterFrom').value;
   const to    = document.getElementById('filterTo').value;
@@ -992,9 +1004,10 @@ function importSimilarAnyway(btn) {
   try {
     const session = JSON.parse(decodeURIComponent(card.dataset.session));
     delete session._source; delete session._skip;
-    TS.saveSession(session);
+    const saved = TS.saveSession(session);
     renderSessions();
     TS.toast('S\u00e9ance import\u00e9e');
+    askFeeling([saved.id]);
   } catch(e) {}
   card.remove();
   checkHideSimilarZone();
@@ -1012,8 +1025,64 @@ function checkHideSimilarZone() {
   }
 }
 
+// ── Ressenti après import ────────────────────────────────────────────────────
+// Les fichiers de montre n'ont pas de ressenti : on le demande juste après
+// l'import, pour les séances des 14 derniers jours (pas pour un historique ancien).
+const FEELINGS = [[1,'😫','Très mauvais'],[2,'😕','Mauvais'],[3,'😐','Neutre'],[4,'🙂','Bon'],[5,'😄','Excellent']];
+
+function sessionsNeedingFeeling(ids) {
+  const since = TS.localDateStr(new Date(Date.now() - 14 * 86400000));
+  return TS.getSessions()
+    .filter(s => !s.sensation && s.date >= since && (!ids || ids.includes(s.id)))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 6);
+}
+
+function askFeeling(ids) {
+  const list = sessionsNeedingFeeling(ids);
+  if (!list.length) return;
+  document.getElementById('feelingRows').innerHTML = list.map(s => {
+    const sp = TS.SPORTS[s.sport] || {};
+    const day = new Date(s.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'short' });
+    const detail = [s.distance ? s.distance + ' km' : '', s.duration ? formatHMS(s.duration) : ''].filter(Boolean).join(' · ');
+    return `<div class="feeling-row" id="feel-${s.id}">
+      <div class="feeling-row__info"><span class="sport-dot sport-dot--${s.sport}"></span>${sp.label || s.sport} — ${day}<small>${detail}</small></div>
+      <div class="feeling-row__btns">${FEELINGS.map(([v, e, t]) =>
+        `<button type="button" class="sensation-btn" title="${t}" onclick="saveFeeling('${s.id}', ${v}, this)">${e}</button>`).join('')}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('feelingModal').classList.add('open');
+}
+
+function saveFeeling(id, val, btn) {
+  const session = TS.getSessions().find(s => s.id === id);
+  if (!session) return;
+  session.sensation = val;
+  TS.saveSession(session);
+  const row = document.getElementById('feel-' + id);
+  row.classList.add('done');
+  row.querySelectorAll('.sensation-btn').forEach(b => b.classList.toggle('active', b === btn));
+  if (!document.querySelector('#feelingRows .feeling-row:not(.done)')) setTimeout(closeFeelingModal, 400);
+}
+
+function closeFeelingModal() {
+  document.getElementById('feelingModal').classList.remove('open');
+  renderSessions();
+}
+
+function renderFeelingNudge() {
+  const el = document.getElementById('feelingNudge');
+  if (!el) return;
+  const n = sessionsNeedingFeeling().length;
+  el.innerHTML = n ? `<div class="feeling-nudge">
+      <span style="flex:1">${n} séance${n > 1 ? 's' : ''} récente${n > 1 ? 's' : ''} sans ressenti.</span>
+      <button class="btn btn--primary btn--sm" onclick="askFeeling()">Noter mon ressenti</button>
+    </div>` : '';
+}
+
 function importAll() {
   const cards = document.querySelectorAll('#importResults [data-session]');
+  const importedIds = [];
   let count = 0;
   cards.forEach(card => {
     try {
@@ -1021,13 +1090,14 @@ function importAll() {
       const sportSel = card.querySelector('select');
       if (sportSel) session.sport = sportSel.value;
       delete session._source; delete session._skip;
-      TS.saveSession(session);
+      importedIds.push(TS.saveSession(session).id);
       count++;
     } catch(e) {}
   });
   document.getElementById('importZone').style.display = 'none';
   renderSessions();
   TS.toast(`${count} séance${count>1?'s':''} importée${count>1?'s':''}`);
+  askFeeling(importedIds);
 }
 
 function confirmImport(btn, sessionData) {
@@ -1035,13 +1105,14 @@ function confirmImport(btn, sessionData) {
   const sportOverride = card.querySelector('select')?.value;
   const session = { ...sessionData, sport: sportOverride || sessionData.sport };
   delete session._source; delete session._skip;
-  TS.saveSession(session);
+  const saved = TS.saveSession(session);
   card.style.opacity = '0.4';
   card.style.pointerEvents = 'none';
   btn.textContent = '✓ Importé';
   btn.style.background = 'var(--green)';
   renderSessions();
   TS.toast('Séance importée');
+  askFeeling([saved.id]);
 }
 
 function formatDuration(h) {
@@ -1125,6 +1196,20 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
   </script>
 
 
+
+<div class="modal-overlay" id="feelingModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal__header">
+      <div class="modal__title">Comment t'es-tu senti ?</div>
+      <button class="modal__close" onclick="closeFeelingModal()" aria-label="Fermer">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:6px">Un clic par séance. Le ressenti sert à comparer tes séances avec ta nutrition (page Forme).</div>
+    <div id="feelingRows"></div>
+    <div class="form-actions">
+      <button class="btn btn--ghost" onclick="closeFeelingModal()">Plus tard</button>
+    </div>
+  </div>
+</div>
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
