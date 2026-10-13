@@ -129,8 +129,11 @@ le dire dans `confidentialite.html` et sans accord explicite.
   région eur3 (UE) ; comptes inactifs supprimés après 3 ans (engagement écrit
   dans la politique, pas encore automatisé).
 - **Pas de ressource tierce inutile** : polices IBM Plex servies depuis
-  `fonts/` (pas de Google Fonts) et Chart.js depuis `vendor/` (pas de CDN).
-  Seuls les scripts Firebase (gstatic.com) restent externes.
+  `fonts/` (pas de Google Fonts), Chart.js et ZXing (scan de code-barres, chargé
+  seulement au scan) depuis `vendor/` (pas de CDN). Seuls les scripts Firebase
+  (gstatic.com) restent externes. Exception voulue : la recherche de produits
+  (Nutrition) appelle Open Food Facts, uniquement quand l'utilisateur cherche,
+  avec seulement le texte tapé ou le code-barres (écrit dans `confidentialite.html`).
 
 ## Rapport hebdomadaire
 

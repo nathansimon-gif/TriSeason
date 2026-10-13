@@ -211,6 +211,48 @@ async function main() {
   });
   await u.ctx.close();
 
+  // Nutrition : produits du commerce (faux Open Food Facts, rien n'est envoyé au vrai site)
+  await test('Nutrition : produit Open Food Facts ajouté au repas, sans compter deux fois', async () => {
+    const v = await newUser();
+    const asked = [];
+    await v.ctx.route(/openfoodfacts\.org/, r => {
+      const url = r.request().url(); asked.push(url);
+      const compote = { code: '3045320001570', product_name: 'Compote pomme', brands: 'Andros, Andros SAS', serving_quantity: '100',
+        nutriments: { carbohydrates_100g: 14, proteins_100g: 0.3, fat_100g: 0.2, 'energy-kcal_100g': 60 } };
+      const body = url.includes('/api/v2/product/')
+        ? { status: 1, product: { ...compote, product_name: 'Pâte à tartiner', brands: 'Marque', nutriments: { carbohydrates_100g: 57, proteins_100g: 6, fat_100g: 31 } } }
+        : { products: [compote, { code: '1', product_name: 'Sans valeurs', nutriments: {} }] };
+      r.fulfill({ body: JSON.stringify(body), contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' } });
+    });
+    const p = v.page;
+    await p.goto(`${BASE}/nutrition.html`); await p.waitForTimeout(700);
+    await p.evaluate(() => openMealModal());
+    await p.fill('#m_desc', 'riz 150g'); await p.dispatchEvent('#m_desc', 'input');
+    await p.fill('#off_q', 'compote'); await p.click('text=Chercher');
+    await p.waitForSelector('.off-item');
+    const shown = await p.locator('.off-item').count();
+    await p.click('.off-item >> nth=0');
+    await p.fill('#off_qty_input', '200'); await p.click('text=Ajouter au repas');
+    const gluc = await p.inputValue('#m_glucides');
+    const desc = await p.inputValue('#m_desc');
+    // Code-barres : recherche directe du produit
+    await p.fill('#off_q', '3017620422003'); await p.click('text=Chercher');
+    await p.waitForSelector('#off_qty_input');
+    await p.fill('#off_qty_input', '30'); await p.click('text=Ajouter au repas');
+    const gluc2 = await p.inputValue('#m_glucides');
+    await p.evaluate(() => saveMealForm());
+    const saved = await p.evaluate(() => { const m = TS.getData().nutrition.meals; return m[m.length - 1]; });
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    assert(shown === 1, `${shown} produits affichés (le produit sans valeurs doit être masqué)`);
+    assert(desc.includes('[Compote pomme – Andros · 200 g]'), 'description : ' + desc);
+    assert(gluc === '70', `glucides ${gluc} au lieu de 70 (riz 42 + compote 28 ; « pomme » ne doit pas être recompté)`);
+    assert(gluc2 === '87', `glucides ${gluc2} au lieu de 87 après le code-barres`);
+    assert(saved.glucides === 87 && saved.products?.length === 2 && saved.products[0].qty === 200 && !saved.products[0].label, 'repas enregistré : ' + JSON.stringify(saved));
+    assert(asked.length === 2 && asked[1].includes('/api/v2/product/3017620422003'), 'requêtes : ' + asked.join(' | '));
+    return 'recherche, code-barres et enregistrement';
+  });
+
   // 5. Données personnelles
   await test('RGPD : déconnexion → plus aucune donnée dans le navigateur', async () => {
     const v = await newUser();

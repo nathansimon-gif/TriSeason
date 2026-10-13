@@ -9,10 +9,14 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #16 (tests automatiques + Aide et contact) puis recharger le site
+- [ ] 🧑 Fusionner la PR #17 (recherche et scan de produits, phrase sur Strava) puis recharger le site
+- [ ] 🧑 Tester sur ton téléphone : Nutrition → Ajouter un repas → chercher un produit, puis « Scanner » un code-barres (iPhone et Android). La recherche n'a pas pu être essayée sur le vrai Open Food Facts depuis l'environnement de Claude
+- [ ] 🧑 **Décider pour la synchronisation Strava** (voir ci-dessous) : depuis juin 2026, Strava demande au développeur d'avoir un **abonnement Strava** (environ 60 €/an) ; 10 utilisateurs possibles tout de suite, au-delà il faut une validation par Strava
 
 ## Bientôt (dans le mois)
 
+- [ ] 🤖 **Synchronisation automatique avec Strava** (si Nathan valide) : bouton « Connecter Strava » dans Profil, les nouvelles séances arrivent seules. Demande : une appli créée sur strava.com/settings/api par Nathan, un petit serveur pour garder la clé secrète (Cloudflare Workers, gratuit), la mise à jour de la politique de confidentialité, le logo « Powered by Strava »
+- [ ] 🤖 *Sans attendre Strava* : importer d'un coup **toute l'archive Strava** (le fichier .zip que Strava envoie quand on demande ses données) pour récupérer tout l'historique
 - [ ] 🤖 *Facultatif* : lancer aussi les tests automatiques sur GitHub à chaque pull request (coche verte / croix rouge avant la fusion). Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
 - [ ] 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
@@ -44,6 +48,9 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Idées écartées (et pourquoi)
 
+- ~~Connexion directe à Garmin Connect~~ — Garmin a suspendu les nouvelles inscriptions à son programme développeurs (2026). Passer par Strava, où la plupart des montres envoient déjà leurs séances
+- ~~Espace coach, appli dans les stores~~ — reporté (pas écarté) : voir « Quand l'appli devient payante »
+
 - ~~IA qui donne des conseils nutritionnels ou un plan de course~~ — pas de diplôme pour donner des avis médicaux ou nutritionnels
 - ~~Chatbot « coach » sur toutes les pages~~ — même raison, et coûteux
 - ~~Offres IA gratuites (Gemini, Mistral)~~ — elles réutilisent les données (données de santé des utilisateurs) et sont souvent interdites pour une appli utilisée en Europe
@@ -54,6 +61,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/10/2026 | #17 | Nutrition : recherche de produits du commerce et **scan du code-barres** (Open Food Facts) ; phrase « Strava et Garmin suivent tes séances, TriSeason les relie à ce que tu manges et à ta forme » (connexion + Aide) ; nouvelle simulation des 100 clients |
 | 14/10/2026 | #16 | Tests automatiques (20 vérifications) chaque lundi à 6h53, résultat dans le rapport ; page « Aide et contact » (FAQ + e-mail) |
 | 14/10/2026 | #15 | Repas habituels plus compacts : 2 affichés, « Voir tous les repas habituels » pour la liste complète |
 | 14/10/2026 | #14 | Saisie rapide des repas (favoris, repas habituels, reprendre la veille), hydratation en un clic sur le Dashboard, ressenti demandé après un import, guide « Bien démarrer », identifiants uniques |

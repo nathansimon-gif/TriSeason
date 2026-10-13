@@ -1,5 +1,5 @@
 // TriSeason Tracker — Service Worker
-const CACHE = 'triseason-v7';
+const CACHE = 'triseason-v8';
 const ASSETS = [
   '/', '/index.html', '/sport.html', '/sessions.html',
   '/competitions.html', '/nutrition.html', '/records.html',
@@ -30,7 +30,8 @@ self.addEventListener('fetch', e => {
   const sameOrigin = new URL(e.request.url).origin === location.origin;
   e.respondWith(
     fetch(e.request, sameOrigin ? { cache: 'no-cache' } : undefined).then(res => {
-      if (res.ok && e.request.method === 'GET') {
+      // Les recherches d'aliments (Open Food Facts) ne sont pas gardées en cache
+      if (res.ok && e.request.method === 'GET' && !e.request.url.includes('openfoodfacts.org')) {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
       }
