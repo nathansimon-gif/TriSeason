@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013e"></script>
+  <script src="auth-guard.js?v=20261014a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261013e">
+  <link rel="stylesheet" href="style.css?v=20261014a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -94,6 +94,13 @@
       font-size:12px;
     }
     .month-sport-row:last-child { border-bottom:none; }
+    .onboarding__steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px; }
+    .onboarding__step { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface2); font-size:13px; color:var(--text); }
+    .onboarding__step:hover { border-color:var(--accent); }
+    .onboarding__step small { display:block; color:var(--text-2); font-size:12px; margin-top:2px; line-height:1.45; }
+    .onboarding__check { width:22px; height:22px; border-radius:50%; border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text-2); flex-shrink:0; }
+    .onboarding__step.done { opacity:.6; }
+    .onboarding__step.done .onboarding__check { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
     .month-best-day {
       margin-top:10px; padding:10px 12px; background:var(--surface2);
       border:1px solid var(--border); border-radius:var(--r-sm); font-size:12px;
@@ -138,6 +145,9 @@
     </div>
     <div id="weekInfo" style="text-align:right;font-size:12px;color:var(--text-2)"></div>
   </div>
+
+  <!-- Guide de démarrage (nouveaux utilisateurs) -->
+  <div id="onboarding"></div>
 
   <!-- Week navigator -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:16px">
@@ -311,6 +321,12 @@
       <a href="nutrition.html" style="font-size:11px;color:var(--accent2);font-weight:600">Voir tout →</a>
     </div>
     <div id="nutriWidget" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px">
+      <span style="font-size:12px;color:var(--text-2);margin-right:4px">Hydratation rapide :</span>
+      <button class="btn btn--ghost btn--sm" onclick="quickHydro(250)">+250 ml</button>
+      <button class="btn btn--ghost btn--sm" onclick="quickHydro(500)">+500 ml</button>
+      <a href="nutrition.html" class="btn btn--ghost btn--sm" style="margin-left:auto">+ Repas</a>
+    </div>
   </div>
 
   <!-- ── Records widget ── -->
@@ -355,7 +371,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261013e"></script>
+<script src="app.js?v=20261014a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -403,10 +419,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderActivityCalendar();
   renderMonthSummary();
   loadProfileForm();
+  renderOnboarding();
   TS.initTooltips();
 });
 
 window.addEventListener('triseason:update', () => {
+  renderOnboarding();
   updateWeekNav();
   renderHeroStrip();
   renderTotals();
@@ -848,13 +866,76 @@ function renderDonutChart() {
 
 
 // ── Widget nutrition (résumé du jour) ──────────────────────────────────────────
+// ── Guide de démarrage ──────────────────────────────────────────────────────
+// Étapes cochées automatiquement d'après les données. Disparaît quand tout est
+// fait, ou si la personne le masque (préférence enregistrée dans son compte).
+function onboardingSteps(data) {
+  const sessions = data.sessions || [];
+  const nutri = data.nutrition || {};
+  const p = data.profile || {};
+  const hasWeight = (data.weight || []).length > 0 || (p.weight || []).length > 0;
+  return [
+    { done: sessions.length > 0, href: 'sessions.html', title: 'Ajoute ta première séance',
+      text: 'Importe un fichier de ta montre (.fit, .gpx, .tcx) ou saisis-la à la main.' },
+    { done: hasWeight && !!p.fcmax, href: 'profile.html', title: 'Complète ton profil',
+      text: 'Ton poids et ta FC max rendent les calculs (W/kg, zones, forme) justes.' },
+    { done: (data.competitions || []).length > 0, href: 'competitions.html', title: 'Ajoute ta course objectif',
+      text: 'Le compte à rebours et tes records se mettent à jour tout seuls.' },
+    { done: (nutri.meals || []).length > 0 || Object.values(nutri.hydration || {}).some(v => v > 0), href: 'nutrition.html', title: 'Note un repas ou ton hydratation',
+      text: 'C’est ce qui permet de voir l’effet de ta nutrition sur tes séances.' },
+    { done: sessions.some(s => s.sensation), href: 'sessions.html', title: 'Donne ton ressenti sur une séance',
+      text: 'Un clic après la séance : indispensable pour la page Forme.' },
+  ];
+}
+
+function renderOnboarding() {
+  const el = document.getElementById('onboarding');
+  if (!el) return;
+  const data = TS.getData();
+  const steps = onboardingSteps(data);
+  const done = steps.filter(s => s.done).length;
+  if ((data.prefs && data.prefs.onboardingHidden) || done === steps.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card onboarding" style="margin-bottom:16px">
+    <div class="card__title" style="justify-content:space-between">
+      <span>Bien démarrer avec TriSeason</span>
+      <span style="font-size:12px;font-weight:500;color:var(--text-2)">${done} / ${steps.length}</span>
+    </div>
+    <div class="progress" style="margin-bottom:14px"><div class="progress__bar" style="width:${Math.round(done / steps.length * 100)}%"></div></div>
+    <div class="onboarding__steps">
+      ${steps.map((s, i) => `<a class="onboarding__step ${s.done ? 'done' : ''}" href="${s.href}">
+        <span class="onboarding__check">${s.done ? '✓' : i + 1}</span>
+        <span><b>${s.title}</b><small>${s.text}</small></span>
+      </a>`).join('')}
+    </div>
+    <button class="btn btn--ghost btn--sm" style="margin-top:12px" onclick="hideOnboarding()">Masquer ce guide</button>
+  </div>`;
+}
+
+function hideOnboarding() {
+  const data = TS.getData();
+  data.prefs = Object.assign({}, data.prefs, { onboardingHidden: true });
+  TS.saveData(data);
+  renderOnboarding();
+}
+
+// Ajoute de l'eau au jour en cours sans quitter le Dashboard.
+function quickHydro(ml) {
+  const data = TS.getData();
+  data.nutrition = data.nutrition || { meals: [], hydration: {}, fuel: [] };
+  data.nutrition.hydration = data.nutrition.hydration || {};
+  const today = TS.localDateStr();
+  data.nutrition.hydration[today] = (data.nutrition.hydration[today] || 0) + ml;
+  TS.saveData(data);
+  renderNutriWidget();
+  TS.toast('+' + ml + ' ml — ' + data.nutrition.hydration[today] + ' ml aujourd’hui');
+}
+
 function renderNutriWidget() {
   const el = document.getElementById('nutriWidget');
   if (!el) return;
   const data  = TS.getData();
   const nutri = data.nutrition || { meals: [], hydration: {} };
-  const now   = new Date();
-  const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const today = TS.localDateStr();
   const meals = (nutri.meals || []).filter(m => m.date === today);
   const hydro = (nutri.hydration || {})[today] || 0;
 

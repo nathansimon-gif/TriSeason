@@ -405,9 +405,15 @@ function getSessions(filters = {}) {
   return sessions.sort((a, b) => b.date.localeCompare(a.date));
 }
 
+// Identifiant unique : l'heure seule (Date.now) peut se répéter quand plusieurs
+// éléments sont créés dans la même milliseconde (import groupé, copie de repas).
+function newId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
 function saveSession(session) {
   const data = getData();
-  if (!session.id) session.id = Date.now().toString();
+  if (!session.id) session.id = newId();
   const idx = data.sessions.findIndex(s => s.id === session.id);
   if (idx >= 0) data.sessions[idx] = session;
   else data.sessions.push(session);
@@ -464,7 +470,7 @@ function getCompetitions(filters = {}) {
 
 function saveCompetition(comp) {
   const data = getData();
-  if (!comp.id) comp.id = Date.now().toString();
+  if (!comp.id) comp.id = newId();
   const idx = data.competitions.findIndex(c => c.id === comp.id);
   if (idx >= 0) data.competitions[idx] = comp;
   else data.competitions.push(comp);
@@ -1245,7 +1251,7 @@ function deleteGoal(sport, id) {
 migrateWeeksToSessions();
 
 window.TS = {
-  getData, saveData, loadData, resetAllData, deleteAccount, clearLocalUserData,
+  getData, saveData, loadData, newId, resetAllData, deleteAccount, clearLocalUserData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,
   getSessions, saveSession, deleteSession,

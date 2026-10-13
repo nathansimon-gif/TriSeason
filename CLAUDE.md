@@ -20,6 +20,14 @@ performances sportives (triathlon : natation, vélo, course à pied).
 - **Priorités** : simple à utiliser pour quelqu'un qui découvre l'appli, chiffres
   justes (dates, durées à la seconde, records), données jamais perdues.
 
+## Feuille de route
+
+`FEUILLE-DE-ROUTE.md` (racine) est la to-do list partagée avec le propriétaire,
+classée par échéance. **La lire au début de chaque demande** pour situer le
+travail, et **la mettre à jour dans chaque pull request** : cocher / déplacer
+ce qui est fait dans « Fait » (date + n° de PR), ajouter ce qui est décidé ou
+reporté, noter les idées écartées avec leur raison.
+
 ## Le propriétaire
 
 Il n'est pas développeur et pousse souvent des fichiers via « Add files via
