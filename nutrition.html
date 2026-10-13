@@ -37,9 +37,11 @@
     .meal-card:hover { border-color:var(--border2); }
     .fav-btn { background:none; border:1px solid var(--border2); color:var(--text-3); border-radius:var(--r-sm); width:28px; height:28px; font-size:15px; line-height:1; cursor:pointer; }
     .fav-btn.on { color:var(--accent); border-color:rgba(185,236,74,.4); background:var(--accent-dim); }
-    .quick-meals { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px; margin-bottom:14px; }
-    .quick-meals__title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:8px; }
-    .quick-meal { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:8px 10px; margin-bottom:6px; color:var(--text); font-size:12px; cursor:pointer; }
+    .quick-meals { margin-bottom:12px; }
+    .quick-meals__title { font-size:11px; color:var(--text-2); margin-bottom:5px; }
+    .quick-meals__list { max-height:260px; overflow-y:auto; }
+    .quick-meal { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:6px 10px; margin-bottom:4px; color:var(--text); font-size:12px; cursor:pointer; }
+    .quick-meals__more { background:none; border:none; padding:2px 0; font-size:12px; color:var(--accent); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
     .quick-meal:hover { border-color:var(--accent); }
     .quick-meal__star { color:var(--accent); width:14px; flex-shrink:0; }
     .quick-meal__desc { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -597,17 +599,23 @@ function quickMealSuggestions() {
   const recent = Object.keys(latest)
     .sort((a, b) => (counts[b] - counts[a]) || latest[b].date.localeCompare(latest[a].date))
     .map(k => ({ ...mealTemplate(latest[k]), uses: counts[k] }));
-  return favs.concat(recent).slice(0, 8);
+  return favs.concat(recent).slice(0, 12);
 }
 
+// Compact par défaut : 2 repas (favoris en premier) + « Voir tous les repas habituels ».
+const QUICK_MEALS_COLLAPSED = 2;
 let quickMealList = [];
+let quickMealsExpanded = false;
 function renderQuickMeals(show) {
   const el = document.getElementById('quickMeals');
-  quickMealList = show ? quickMealSuggestions() : [];
+  if (show !== undefined) { quickMealList = show ? quickMealSuggestions() : []; quickMealsExpanded = false; }
   if (!quickMealList.length) { el.innerHTML = ''; return; }
+  const visible = quickMealsExpanded ? quickMealList : quickMealList.slice(0, QUICK_MEALS_COLLAPSED);
+  const hidden = quickMealList.length - QUICK_MEALS_COLLAPSED;
   el.innerHTML = `<div class="quick-meals">
     <div class="quick-meals__title">Repas habituels — un clic pour remplir</div>
-    ${quickMealList.map((m, i) => {
+    <div class="quick-meals__list">
+    ${visible.map((m, i) => {
       const meta = [m.glucides ? m.glucides + ' g gluc.' : '', m.kcal ? '~' + m.kcal + ' kcal' : ''].filter(Boolean).join(' · ');
       return `<button type="button" class="quick-meal" onclick="useQuickMeal(${i})">
         <span class="quick-meal__star">${m.fav ? '★' : ''}</span>
@@ -615,7 +623,14 @@ function renderQuickMeals(show) {
         <span class="quick-meal__meta">${meta}</span>
       </button>`;
     }).join('')}
+    </div>
+    ${hidden > 0 ? `<button type="button" class="quick-meals__more" onclick="toggleQuickMeals()">${quickMealsExpanded ? 'Réduire' : 'Voir tous les repas habituels (' + quickMealList.length + ')'}</button>` : ''}
   </div>`;
+}
+
+function toggleQuickMeals() {
+  quickMealsExpanded = !quickMealsExpanded;
+  renderQuickMeals();
 }
 
 function useQuickMeal(i) {
