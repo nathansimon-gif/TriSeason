@@ -1165,8 +1165,8 @@ function importData(file) {
 // dans le site : il échange le code d'autorisation et renouvelle les jetons.
 // Les séances sont lues directement chez Strava par le navigateur, à
 // l'ouverture de l'appli (au plus toutes les 15 minutes par appareil).
-const STRAVA_CLIENT_ID = '';
-const TS_SERVER_URL = '';   // ex. https://triseason.<nom>.workers.dev (sans / à la fin)
+const STRAVA_CLIENT_ID = '287261';
+const TS_SERVER_URL = 'https://triseason.tri-season-tracker.workers.dev';
 const STRAVA_API = 'https://www.strava.com/api/v3';
 const STRAVA_CHECK_KEY = 'triseason_strava_check';
 const STRAVA_STATE_KEY = 'triseason_strava_state';
