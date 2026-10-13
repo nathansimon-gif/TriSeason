@@ -115,7 +115,9 @@ le dire dans `confidentialite.html` et sans accord explicite.
   identique que le compte existe ou non).
 - `confidentialite.html` : politique de confidentialité, mentions légales,
   conditions d'utilisation. Page publique : **ne pas** y inclure auth-guard.js.
-  Les passages `[À COMPLÉTER]` sont à remplir par le propriétaire.
+  Éditeur : Nathan SIMON (particulier) ; site sur GitHub Pages ; Firestore en
+  région eur3 (UE) ; comptes inactifs supprimés après 3 ans (engagement écrit
+  dans la politique, pas encore automatisé).
 - **Pas de ressource tierce inutile** : polices IBM Plex servies depuis
   `fonts/` (pas de Google Fonts) et Chart.js depuis `vendor/` (pas de CDN).
   Seuls les scripts Firebase (gstatic.com) restent externes.
