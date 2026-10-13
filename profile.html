@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261013d"></script>
+  <script src="auth-guard.js?v=20261013e"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261013d">
+  <link rel="stylesheet" href="style.css?v=20261013e">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -125,7 +125,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div style="font-size:13px;color:var(--text-2)">Connecté en tant que <span id="accountEmail" style="color:var(--text);font-weight:600">—</span></div>
         <button class="data-export-btn" style="width:auto;padding:8px 16px;color:var(--red);border-color:rgba(239,83,80,.25)" onclick="TS_logout()">
-          <span>🚪</span><div>Se déconnecter</div>
+          <div>Se déconnecter</div>
         </button>
       </div>
     </div>
@@ -133,17 +133,15 @@
 
   <!-- ── Données & Confidentialité ── -->
   <div class="section-card">
-    <div class="section-card__title">💾 Données</div>
+    <div class="section-card__title">Données et confidentialité</div>
     <div class="stack">
       <button class="data-export-btn" onclick="TS.exportData()">
-        <span style="font-size:18px">📤</span>
         <div>
           <div>Exporter mes données</div>
           <div style="font-size:11px;color:var(--text-2);font-weight:400">Sauvegarde complète au format JSON</div>
         </div>
       </button>
       <label class="data-export-btn" style="cursor:pointer">
-        <span style="font-size:18px">📥</span>
         <div>
           <div>Importer des données</div>
           <div style="font-size:11px;color:var(--text-2);font-weight:400">Restaurer depuis une sauvegarde JSON</div>
@@ -151,12 +149,18 @@
         <input type="file" accept=".json" style="display:none" onchange="handleImport(event)">
       </label>
       <button class="data-export-btn" onclick="clearAllData()" style="color:var(--red);border-color:rgba(239,83,80,.25)">
-        <span style="font-size:18px">🗑</span>
         <div>
-          <div>Effacer toutes les données</div>
-          <div style="font-size:11px;color:var(--text-3);font-weight:400">Irréversible — supprime tout le localStorage</div>
+          <div>Effacer toutes mes données</div>
+          <div style="font-size:11px;color:var(--text-3);font-weight:400">Séances, nutrition, records… sur tous tes appareils. Ton compte reste ouvert.</div>
         </div>
       </button>
+      <button class="data-export-btn" onclick="openDeleteAccount()" style="color:var(--red);border-color:rgba(239,83,80,.25)">
+        <div>
+          <div>Supprimer mon compte</div>
+          <div style="font-size:11px;color:var(--text-3);font-weight:400">Supprime définitivement ton compte et toutes tes données. Irréversible.</div>
+        </div>
+      </button>
+      <a href="confidentialite.html" style="font-size:12px;color:var(--text-2);text-decoration:underline;text-underline-offset:2px">Politique de confidentialité et mentions légales</a>
     </div>
   </div>
 
@@ -167,6 +171,32 @@
 </div></div>
 
 <!-- Edit profile modal -->
+<div class="modal-overlay" id="deleteAccountModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal__header">
+      <div class="modal__title">Supprimer mon compte</div>
+      <button class="modal__close" onclick="closeDeleteAccount()" aria-label="Fermer">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px">
+      Ton compte et <b style="color:var(--text)">toutes tes données</b> (séances, nutrition, records, compétitions, profil)
+      seront supprimés définitivement. Pense à <a onclick="TS.exportData()" style="color:var(--text);text-decoration:underline;cursor:pointer">exporter tes données</a> avant si tu veux les garder.
+    </div>
+    <div class="form-group" id="delPasswordGroup" style="margin-bottom:12px">
+      <label class="form-label">Ton mot de passe (pour confirmer que c'est bien toi)</label>
+      <input class="form-input" type="password" id="delPassword" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Écris SUPPRIMER pour confirmer</label>
+      <input class="form-input" type="text" id="delConfirm" autocomplete="off" oninput="document.getElementById('delBtn').disabled = this.value.trim().toUpperCase() !== 'SUPPRIMER'">
+    </div>
+    <div id="delError" style="display:none;color:var(--red);font-size:12px;margin-top:10px"></div>
+    <div class="form-actions">
+      <button class="btn btn--ghost" onclick="closeDeleteAccount()">Annuler</button>
+      <button class="btn btn--danger" id="delBtn" disabled onclick="confirmDeleteAccount()">Supprimer définitivement</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="editModal">
   <div class="modal" style="max-width:480px">
     <div class="modal__header">
@@ -233,7 +263,7 @@
 </div>
 
 
-<script src="app.js?v=20261013d"></script>
+<script src="app.js?v=20261013e"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -446,12 +476,51 @@ function handleImport(e) {
     .catch(() => TS.toast('Fichier invalide', 'error'));
 }
 
+// Remet les données à zéro partout (cloud compris) ; le compte reste ouvert.
 function clearAllData() {
-  if (!confirm('Effacer toutes les données ? Cette action est irréversible.')) return;
-  if (!confirm('Dernière confirmation — toutes vos données seront supprimées.')) return;
-  localStorage.clear();
+  if (!confirm('Effacer toutes tes données (séances, nutrition, records, profil…) sur tous tes appareils ? Cette action est irréversible.')) return;
+  if (!confirm('Dernière confirmation : toutes tes données seront supprimées.')) return;
+  TS.resetAllData();
   TS.toast('Données effacées');
   setTimeout(() => location.reload(), 800);
+}
+
+// ── Suppression du compte ─────────────────────────────────────────────────────
+function openDeleteAccount() {
+  const user = firebase.auth().currentUser;
+  const hasPassword = !!user && user.providerData.some(p => p.providerId === 'password');
+  document.getElementById('delPasswordGroup').style.display = hasPassword ? '' : 'none';
+  document.getElementById('delPassword').value = '';
+  document.getElementById('delConfirm').value = '';
+  document.getElementById('delBtn').disabled = true;
+  document.getElementById('delError').style.display = 'none';
+  document.getElementById('deleteAccountModal').classList.add('open');
+}
+function closeDeleteAccount() {
+  document.getElementById('deleteAccountModal').classList.remove('open');
+}
+function confirmDeleteAccount() {
+  const btn = document.getElementById('delBtn');
+  const errEl = document.getElementById('delError');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Suppression…';
+  TS.deleteAccount(document.getElementById('delPassword').value)
+    .then(() => location.replace('login.html?deleted=1'))
+    .catch(err => {
+      const msgs = {
+        'password-required': 'Saisis ton mot de passe pour confirmer.',
+        'auth/wrong-password': 'Mot de passe incorrect.',
+        'auth/invalid-credential': 'Mot de passe incorrect.',
+        'auth/too-many-requests': 'Trop de tentatives, réessaie dans quelques minutes.',
+        'auth/popup-closed-by-user': 'Fenêtre Google fermée : suppression annulée.',
+        'auth/network-request-failed': 'Problème de connexion internet.',
+      };
+      errEl.textContent = msgs[err.code] || ('La suppression a échoué (' + (err.code || err.message) + '). Réessaie ou écris à tri.season.tracker@gmail.com.');
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Supprimer définitivement';
+    });
 }
 
 function toggleMenu() { document.getElementById('navLinks').classList.toggle('open'); }

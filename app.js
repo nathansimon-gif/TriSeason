@@ -118,13 +118,132 @@ function markActiveToday(uid) {
   });
 }
 
+// ── Données locales liées à un compte ───────────────────────────────────────
+// La copie locale porte l'identifiant du compte à qui elle appartient. Si un
+// autre compte se connecte sur le même appareil, elle est effacée avant toute
+// synchronisation : sinon un nouveau compte « hériterait » des données de la
+// personne précédente (et les enverrait dans son propre cloud).
+const OWNER_KEY = 'triseason_owner';
+const LOCAL_USER_KEYS = [DB_KEY, OWNER_KEY, 'triseason_active_day'];
+
+function clearLocalUserData() {
+  LOCAL_USER_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+}
+
+function claimLocalData(uid) {
+  let owner = null;
+  try { owner = localStorage.getItem(OWNER_KEY); } catch {}
+  try { localStorage.setItem(OWNER_KEY, uid); } catch {}
+  if (owner && owner !== uid) {
+    clearLocalUserData();
+    try { localStorage.setItem(OWNER_KEY, uid); } catch {}
+    window.dispatchEvent(new CustomEvent('triseason:update', { detail: getData() }));
+  }
+}
+
+// ── Consentement (données de santé, RGPD art. 9) ────────────────────────────
+// Enregistré dans users/{uid}.consent. Sans consentement à jour, une fenêtre
+// bloque l'appli tant que la personne n'a pas accepté (ou s'est déconnectée /
+// a supprimé son compte). Changer CONSENT_VERSION redemande le consentement à
+// tout le monde (ex. après une modification importante de la politique).
+const CONSENT_VERSION = 1;
+const PENDING_CONSENT_KEY = 'triseason_pending_consent';
+
+function saveConsent(uid) {
+  const ref = getUserDocRef(uid);
+  if (!ref) return Promise.resolve();
+  return ref.set({ consent: { healthData: true, version: CONSENT_VERSION, at: Date.now() } }, { merge: true });
+}
+
+function showConsentGate(uid) {
+  if (document.getElementById('consentGate')) return;
+  const gate = document.createElement('div');
+  gate.id = 'consentGate';
+  gate.className = 'consent-gate';
+  gate.innerHTML = `
+    <div class="consent-gate__box" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+      <div class="consent-gate__title" id="consentTitle">Tes données, ton accord</div>
+      <p>TriSeason enregistre des informations liées à ta santé : poids, taille, fréquence cardiaque,
+      puissance, ressenti, repas et hydratation. Elles servent uniquement à te fournir ton suivi,
+      sont stockées sur ton compte (Google Firebase) et ne sont ni vendues ni partagées.</p>
+      <p>Tu peux exporter ou supprimer tes données et ton compte à tout moment depuis ta page Profil.
+      <a href="confidentialite.html" target="_blank" rel="noopener">Lire la politique de confidentialité</a></p>
+      <label class="consent-gate__check">
+        <input type="checkbox" id="consentCheck">
+        <span>J'accepte que TriSeason enregistre et utilise mes données de santé pour me fournir le suivi de mon entraînement et de ma nutrition.</span>
+      </label>
+      <div class="consent-gate__actions">
+        <button class="btn btn--ghost btn--sm" id="consentRefuse">Refuser et me déconnecter</button>
+        <button class="btn btn--primary" id="consentAccept" disabled>Accepter et continuer</button>
+      </div>
+      <div class="consent-gate__note">Sans cet accord, l'appli ne peut pas fonctionner. Tu pourras retirer ton accord à tout moment en supprimant ton compte.</div>
+    </div>`;
+  document.body.appendChild(gate);
+  const check = gate.querySelector('#consentCheck');
+  const accept = gate.querySelector('#consentAccept');
+  check.addEventListener('change', () => { accept.disabled = !check.checked; });
+  accept.addEventListener('click', () => {
+    accept.disabled = true;
+    saveConsent(uid).then(() => gate.remove()).catch(err => {
+      accept.disabled = false;
+      toast('Accord non enregistré : ' + err.message, 'error');
+    });
+  });
+  gate.querySelector('#consentRefuse').addEventListener('click', () => {
+    if (window.TS_logout) window.TS_logout();
+  });
+}
+
+function checkConsent(uid, doc) {
+  const consent = doc && doc.exists ? doc.data().consent : null;
+  if (consent && consent.healthData && consent.version >= CONSENT_VERSION) return;
+  // Case cochée à l'inscription : on l'enregistre maintenant (le compte existe).
+  // Valable 10 minutes : une case cochée lors d'une inscription abandonnée ne
+  // doit pas servir d'accord à la personne suivante sur le même appareil.
+  let pending = null;
+  try { pending = Number(localStorage.getItem(PENDING_CONSENT_KEY)); localStorage.removeItem(PENDING_CONSENT_KEY); } catch {}
+  if (pending && Date.now() - pending < 10 * 60 * 1000) {
+    saveConsent(uid).catch(() => showConsentGate(uid));
+    return;
+  }
+  const show = () => showConsentGate(uid);
+  if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+}
+
+// ── Effacer ses données / supprimer son compte ──────────────────────────────
+// Garde le compte mais remet les données à zéro (cloud compris).
+function resetAllData() {
+  saveData(structuredClone(DEFAULT_DATA));
+}
+
+// Supprime définitivement les données cloud puis le compte de connexion.
+// Firebase exige une connexion récente : on redemande donc l'identité avant
+// (mot de passe, ou fenêtre Google), puis on supprime.
+async function deleteAccount(password) {
+  const user = firebase.auth().currentUser;
+  if (!user) throw new Error('Personne n’est connecté.');
+  const providers = user.providerData.map(p => p.providerId);
+  if (providers.includes('password')) {
+    if (!password) throw Object.assign(new Error('Mot de passe requis.'), { code: 'password-required' });
+    const cred = firebase.auth.EmailAuthProvider.credential(user.email, password);
+    await user.reauthenticateWithCredential(cred);
+  } else if (providers.includes('google.com')) {
+    await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+  }
+  await getUserDocRef(user.uid).delete();
+  await user.delete();
+  clearLocalUserData();
+}
+
 function syncFromCloud(uid) {
   if (cloudSyncing) return;
   cloudSyncing = true;
   const ref = getUserDocRef(uid);
   if (!ref) { cloudSyncing = false; return; }
+  claimLocalData(uid);
 
   ref.get().then(doc => {
+    checkConsent(uid, doc);
     if (doc.exists && doc.data() && doc.data().data) {
       // Un compte cloud existe déjà : ses données font foi sur cet appareil.
       const cloudData = doc.data().data;
@@ -1126,7 +1245,7 @@ function deleteGoal(sport, id) {
 migrateWeeksToSessions();
 
 window.TS = {
-  getData, saveData, loadData,
+  getData, saveData, loadData, resetAllData, deleteAccount, clearLocalUserData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,
   getSessions, saveSession, deleteSession,
