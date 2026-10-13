@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1016">
+  <title>TriSeason — Aide et contact</title>
+  <link rel="stylesheet" href="style.css?v=20261014b">
+  <style>
+    .help { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; color: var(--text-2); font-size: 14px; line-height: 1.65; }
+    .help h1 { color: var(--text); font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+    .help h2 { color: var(--text); font-size: 17px; font-weight: 600; margin: 28px 0 12px; }
+    .help .lead { margin-bottom: 20px; }
+    .help a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+    .help .back { display: inline-block; margin-bottom: 20px; font-size: 13px; color: var(--text-2); }
+    .faq details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; }
+    .faq summary { cursor: pointer; padding: 12px 14px; color: var(--text); font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: '+'; color: var(--text-3); font-weight: 400; }
+    .faq details[open] summary::after { content: '–'; }
+    .faq details > div { padding: 0 14px 14px; }
+    .faq b { color: var(--text); font-weight: 600; }
+    .contact { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; }
+    .contact .form-group { margin-bottom: 12px; }
+    .contact__kinds { display: flex; gap: 6px; flex-wrap: wrap; }
+    .contact__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+    .contact__note { font-size: 12px; color: var(--text-3); margin-top: 12px; }
+    .contact__addr { font-family: var(--mono); color: var(--text); }
+  </style>
+</head>
+<body>
+<main class="help">
+  <a class="back" href="index.html">← Retour à TriSeason</a>
+  <h1>Aide et contact</h1>
+  <p class="lead">Les réponses aux questions fréquentes, et un moyen d'écrire directement si tu as une question,
+  un problème ou une idée.</p>
+
+  <h2>Questions fréquentes</h2>
+  <div class="faq">
+    <details>
+      <summary>Comment importer une séance de ma montre ?</summary>
+      <div>Page <b>Séances</b> → glisse tes fichiers dans la zone d'import, ou clique sur « Sélectionner des fichiers ».
+      Formats acceptés : <b>.fit</b> (Garmin, Coros, Polar, Suunto, Wahoo), <b>.gpx</b> et <b>.tcx</b>
+      (exports Strava, Garmin Connect…). Tu peux aussi saisir une séance à la main avec « + Nouvelle séance ».</div>
+    </details>
+    <details>
+      <summary>Pourquoi noter mon ressenti après une séance ?</summary>
+      <div>Le ressenti (les 5 visages) permet de comparer tes séances avec ta nutrition dans la page <b>Forme</b>
+      (« Nutrition et performance »). Il est demandé juste après un import, et un rappel s'affiche sur la page
+      Séances pour les séances récentes sans ressenti.</div>
+    </details>
+    <details>
+      <summary>« Nutrition et performance » n'affiche rien</summary>
+      <div>Il faut assez de séances qui ont <b>à la fois</b> une nutrition saisie (repas avec glucides, ou hydratation)
+      et un résultat (ressenti, ou distance et durée). La carte indique ce qu'il manque et combien de séances il faut.
+      Astuce : dans <b>Nutrition</b>, « Reprendre les repas de la veille » et les favoris (étoile) rendent la saisie très rapide.</div>
+    </details>
+    <details>
+      <summary>J'ai oublié mon mot de passe</summary>
+      <div>Sur la page de connexion, saisis ton adresse e-mail puis clique sur <b>« Mot de passe oublié ? »</b>.
+      Tu recevras un lien pour en choisir un nouveau (regarde dans les spams). Si tu te connectes avec Google,
+      pas de mot de passe TriSeason : utilise « Continuer avec Google ».</div>
+    </details>
+    <details>
+      <summary>Mes données sont-elles sur tous mes appareils ?</summary>
+      <div>Oui : tes données sont enregistrées dans ton compte. Connecte-toi avec le même compte sur ton téléphone et
+      ton ordinateur. Si une page semble vide ou ancienne, <b>recharge la page</b> (ou ferme et rouvre l'appli).</div>
+    </details>
+    <details>
+      <summary>Installer TriSeason sur mon téléphone</summary>
+      <div><b>iPhone</b> : ouvre le site dans Safari → bouton Partager → « Sur l'écran d'accueil ».
+      <b>Android</b> : ouvre le site dans Chrome → menu ⋮ → « Installer l'application » (ou « Ajouter à l'écran d'accueil »).</div>
+    </details>
+    <details>
+      <summary>Exporter ou supprimer mes données</summary>
+      <div>Page <b>Profil</b> → « Données et confidentialité » : exporter toutes tes données, les effacer
+      (le compte reste ouvert) ou supprimer ton compte définitivement.
+      Voir aussi la <a href="confidentialite.html">politique de confidentialité</a>.</div>
+    </details>
+    <details>
+      <summary>TriSeason peut-il me conseiller sur mon entraînement ou mon alimentation ?</summary>
+      <div>Non. TriSeason affiche et compare <b>tes propres données</b> (statistiques descriptives), mais ne donne
+      ni avis médical ni conseil nutritionnel. Pour cela, adresse-toi à un professionnel de santé ou à un nutritionniste.</div>
+    </details>
+  </div>
+
+  <h2 id="contact">Écrire à TriSeason</h2>
+  <div class="contact">
+    <div class="form-group">
+      <label class="form-label">C'est à propos de…</label>
+      <div class="contact__kinds" id="kinds">
+        <button type="button" class="btn btn--sm active" data-kind="Problème">Un problème</button>
+        <button type="button" class="btn btn--sm" data-kind="Question">Une question</button>
+        <button type="button" class="btn btn--sm" data-kind="Idée">Une idée</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="msg">Ton message</label>
+      <textarea class="form-textarea" id="msg" rows="6" placeholder="Explique ce qui se passe : sur quelle page, ce que tu as fait, ce que tu voyais…"></textarea>
+    </div>
+    <div class="contact__actions">
+      <button class="btn btn--primary" onclick="sendMail()">Envoyer par e-mail</button>
+      <button class="btn btn--ghost btn--sm" onclick="copyAddress(this)">Copier l'adresse</button>
+      <span class="contact__addr">tri.season.tracker@gmail.com</span>
+    </div>
+    <div class="contact__note">
+      « Envoyer par e-mail » ouvre ton application de messagerie avec le message prêt : il ne reste qu'à l'envoyer,
+      et la réponse arrivera dans ta boîte mail. Quelques informations techniques (navigateur, version de l'appli)
+      sont ajoutées pour aider à comprendre un problème. Aucune de tes données d'entraînement, de nutrition ou de santé
+      n'est jointe. Ton message n'est utilisé que pour te répondre.
+    </div>
+  </div>
+</main>
+
+<script>
+const SUPPORT_EMAIL = 'tri.season.tracker@gmail.com';
+let kind = 'Problème';
+document.querySelectorAll('#kinds .btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#kinds .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  kind = btn.dataset.kind;
+}));
+
+// Version de l'appli = paramètre « v » de la feuille de style chargée
+function appVersion() {
+  const link = document.querySelector('link[href*="style.css"]');
+  const m = link && link.getAttribute('href').match(/v=([\w.-]+)/);
+  return m ? m[1] : 'inconnue';
+}
+
+// Prépare le lien « mailto: » (destinataire, objet, message + infos techniques).
+function mailtoUrl() {
+  const msg = document.getElementById('msg').value.trim();
+  if (!msg) return null;
+  const from = new URLSearchParams(location.search).get('depuis') || document.referrer.split('/').pop() || '—';
+  const body = msg
+    + '\n\n— — —\nInformations techniques (pour aider à comprendre) :'
+    + '\nPage : ' + from
+    + '\nVersion de l’appli : ' + appVersion()
+    + '\nNavigateur : ' + navigator.userAgent
+    + '\nÉcran : ' + window.innerWidth + '×' + window.innerHeight
+    + '\nDate : ' + new Date().toLocaleString('fr-FR');
+  const subject = '[TriSeason] ' + kind + ' — ' + msg.split('\n')[0].slice(0, 60);
+  return 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
+function sendMail() {
+  const url = mailtoUrl();
+  if (!url) { document.getElementById('msg').focus(); return; }
+  location.href = url;
+}
+
+function copyAddress(btn) {
+  const done = () => { btn.textContent = 'Adresse copiée'; setTimeout(() => { btn.textContent = 'Copier l’adresse'; }, 2000); };
+  if (navigator.clipboard) navigator.clipboard.writeText(SUPPORT_EMAIL).then(done, () => prompt('Adresse e-mail :', SUPPORT_EMAIL));
+  else prompt('Adresse e-mail :', SUPPORT_EMAIL);
+}
+</script>
+</body>
+</html>

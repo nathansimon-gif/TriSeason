@@ -84,5 +84,12 @@ assert.equal(sent.opts.headers.Authorization, undefined);
 await assert.rejects(sendReportEmail({ subject: 's', markdown: 'x', to: 't', apiKey: 'k',
   fetchImpl: async () => ({ ok: false, status: 403, text: async () => 'interdit' }) }), /Resend 403/);
 
+// Section « Santé de l'appli »
+const okTests = { total: 20, failed: 0, results: [] };
+const koTests = { total: 20, failed: 1, results: [{ name: 'Semaines', ok: false, detail: 'S41=0 km' }] };
+assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics, tests: okTests })), /Tout fonctionne.*20 tests/);
+assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics, tests: koTests })), /1 test en échec[\s\S]*Échec — Semaines : S41=0 km/);
+assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics })), /Tests non lancés/);
+
 console.log('Tous les tests passent.\n');
 console.log(md);

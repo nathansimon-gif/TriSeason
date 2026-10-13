@@ -9,11 +9,12 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #15 (repas habituels plus compacts) puis recharger le site
+- [ ] 🧑 Fusionner la PR #16 (tests automatiques + Aide et contact) puis recharger le site
 
 ## Bientôt (dans le mois)
 
-- [ ] 🤖 **Tests automatiques sur GitHub** : à chaque pull request, ouvrir toutes les pages et vérifier qu'elles marchent avant la fusion (gratuit avec GitHub Actions)
+- [ ] 🤖 *Facultatif* : lancer aussi les tests automatiques sur GitHub à chaque pull request (coche verte / croix rouge avant la fusion). Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
+- [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
 - [ ] 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
 - [ ] 🧑 Vérifier dans Firebase que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié »), et tester un e-mail de réinitialisation
 - [ ] 🧑 *Facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom TriSeason
@@ -53,6 +54,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/10/2026 | #16 | Tests automatiques (20 vérifications) chaque lundi à 6h53, résultat dans le rapport ; page « Aide et contact » (FAQ + e-mail) |
 | 14/10/2026 | #15 | Repas habituels plus compacts : 2 affichés, « Voir tous les repas habituels » pour la liste complète |
 | 14/10/2026 | #14 | Saisie rapide des repas (favoris, repas habituels, reprendre la veille), hydratation en un clic sur le Dashboard, ressenti demandé après un import, guide « Bien démarrer », identifiants uniques |
 | 13/10/2026 | #13 | RGPD : bug de fuite entre comptes, suppression du compte, consentement aux données de santé, mot de passe oublié, page Confidentialité et mentions légales, polices et Chart.js hébergés sur le site |
