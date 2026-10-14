@@ -244,15 +244,23 @@ async function main() {
     });
     assert(JSON.stringify(r) === JSON.stringify([['3 séances de vélo', 2, false], ['Repas notés 3 jours', 1, false]]), JSON.stringify(r));
   });
-  await test('Dashboard : carte « Ce que Strava ne te montre pas »', async () => {
+  await test('Dashboard : carte « Ce que Strava ne te montre pas » (dernière séance + repas autour)', async () => {
     await u.page.goto(`${BASE}/index.html`); await u.page.waitForTimeout(800);
-    const full = await u.page.textContent('#insightBody');
-    const v = await newUser({ data: { profile: {}, sessions: [], nutrition: { meals: [], hydration: {} } } });
+    const full = (await u.page.innerText('#insightBody')).replace(/\s+/g, ' ');
+    // Compte avec jours d'entraînement et de repos, et un ravitaillement
+    const meals = [1, 2, 3, 4, 5, 6].map(i => ({ id: 'm' + i, date: day(-i), glucides: i % 2 ? 300 : 200, kcal: 2500 }));
+    const v = await newUser({ data: { profile: {}, sessions: [1, 3, 5].map(i => ({ id: 's' + i, date: day(-i), sport: 'velo', duration: 2, distance: 60 })),
+      nutrition: { meals, hydration: { [day(-1)]: 1500 }, fuel: [{ id: 'f1', date: day(-1), type: 'gel', qty: 2 }, { id: 'f2', date: day(-1), type: 'barre', qty: 1 }] } } });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
-    const empty = await v.page.textContent('#insightBody');
-    await v.ctx.close();
-    assert(/Quand tu as (mangé|bu) plus de .*Les autres fois, /s.test(full) && full.includes('pas un conseil'), 'avec données : ' + full.slice(0, 160));
-    assert(/Encore\s+6 séances/.test(empty), 'sans données : ' + empty.slice(0, 200));
+    const mixed = (await v.page.innerText('#insightBody')).replace(/\s+/g, ' ');
+    const w = await newUser({ data: { profile: {}, sessions: [], nutrition: { meals: [], hydration: {} } } });
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(800);
+    const empty = await w.page.textContent('#insightBody');
+    await v.ctx.close(); await w.ctx.close();
+    assert(full.includes('hier') && /la veille 230 g de glucides/i.test(full) && full.includes('2 L d’eau'), 'avec données : ' + full.slice(0, 260));
+    assert(mixed.includes('≈ 80 g de glucides') && mixed.includes('≈ 40 g par heure') && mixed.includes('300 g de glucides les jours d’entraînement') && mixed.includes('200 g les jours de repos'),
+      'entraînement / repos : ' + mixed.slice(0, 400));
+    assert(empty.includes('Importe une séance'), 'sans données : ' + empty.slice(0, 200));
   });
   await test('Identifiants uniques (rien ne s’écrase lors d’un import groupé)', async () => {
     const r = await u.page.evaluate(() => { const before = TS.getData().sessions.length;
