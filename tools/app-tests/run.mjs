@@ -539,6 +539,29 @@ async function main() {
     } finally { globalThis.fetch = realFetch; }
   });
 
+  await test('Nutrition : ravitaillement avec glucides au choix (gels, barres…)', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(700);
+    await v.page.evaluate(() => openFuelModal());
+    await v.page.selectOption('#f_type', 'gel');
+    const chips = await v.page.locator('#f_presets .fuel-chip').count();
+    await v.page.click('#f_presets .fuel-chip:has-text("Maurten Gel 160")');
+    await v.page.fill('#f_qty', '2');
+    await v.page.evaluate(() => saveFuelForm());
+    await v.page.evaluate(() => openFuelModal());
+    await v.page.selectOption('#f_type', 'banane');
+    const banana = await v.page.inputValue('#f_carbs');
+    await v.page.evaluate(() => saveFuelForm());
+    const r = await v.page.evaluate(() => { const f = TS.getData().nutrition.fuel; return { f, list: document.getElementById('fuelList').innerText }; });
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    assert(chips >= 10, chips + ' choix pour les gels');
+    const gel = r.f.find(x => x.type === 'gel');
+    assert(gel && gel.carbs === 40 && gel.qty === 2 && gel.name === 'Maurten Gel 160', 'gel : ' + JSON.stringify(gel));
+    assert(banana === '25' && r.f.find(x => x.type === 'banane').carbs === 25, 'banane : ' + banana);
+    assert(/80 g gluc\./.test(r.list) && !/≈ 80/.test(r.list), 'liste : ' + r.list);
+  });
+
   // 5. Données personnelles
   await test('RGPD : déconnexion → plus aucune donnée dans le navigateur', async () => {
     const v = await newUser();
