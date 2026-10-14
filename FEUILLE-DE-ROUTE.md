@@ -9,17 +9,28 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #25 (aperçu avant d'importer l'historique Strava) puis recharger le site
+- [ ] 🧑 Fusionner la PR #26 (feuille de route + nouvelle carte « Ce que Strava ne te montre pas ») puis recharger le site
 - [ ] 🧑 Tester l'import de **beaucoup de fichiers .fit** (50 d'un coup) : si ça ne plante plus, Claude peut rendre l'import automatique par paquets de 50
 
 ## Bientôt (dans le mois)
+
+**Prochaines tâches, dans cet ordre :**
+
+- [ ] 🤖🧑 **1. Ranger les données en plusieurs tiroirs** (une pull request à part, rien d'autre dedans). Lève la limite de 1 Mo par compte (plus gros compte : 19 % en octobre 2026), allège chaque enregistrement, et débloque l'historique Strava complet, les parcours et plus tard l'espace coach. Les pages ne changent pas, seul le rangement dans le cloud change :
+  - tiroir **principal** : profil, réglages, objectifs, compétitions, records, poids, Strava, badges
+  - **séances** : un tiroir par année · **nutrition** : un tiroir par mois · **parcours** (plus tard) : un par sortie, ouvert seulement quand on regarde la séance
+  - rangé par année / mois (et pas une séance par document) pour rester dans l'offre gratuite de Firebase : une dizaine de lectures par ouverture de l'appli au lieu d'une
+  - Étapes : (a) 🧑 ajouter dans les règles Firebase la ligne pour les sous-tiroirs (texte exact fourni par Claude) **avant** la fusion ; (b) 🧑 exporter ses données par prudence (Profil → Exporter) ; (c) 🤖 déménagement automatique à la première ouverture, vérifié avant de basculer ; (d) l'ancien grand tiroir est gardé en secours environ 30 jours, supprimé seulement avec l'accord de Nathan ; (e) 🤖 rapport du lundi et tests automatiques adaptés (déménagement, deux appareils, connexion lente)
+- [ ] 🤖🧑 **2. Tests automatiques sur GitHub avant chaque fusion** : à chaque pull request, GitHub lance les tests et affiche une coche verte (tout passe) ou une croix rouge (ne pas fusionner) à côté du bouton de fusion. Gratuit. Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
+- [ ] 🤖 **3. Partage en story** (Instagram, WhatsApp…) : bouton « Partager » qui crée une image verticale des résultats, fabriquée sur le téléphone, rien envoyé à un service extérieur. **Le contenu des stories sera précisé ensemble plus tard**, avant de commencer (pistes : une séance, une compétition, le bilan de la semaine, avec ce que Strava ne montre pas : glucides par heure, ressenti, repas notés 7/7). Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
+
+**Ensuite :**
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
   1. 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets »), les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload ») et prévenir Claude
   2. 🤖 Claude remplace le bouton « Connecter avec Strava » et la mention « Powered by Strava » par les logos officiels, prépare les captures d'écran et le texte de la demande
   3. 🧑 Envoyer la demande depuis strava.com/settings/api
 - [ ] 🤖 *Plus tard* : séances en temps réel avec les alertes Strava (« webhooks »), au lieu d'attendre l'ouverture de l'appli. Demande que le serveur puisse écrire dans Firestore
-- [ ] 🤖 *Facultatif* : lancer aussi les tests automatiques sur GitHub à chaque pull request (coche verte / croix rouge avant la fusion). Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
 - [ ] 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
 - [ ] 🧑 Vérifier dans Firebase que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié »), et tester un e-mail de réinitialisation
@@ -33,14 +44,12 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Plus tard : idées pour rendre l'appli plus vivante
 
-- [ ] 🤖 **Partage en story** (Instagram, WhatsApp…) : bouton « Partager » sur une séance, une compétition ou la semaine, qui crée une image verticale avec ce que Strava ne montre pas (glucides par heure, ressenti, repas notés 7/7). Image fabriquée sur le téléphone, rien envoyé à un service extérieur. Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
-- [ ] 🤖 **Parcours des sorties** : tracé simplifié fourni par Strava (ou tiré des fichiers .fit), dessiné sur la fiche de la séance et sur l'image story, sans fond de carte (une vraie carte = service extérieur, à ajouter à la politique de confidentialité). **Après** le découpage du stockage (sinon limite de 1 Mo par compte)
+- [ ] 🤖 **Parcours des sorties** : tracé simplifié fourni par Strava (ou tiré des fichiers .fit), dessiné sur la fiche de la séance et sur l'image story, sans fond de carte (une vraie carte = service extérieur, à ajouter à la politique de confidentialité). **Après** le rangement en tiroirs (sinon limite de 1 Mo par compte)
 - [ ] 🤖 **Défis entre amis** : défi créé avec un code d'invitation, chacun accepte de partager **seulement son score**, classement simple ; plus tard des défis de club. Demande de nouvelles règles Firebase et une mise à jour de la confidentialité. **Règle Strava** : les séances venues de Strava ne peuvent pas être montrées à d'autres personnes, donc défis sur ce qui est propre à TriSeason (jours de repas notés, hydratation, ressenti) ou sur les séances importées par fichier
 - [ ] 🧑 *Avec la version payante* : vraies récompenses avec des partenaires (ex. réductions sur la nutrition sportive)
 
 ## Dans 1 an, ou quand l'appli grandit
 
-- [ ] 🤖 **Découper le stockage des données** (une collection par type) avant d'approcher la limite de 1 Mo par compte — surveillé chaque lundi dans le rapport (plus gros compte : 19 % en octobre 2026). À faire aussi avant l'accès nutritionniste. Penser à étendre les règles Firestore aux sous-collections
 - [ ] 🧑 **Analyse d'impact (AIPD)** si le nombre d'utilisateurs devient important (données de santé à grande échelle)
 - [ ] 🧑 *Facultatif* : passer Firebase au forfait Blaze (avec alerte de budget à 1 €) pour avoir les lectures/écritures dans le rapport du lundi — à ton échelle ça reste à 0 €
 
@@ -71,6 +80,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/10/2026 | #26 | Feuille de route : prochaines tâches (rangement des données en tiroirs, tests GitHub avant chaque fusion, partage en story) ; carte **« Ce que Strava ne te montre pas »** refaite : ta dernière séance avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort (≈ g de glucides par heure), et tes glucides les jours d'entraînement / de repos |
 | 16/10/2026 | #25 | « Récupérer tout l'historique » (Profil) ouvre la page Séances avec un **aperçu** des séances à importer (période au choix, doublons écartés) : rien n'est importé avant validation. Bouton « Depuis mon compte Strava » à côté de l'archive. Archive Strava testée par Nathan : ça marche |
 | 16/10/2026 | #24 | **Archive Strava** : tout l'historique d'un coup (seul le résumé activities.csv est lu, même pour une archive de plusieurs Go), sans doublon, avec limite de place par compte ; import de fichiers limité à 50 et enregistré en une fois (fin des plantages) ; un seul envoi au cloud à la fois ; phrase de la carte constat réécrite |
 | 15/10/2026 | #23 | 3e simulation des 100 clients (de 18 à 26 payants avec la formule D depuis Strava, scan et badges) ; carte **« Ce que Strava ne te montre pas »** sur le Dashboard (ton constat nutrition × séances, ou ce qu'il manque pour l'obtenir) |

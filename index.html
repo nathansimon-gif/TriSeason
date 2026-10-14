@@ -70,6 +70,18 @@
 
     .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
     .cal-nav__label { font-size:13px; font-weight:700; text-transform:capitalize; }
+    .ins-session { font-size:13px; color:var(--text-2); display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .ins-session b { color:var(--text); }
+    .ins-tiles { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+    @media (max-width:560px) { .ins-tiles { grid-template-columns:minmax(0,1fr); } }
+    .ins-tile { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:10px 12px; min-width:0; }
+    .ins-tile__label { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.06em; }
+    .ins-tile__main { font-size:15px; font-weight:600; color:var(--text); margin-top:3px; }
+    .ins-tile__sub { font-size:12px; color:var(--text-2); margin-top:2px; }
+    .ins-tile--empty .ins-tile__main { color:var(--text-3); font-weight:500; font-size:13px; }
+    .ins-week { font-size:13px; color:var(--text-2); line-height:1.6; margin-top:12px; }
+    .ins-week b { color:var(--text); }
+    .ins-note { font-size:12px; color:var(--text-3); margin-top:10px; line-height:1.5; }
     .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; max-width:380px; margin:0 auto; }
     .cal-dow { text-align:center; font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:.05em; padding-bottom:4px; }
     .cal-cell {
@@ -199,7 +211,7 @@
   <!-- ── Ce que Strava ne te montre pas (constat nutrition × séances) ── -->
   <div class="card" style="margin-bottom:12px" id="insightCard">
     <div class="card__title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>Ce que Strava ne te montre pas</span>
+      <span>Ce que Strava ne te montre pas <span style="font-weight:400;color:var(--text-2)">· ta dernière séance, avec ce que tu as mangé et bu autour</span></span>
       <a href="forme.html" style="font-size:12px;font-weight:500;color:var(--accent)">Voir le détail dans Forme</a>
     </div>
     <div id="insightBody"></div>
@@ -450,49 +462,81 @@ document.addEventListener('DOMContentLoaded', () => {
   TS.initTooltips();
 });
 
-// ── Constat nutrition × séances (décrit tes données, ne donne pas de conseil) ──
+// ── Ce que Strava ne te montre pas : ta dernière séance avec ce que tu as mangé
+// et bu autour, puis tes glucides les jours d'entraînement et de repos.
+// Des faits sur tes données, jamais un conseil.
+const FUEL_CARBS = { gel: 25, barre: 30, banane: 25, 'boisson-iso': 30, flasque: 40, 'pâte-de-fruit': 20, autre: 20 }; // g par unité, ordre de grandeur
+function dayNutrition(nutri, day) {
+  const meals = (nutri.meals || []).filter(m => m.date === day);
+  return {
+    meals: meals.length,
+    carbs: meals.reduce((a, m) => a + (m.glucides || 0), 0),
+    kcal: meals.reduce((a, m) => a + (m.kcal || ((m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9)), 0),
+    prot: meals.reduce((a, m) => a + (m.proteines || 0), 0),
+    water: (nutri.hydration || {})[day] || 0,
+  };
+}
 function renderInsight() {
   const el = document.getElementById('insightBody');
-  const res = TS.getNutritionImpact();
-  let best = null;
-  Object.entries(res.comparisons).forEach(([f, byO]) => Object.entries(byO).forEach(([o, c]) => {
-    if (!c.enough || c.high.avg == null || c.low.avg == null) return;
-    const gap = o === 'sensation' ? Math.abs(c.high.avg - c.low.avg) / 4 : Math.abs(c.high.avg - c.low.avg) / 10; // écart rapporté à l'échelle
-    if (!best || gap > best.gap) best = { f, o, c, gap };
-  }));
-  if (best && best.gap >= 0.05) {
-    const t = best.c.threshold;
-    const when = {
-      carbs_prev: `Quand tu as mangé plus de <b>${Math.round(t)} g de glucides la veille</b>`,
-      carbs_day:  `Quand tu as mangé plus de <b>${Math.round(t)} g de glucides le jour de la séance</b>`,
-      kcal_prev:  `Quand tu as mangé plus de <b>${Math.round(t).toLocaleString('fr-FR')} kcal la veille</b>`,
-      hydration:  `Quand tu as bu plus de <b>${(t / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} L le jour de la séance</b>`,
-    }[best.f];
-    const pct = (v) => Math.abs(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %';
-    const result = (v, strong) => {
-      const b = (x) => strong ? `<b style="color:var(--accent)">${x}</b>` : `<b>${x}</b>`;
-      if (best.o === 'sensation') return 'ton ressenti moyen est de ' + b(v.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' sur 5');
-      if (Math.abs(v) < 0.1) return 'tu vas ' + b('à ton rythme habituel');
-      return 'tu vas en moyenne ' + b(pct(v) + (v > 0 ? ' plus vite' : ' moins vite')) + ' que d’habitude';
-    };
-    el.innerHTML = `<div style="font-size:14px;color:var(--text);line-height:1.6">${when}, ${result(best.c.high.avg, true)}.<br>
-        Les autres fois, ${result(best.c.low.avg, false)}.</div>
-      <div style="font-size:12px;color:var(--text-2);margin-top:6px">Calculé sur ${best.c.n} de tes séances. C'est un constat sur tes données, pas un conseil :
-        d'autres choses (sommeil, fatigue, météo) comptent aussi.</div>`;
+  const data = TS.getData();
+  const nutri = data.nutrition || {};
+  const today = TS.localDateStr();
+  const shift = (d, n) => { const x = TS.parseLocalDate(d); x.setDate(x.getDate() + n); return TS.localDateStr(x); };
+  const sessions = (data.sessions || []).filter(s => s.date && s.date <= today).sort((a, b) => a.date.localeCompare(b.date));
+  const last = sessions[sessions.length - 1];
+  const fmtL = (ml) => (ml / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' L';
+  const n0 = (v) => Math.round(v).toLocaleString('fr-FR');
+  const tile = (label, main, sub, empty) => `<div class="ins-tile${empty ? ' ins-tile--empty' : ''}">
+      <div class="ins-tile__label">${label}</div><div class="ins-tile__main">${main}</div><div class="ins-tile__sub">${sub || ''}</div></div>`;
+
+  if (!last) {
+    el.innerHTML = `<div class="ins-note">Strava et ta montre montrent tes séances. TriSeason les met à côté de ce que tu as mangé et bu :
+      la veille, le jour même et pendant l'effort. Importe une séance et note tes repas pour le voir ici.</div>`;
     return;
   }
-  // Pas encore assez de séances : ce qu'il manque
-  const c = res.comparisons.carbs_prev.sensation;
-  const need = Math.max(0, TS.NUTRI_MIN_GROUP * 2 - c.n);
-  el.innerHTML = `<div style="font-size:13px;color:var(--text-2);line-height:1.55">TriSeason compare tes repas, ton hydratation et tes séances
-      pour voir ce qui va avec tes meilleures sorties. Strava et ta montre ne le font pas.</div>
-    <div style="font-size:13px;color:var(--text);margin-top:8px">${need
-      ? `Encore <b>${need} séance${need > 1 ? 's' : ''}</b> avec tes repas de la veille notés et ton ressenti pour ton premier constat (${c.n} pour l'instant).`
-      : 'Continue à noter tes repas et ton ressenti : le premier constat arrive dès qu’une différence apparaît.'}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-      <a class="btn btn--sm" href="nutrition.html">Noter un repas</a>
-      <a class="btn btn--ghost btn--sm" href="sessions.html">Noter un ressenti</a>
-    </div>`;
+
+  // 1. Dernière séance
+  const sp = TS.SPORTS[last.sport] || {};
+  const when = last.date === today ? 'aujourd’hui' : last.date === shift(today, -1) ? 'hier'
+    : TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const facts = [last.duration ? TS.formatHours(last.duration) : '', last.distance ? last.distance.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' km' : '',
+    last.sensation ? 'ressenti ' + last.sensation + '/5' : ''].filter(Boolean).join(' · ');
+  const prev = dayNutrition(nutri, shift(last.date, -1));
+  const day = dayNutrition(nutri, last.date);
+  const fuel = (nutri.fuel || []).filter(f => f.date === last.date);
+  const fuelCarbs = fuel.reduce((a, f) => a + (FUEL_CARBS[f.type] || 20) * (f.qty || 1), 0);
+  const perHour = last.duration >= 0.75 && fuelCarbs ? Math.round(fuelCarbs / last.duration) : null;
+  const tiles = [
+    prev.meals ? tile('La veille', n0(prev.carbs) + ' g de glucides', n0(prev.kcal) + ' kcal · ' + prev.meals + ' repas') : tile('La veille', 'Repas non notés', '', true),
+    day.meals || day.water ? tile('Le jour même', day.meals ? n0(day.carbs) + ' g de glucides' : 'Repas non notés', day.water ? fmtL(day.water) + ' d’eau' : 'Eau non notée', !day.meals)
+      : tile('Le jour même', 'Rien de noté', '', true),
+    fuel.length ? tile('Pendant l’effort', '≈ ' + n0(fuelCarbs) + ' g de glucides', fuel.reduce((a, f) => a + (f.qty || 1), 0) + ' ravitaillement' + (fuel.length > 1 || (fuel[0].qty || 1) > 1 ? 's' : '') + (perHour ? ' · ≈ ' + perHour + ' g par heure' : ''))
+      : tile('Pendant l’effort', last.duration >= 1.5 ? 'Aucun ravitaillement noté' : 'Rien de noté', '', true),
+  ];
+
+  // 2. Glucides les jours d'entraînement et de repos (4 dernières semaines, jours où les repas sont notés)
+  const trainDays = new Set(sessions.map(s => s.date));
+  const train = [], rest = [];
+  for (let i = 0; i < 28; i++) {
+    const d = shift(today, -i - 1);
+    const n = dayNutrition(nutri, d);
+    if (!n.meals) continue;
+    (trainDays.has(d) ? train : rest).push(n.carbs);
+  }
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const compare = train.length >= 3 && rest.length >= 2
+    ? `<div class="ins-week">Ces 4 dernières semaines, tu as mangé en moyenne <b>${n0(avg(train))} g de glucides les jours d’entraînement</b>
+        et <b>${n0(avg(rest))} g les jours de repos</b> (${train.length + rest.length} jours notés).</div>`
+    : `<div class="ins-week">Note tes repas quelques jours de plus pour comparer tes glucides les jours d’entraînement et les jours de repos
+        (${train.length + rest.length} jour${train.length + rest.length > 1 ? 's' : ''} noté${train.length + rest.length > 1 ? 's' : ''} sur les 4 dernières semaines).</div>`;
+
+  const missing = !prev.meals || !day.meals;
+  el.innerHTML = `<div class="ins-session"><span class="sport-dot sport-dot--${last.sport}"></span>
+      <b>${sp.label || ''}</b> ${when}${facts ? ' · ' + facts : ''}</div>
+    <div class="ins-tiles">${tiles.join('')}</div>
+    ${compare}
+    ${missing ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn--sm" href="nutrition.html">Noter un repas</a></div>' : ''}
+    <div class="ins-note">Des faits sur tes données, pas un conseil. Le lien entre tes repas et tes performances est détaillé dans Forme.</div>`;
 }
 
 // ── Défis de la semaine et badges ─────────────────────────────────────────────
