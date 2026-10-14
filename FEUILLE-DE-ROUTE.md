@@ -9,7 +9,9 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #27 (ravitaillements : glucides au choix pour les gels, barres, pâtes de fruits, compotes, boissons) puis recharger le site
+- [ ] 🧑 Fusionner la PR #28 (message clair quand la limite de comptes Strava est atteinte) puis recharger le site
+- [ ] 🧑 Passer la limite Strava de 1 à **10 comptes** : strava.com/settings/api, sur la page de l'appli TriSeason (gratuit, sans validation)
+- [ ] 🧑 *Facultatif* : recopier le nouveau `tools/server/worker.js` dans Cloudflare (Edit code → coller → Deploy). L'appli reconnaît déjà la limite avec l'ancienne version ; la nouvelle la signale plus proprement
 - [ ] 🧑 Tester l'import de **beaucoup de fichiers .fit** (50 d'un coup) : si ça ne plante plus, Claude peut rendre l'import automatique par paquets de 50
 
 ## Bientôt (dans le mois)
@@ -80,6 +82,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 17/10/2026 | #28 | Limite de comptes Strava atteinte : au lieu d'une erreur, message « la connexion à Strava n'est pas encore ouverte à tout le monde, elle arrive bientôt » + bouton vers l'import de l'archive Strava |
 | 17/10/2026 | #27 | Ravitaillements : glucides (et protéines) par unité, en un clic — tailles génériques et produits courants (Maurten, SIS, GU, Decathlon, Overstims, Näak, Baouw, Meltonic, Clif, Atlet, Andros Sport, Isostar, Tailwind…), nouveau type « Compote / gourde », chiffre modifiable ; utilisés par la carte du Dashboard |
 | 16/10/2026 | #26 | Feuille de route : prochaines tâches (rangement des données en tiroirs, tests GitHub avant chaque fusion, partage en story) ; carte **« Ce que Strava ne te montre pas »** refaite : ta dernière séance avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort (≈ g de glucides par heure), et tes glucides les jours d'entraînement / de repos |
 | 16/10/2026 | #25 | « Récupérer tout l'historique » (Profil) ouvre la page Séances avec un **aperçu** des séances à importer (période au choix, doublons écartés) : rien n'est importé avant validation. Bouton « Depuis mon compte Strava » à côté de l'archive. Archive Strava testée par Nathan : ça marche |

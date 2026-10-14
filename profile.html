@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261018a"></script>
+  <script src="auth-guard.js?v=20261018b"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261018a">
+  <link rel="stylesheet" href="style.css?v=20261018b">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -290,7 +290,7 @@
 </div>
 
 
-<script src="app.js?v=20261018a"></script>
+<script src="app.js?v=20261018b"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -313,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Strava ────────────────────────────────────────────────────────────────────
 let stravaBusy = '';
+let stravaLimitNote = '';
 function renderStrava() {
   const card = document.getElementById('stravaCard');
   if (!TS.stravaAvailable()) { card.hidden = true; return; }
@@ -324,7 +325,9 @@ function renderStrava() {
     body.innerHTML = `<div class="strava-note">Connecte ton compte Strava : tes nouvelles séances de natation, vélo et course
       arrivent toutes seules dans TriSeason, sans fichier à importer. Ta montre (Garmin, Coros, Polar…) doit déjà envoyer ses séances à Strava.
       TriSeason lit seulement tes activités, ne publie rien sur Strava et tu peux te déconnecter à tout moment.</div>
-      <div class="strava-actions"><button class="btn btn--strava" onclick="TS.stravaConnect()" ${stravaBusy ? 'disabled' : ''}>${stravaBusy || 'Connecter avec Strava'}</button></div>`;
+      ${stravaLimitNote ? `<div class="strava-note" style="margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);color:var(--text)">${stravaLimitNote}
+        <div style="margin-top:8px"><a class="btn btn--sm" href="sessions.html#historique-strava">Importer mon archive Strava</a></div></div>`
+      : `<div class="strava-actions"><button class="btn btn--strava" onclick="TS.stravaConnect()" ${stravaBusy ? 'disabled' : ''}>${stravaBusy || 'Connecter avec Strava'}</button></div>`}`;
     return;
   }
   const n = TS.getData().sessions.filter(s => s.strava_id).length;
@@ -344,7 +347,8 @@ async function handleStravaReturn() {
   stravaBusy = 'Connexion à Strava…'; renderStrava();
   try {
     const r = await TS.stravaHandleRedirect();
-    if (r) TS.toast(r.msg, r.ok ? 'success' : 'error');
+    if (r && r.limit) stravaLimitNote = r.msg;
+    else if (r) TS.toast(r.msg, r.ok ? 'success' : 'error');
   } catch (err) {
     TS.toast('Connexion à Strava impossible : ' + err.message, 'error');
   }

@@ -1450,7 +1450,9 @@ const STRAVA_API = 'https://www.strava.com/api/v3';
 const STRAVA_CHECK_KEY = 'triseason_strava_check';
 const STRAVA_STATE_KEY = 'triseason_strava_state';
 const STRAVA_EVERY_MS = 15 * 60 * 1000;
-const STRAVA_FIRST_DAYS = 30;  // à la connexion : les 30 derniers jours
+const STRAVA_FIRST_DAYS = 30;
+const STRAVA_LIMIT_MSG = 'La connexion à Strava n’est pas encore ouverte à tout le monde : elle arrive bientôt. '
+  + 'En attendant, tu peux récupérer tout ton historique avec ton archive Strava (page Séances) ou importer tes fichiers de montre.';  // à la connexion : les 30 derniers jours
 LOCAL_USER_KEYS.push(STRAVA_CHECK_KEY);
 
 const STRAVA_SPORTS = {
@@ -1468,7 +1470,7 @@ async function serverPost(path, body) {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || ('Serveur TriSeason : erreur ' + res.status));
+  if (!res.ok) throw Object.assign(new Error(json.error || ('Serveur TriSeason : erreur ' + res.status)), { code: json.code || null, status: res.status });
   return json;
 }
 
@@ -1510,7 +1512,15 @@ async function stravaHandleRedirect() {
   if (!/activity:read/.test(q.get('scope') || '')) {
     return { ok: false, msg: 'Pour importer tes séances, laisse cochée la case « Voir les données de vos activités » sur la page Strava.' };
   }
-  const tok = await serverPost('/strava/token', { code: q.get('code') });
+  let tok;
+  try {
+    tok = await serverPost('/strava/token', { code: q.get('code') });
+  } catch (err) {
+    // Strava limite le nombre de comptes connectés tant que l'appli n'est pas validée.
+    // (« (403) » : même cas avec une ancienne version du serveur TriSeason)
+    if (err.code === 'athlete_limit' || /\(403\)/.test(err.message)) return { ok: false, limit: true, msg: STRAVA_LIMIT_MSG };
+    throw err;
+  }
   await whenCloudLoaded();
   const data = getData();
   const a = tok.athlete || {};
