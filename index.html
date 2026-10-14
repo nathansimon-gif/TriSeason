@@ -196,6 +196,15 @@
     </div>
   </div>
 
+  <!-- ── Ce que Strava ne te montre pas (constat nutrition × séances) ── -->
+  <div class="card" style="margin-bottom:12px" id="insightCard">
+    <div class="card__title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Ce que Strava ne te montre pas</span>
+      <a href="forme.html" style="font-size:12px;font-weight:500;color:var(--accent)">Voir le détail dans Forme</a>
+    </div>
+    <div id="insightBody"></div>
+  </div>
+
   <!-- ── Défis de la semaine + badges ── -->
   <div class="card" style="margin-bottom:12px" id="challengesCard">
     <div class="card__title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
@@ -437,8 +446,44 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProfileForm();
   renderOnboarding();
   renderChallenges();
+  renderInsight();
   TS.initTooltips();
 });
+
+// ── Constat nutrition × séances (décrit tes données, ne donne pas de conseil) ──
+function renderInsight() {
+  const el = document.getElementById('insightBody');
+  const res = TS.getNutritionImpact();
+  const fmt = (o, v) => o === 'sensation' ? v.toFixed(1).replace('.', ',') + '/5' : (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + ' %';
+  let best = null;
+  Object.entries(res.comparisons).forEach(([f, byO]) => Object.entries(byO).forEach(([o, c]) => {
+    if (!c.enough || c.high.avg == null || c.low.avg == null) return;
+    const gap = o === 'sensation' ? Math.abs(c.high.avg - c.low.avg) / 4 : Math.abs(c.high.avg - c.low.avg) / 10; // écart rapporté à l'échelle
+    if (!best || gap > best.gap) best = { f, o, c, gap };
+  }));
+  if (best && best.gap >= 0.05) {
+    const F = TS.NUTRI_FACTORS[best.f], O = TS.NUTRI_OUTCOMES[best.o];
+    const thr = Math.round(best.c.threshold).toLocaleString('fr-FR');
+    const what = best.o === 'sensation' ? 'ton ressenti moyen' : 'ta vitesse par rapport à ton habitude';
+    el.innerHTML = `<div style="font-size:14px;color:var(--text);line-height:1.55">Les jours avec plus de <b>${thr} ${F.unit}</b> de ${F.short},
+        ${what} est de <b style="color:var(--accent)">${fmt(best.o, best.c.high.avg)}</b>, contre <b>${fmt(best.o, best.c.low.avg)}</b> les autres jours.</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:6px">Calculé sur ${best.c.n} de tes séances. C'est un constat sur tes données, pas un conseil :
+        d'autres choses (sommeil, fatigue, météo) comptent aussi.</div>`;
+    return;
+  }
+  // Pas encore assez de séances : ce qu'il manque
+  const c = res.comparisons.carbs_prev.sensation;
+  const need = Math.max(0, TS.NUTRI_MIN_GROUP * 2 - c.n);
+  el.innerHTML = `<div style="font-size:13px;color:var(--text-2);line-height:1.55">TriSeason compare tes repas, ton hydratation et tes séances
+      pour voir ce qui va avec tes meilleures sorties. Strava et ta montre ne le font pas.</div>
+    <div style="font-size:13px;color:var(--text);margin-top:8px">${need
+      ? `Encore <b>${need} séance${need > 1 ? 's' : ''}</b> avec tes repas de la veille notés et ton ressenti pour ton premier constat (${c.n} pour l'instant).`
+      : 'Continue à noter tes repas et ton ressenti : le premier constat arrive dès qu’une différence apparaît.'}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <a class="btn btn--sm" href="nutrition.html">Noter un repas</a>
+      <a class="btn btn--ghost btn--sm" href="sessions.html">Noter un ressenti</a>
+    </div>`;
+}
 
 // ── Défis de la semaine et badges ─────────────────────────────────────────────
 function renderChallenges() {
@@ -480,6 +525,7 @@ function announceBadges() {
 
 window.addEventListener('triseason:update', () => {
   renderChallenges();
+  renderInsight();
   announceBadges();
   renderOnboarding();
   updateWeekNav();

@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #22 (heures au format 1h30) puis recharger le site
+- [ ] 🧑 Fusionner la PR #23 (carte « Ce que Strava ne te montre pas » sur le Dashboard) puis recharger le site
 - [ ] 🧑 Vérifier sur strava.com/settings/api que le **domaine du rappel d'autorisation** est `nathansimon-gif.github.io`, et dans Cloudflare que `ALLOWED_ORIGIN` est `https://nathansimon-gif.github.io` (sans `/TriSeason`)
 - [ ] 🧑 Tester : Profil → « Connecter avec Strava », puis vérifier les séances des 30 derniers jours. Ensuite jusqu'à 9 testeurs (limite Strava sans validation)
 - [ ] 🧑 Tester sur ton téléphone la recherche et le scan de produits (Nutrition → Ajouter un repas)
@@ -53,6 +53,7 @@ Les cases cochées passent dans « Fait » en bas de page.
   2. Bilan de la semaine en quelques phrases (Dashboard)
   3. Commentaire automatique après une séance importée
   - Conditions : fournisseur **payant qui ne réutilise pas les données** (ex. Mistral, hébergé en Europe), petit serveur intermédiaire (Cloudflare Workers gratuit ou Firebase Functions), limite d'usage par utilisateur, **accord de l'utilisateur** avant d'envoyer ses données, mise à jour de la politique de confidentialité
+- [ ] 🤖 **Espace coach / nutritionniste** : d'après la 3e simulation (15/10), c'est le plus gros levier restant pour les abonnements (+5 payants sur 100). Même chantier que l'accès nutritionniste ci-dessous
 - [ ] 🤖 **Accès nutritionniste** : accord explicite du client, nouvelles règles Firestore, contrat entre l'éditeur et le nutritionniste
 
 ## Idées écartées (et pourquoi)
@@ -70,6 +71,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 15/10/2026 | #23 | 3e simulation des 100 clients (de 18 à 26 payants avec la formule D depuis Strava, scan et badges) ; carte **« Ce que Strava ne te montre pas »** sur le Dashboard (ton constat nutrition × séances, ou ce qu'il manque pour l'obtenir) |
 | 14/10/2026 | #22 | Heures au format **1h30** partout (Dashboard, Sports, objectifs, Profil, Séances) ; durées de séance, temps de course et records toujours en h:mm:ss |
 | 14/10/2026 | #21 | **Défis de la semaine** (2 défis choisis d'après les 4 semaines précédentes : un sport, un nutrition ; série de semaines réussies) sur le Dashboard, et **18 badges** (Profil) : sports, régularité, nutrition, compétitions |
 | 14/10/2026 | #20 | Bouton « Actualiser Strava » en haut de la page Séances (visible quand Strava est connecté) |
