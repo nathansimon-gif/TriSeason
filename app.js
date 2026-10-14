@@ -1553,7 +1553,7 @@ function dataBytes(data) { return new TextEncoder().encode(JSON.stringify(data))
 function archiveToSession(a) {
   const sec = a.elapsed || 0;
   const s = {
-    date: localDateStr(a.start), sport: a.sport,
+    date: a.localDate || localDateStr(a.start), sport: a.sport,
     duration: sec ? Math.round(sec) / 3600 : null,
     distance: a.distance_m ? Math.round(a.distance_m / 10) / 100 : null,
     elevation: a.elevation ? Math.round(a.elevation) : null,
@@ -1593,6 +1593,34 @@ function planStravaArchive(acts, { since = null } = {}) {
   plan.oldestKept = kept.length ? kept[kept.length - 1].date : null;
   plan.bytesAfter = total; plan.bytesBefore = base;
   return plan;
+}
+
+// Tout l'historique depuis le compte Strava connecté, SANS rien enregistrer :
+// renvoie des activités au même format que l'archive, pour l'aperçu de la page
+// Séances (planStravaArchive puis applyStravaArchive après validation).
+async function stravaFetchHistory(onProgress) {
+  await whenCloudLoaded();
+  const token = await stravaAccessToken();
+  const list = [];
+  for (let page = 1; page <= 40; page++) {
+    if (onProgress) onProgress(list.length);
+    const res = await fetch(STRAVA_API + '/athlete/activities?per_page=200&page=' + page, { headers: { Authorization: 'Bearer ' + token } });
+    if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil.');
+    if (res.status === 429) throw new Error('Strava est très sollicité : réessaie dans un quart d’heure.');
+    if (!res.ok) throw new Error('Strava ne répond pas (erreur ' + res.status + ').');
+    const batch = await res.json();
+    list.push(...batch);
+    if (batch.length < 200) break;
+  }
+  return list.map(a => {
+    const s = stravaToSession(a);
+    return { id: a.id, start: new Date(a.start_date), localDate: String(a.start_date_local || '').slice(0, 10) || null,
+      name: a.name || '', type: a.sport_type || a.type || '', sport: s ? s.sport : null,
+      elapsed: a.elapsed_time || a.moving_time || null, distance_m: a.distance || null, elevation: a.total_elevation_gain || null,
+      hrAvg: a.average_heartrate || null, hrMax: a.max_heartrate || null,
+      watts: a.device_watts ? a.average_watts : null, wattsMax: a.device_watts ? a.max_watts : null,
+      np: a.device_watts ? a.weighted_average_watts : null, kcal: a.calories || null };
+  });
 }
 
 // Un seul enregistrement pour toute l'archive.
@@ -1804,6 +1832,6 @@ window.TS = {
   formatHours, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
-  planStravaArchive, applyStravaArchive, dataBytes, DATA_MAX_BYTES,
+  planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES,
   SPORTS, COMP_TYPES,
 };

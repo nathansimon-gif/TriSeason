@@ -490,6 +490,27 @@ async function main() {
     assert(n.sets <= 3 && n.cloud === 80, `${n.sets} envois, ${n.cloud} séances dans le cloud (80 attendues)`);
   });
 
+  await test('Strava : « Récupérer tout l’historique » montre un aperçu avant d’importer', async () => {
+    const v = await stravaUser();
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate(() => { const d = TS.getData();
+      d.strava = { access_token: 'acces-1', refresh_token: 'r', expires_at: Date.now() / 1000 + 9999, after: Date.now() / 1000 }; TS.saveData(d); });
+    await v.page.waitForTimeout(200);
+    await v.page.click('text=Récupérer tout l’historique');
+    await v.page.waitForSelector('#archiveResult button.btn--primary', { timeout: 8000 });
+    const summary = await v.page.textContent('#archiveResult');
+    const before = await v.page.evaluate(() => TS.getData().sessions.length);
+    await v.page.click('#archiveResult button.btn--primary');
+    await v.page.waitForTimeout(300);
+    const after = await v.page.evaluate(() => TS.getData().sessions);
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    assert(summary.includes('3 activités sur ton compte Strava') && summary.includes('1 séance à ajouter'), 'aperçu : ' + summary.replace(/\s+/g, ' ').slice(0, 200));
+    assert(before === 40, `${before} séances avant validation : rien ne doit être importé avant le clic`);
+    assert(after.length === 41 && after.find(s => s.strava_id === 502).date === day(-2) && after.find(s => s.id === 's1').strava_id === 501,
+      `${after.length} séances après validation`);
+  });
+
   await test('Serveur TriSeason : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
     const { default: worker } = await import('../server/worker.js');
     const env = { STRAVA_CLIENT_ID: '12345', STRAVA_CLIENT_SECRET: 'SECRET-XYZ', ALLOWED_ORIGIN: 'https://site.test' };
