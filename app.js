@@ -591,6 +591,17 @@ function compSecToTime(sec) {
   return '0:' + pad(m) + ':' + pad(s);
 }
 
+// Heures décimales → « 1h30 » (« 45min » sous une heure, « 2h » pile, « 0h »), à la minute.
+// Format de tous les totaux et moyennes d'heures. Les durées de séance, temps de
+// course et records restent en h:mm:ss (à la seconde).
+function formatHours(h) {
+  const total = Math.round((h || 0) * 60);
+  const hrs = Math.floor(total / 60), mins = total % 60;
+  if (!total) return '0h';
+  if (!hrs) return mins + 'min';
+  return mins ? hrs + 'h' + String(mins).padStart(2, '0') : hrs + 'h';
+}
+
 function compFormatHM(sec) {
   var h = Math.floor(sec / 3600);
   var m = Math.round((sec % 3600) / 60);
@@ -1273,7 +1284,7 @@ function getAchievements(data = getData()) {
   });
   add('tri_week', 'Triathlète', 'Les 3 sports dans la même semaine', 'all', triDate, bestSports, 3);
   add('velo100', '100 km de vélo', '100 km de vélo en une semaine', 'velo', veloDate, Math.round(bestVelo), 100);
-  add('hours10', '10 heures', '10 h d’entraînement en une semaine', 'all', hoursDate, Math.round(bestHours * 10) / 10, 10);
+  add('hours10', '10 heures', '10h d’entraînement en une semaine', 'all', hoursDate, Math.round(bestHours * 10) / 10, 10);
 
   // Enchaînement vélo puis course le même jour
   const byDay = {};
@@ -1700,7 +1711,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
-  weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
+  formatHours, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   SPORTS, COMP_TYPES,

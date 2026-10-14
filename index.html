@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261016a"></script>
+  <script src="auth-guard.js?v=20261016b"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261016a">
+  <link rel="stylesheet" href="style.css?v=20261016b">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -387,7 +387,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261016a"></script>
+<script src="app.js?v=20261016b"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -648,7 +648,7 @@ function renderHeroStrip() {
           <span class="hero-sport__unit">km</span>
         </div>
         <div class="hero-sport__meta">
-          ${(d.dur || 0).toFixed(1)} h · ${d.sessions} séance${d.sessions > 1 ? 's' : ''}<br>
+          ${TS.formatHours(d.dur)} · ${d.sessions} séance${d.sessions > 1 ? 's' : ''}<br>
           ${paceLabel} : ${pace}
         </div>
         <div class="hero-sport__hint">Cliquer pour le détail →</div>
@@ -662,12 +662,7 @@ function renderHeroStrip() {
 let calYear     = _initNow.getFullYear();
 let calMonthIdx = _initNow.getMonth(); // 0-11
 
-function calFormatDur(h) {
-  const hrs = Math.floor(h), mins = Math.round((h - hrs) * 60);
-  if (hrs === 0) return mins + 'min';
-  if (mins === 0) return hrs + 'h';
-  return hrs + 'h' + String(mins).padStart(2, '0');
-}
+function calFormatDur(h) { return TS.formatHours(h); }
 
 function changeCalMonth(dir) {
   calMonthIdx += dir;
@@ -817,7 +812,7 @@ function renderTotals() {
     totalH   += d.dur;
     totalSes += d.sessions;
   }
-  document.getElementById('totalH').textContent   = totalH.toFixed(1) + ' h';
+  document.getElementById('totalH').textContent   = TS.formatHours(totalH);
   document.getElementById('totalSes').textContent = totalSes;
   const w = viewMode === 'day' ? 'du jour' : viewMode === 'month' ? 'du mois' : 'de la semaine';
   document.getElementById('totalHLabel').textContent   = 'Heures ' + w;
@@ -906,7 +901,7 @@ function renderDonutChart() {
       labels:['Natation','Vélo','Course'],
       datasets:[{data:vals,backgroundColor:['#2f95e6','#d8791a','#dc3d6a'],borderWidth:0,hoverOffset:8}]
     },
-    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw.toFixed(1)}h (${total?Math.round(ctx.raw/total*100):0}%)`}}}}
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${TS.formatHours(ctx.raw)} (${total?Math.round(ctx.raw/total*100):0}%)`}}}}
   });
   // legend manual
   const colors=['#2f95e6','#d8791a','#dc3d6a'];
@@ -916,7 +911,7 @@ function renderDonutChart() {
       <div style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0"></div>
       <div>
         <div style="font-size:12px;font-weight:600;color:${colors[i]}">${l}</div>
-        <div style="font-size:11px;color:var(--text-2)">${vals[i].toFixed(1)} h${total?' · '+Math.round(vals[i]/total*100)+'%':''}</div>
+        <div style="font-size:11px;color:var(--text-2)">${TS.formatHours(vals[i])}${total?' · '+Math.round(vals[i]/total*100)+'%':''}</div>
       </div>
     </div>`).join('');
 }
