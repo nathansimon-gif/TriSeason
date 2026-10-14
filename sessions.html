@@ -69,7 +69,10 @@
       <h1>Séances détaillées</h1>
       <p>FC, puissance, W/kg — une ligne par séance</p>
     </div>
-    <button class="btn btn--primary" onclick="openSessionModal()">+ Nouvelle séance</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn--ghost" id="stravaRefreshBtn" onclick="refreshStrava()" style="display:none" title="Chercher tes nouvelles séances sur Strava">Actualiser Strava</button>
+      <button class="btn btn--primary" onclick="openSessionModal()">+ Nouvelle séance</button>
+    </div>
   </div>
 
   <!-- ── Import zone ── -->
@@ -406,7 +409,28 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('triseason:update', () => {
   renderSessions();
   renderSportAvgs();
+  renderStravaRefresh();
 });
+
+// ── Strava : même action que « Vérifier maintenant » dans Profil ─────────────
+let stravaRefreshing = false;
+function renderStravaRefresh() {
+  const btn = document.getElementById('stravaRefreshBtn');
+  if (!btn) return;
+  btn.style.display = TS.stravaAvailable() && TS.getStrava() ? '' : 'none';
+  btn.disabled = stravaRefreshing;
+  btn.textContent = stravaRefreshing ? 'Actualisation…' : 'Actualiser Strava';
+}
+async function refreshStrava() {
+  if (stravaRefreshing) return;
+  stravaRefreshing = true; renderStravaRefresh();
+  try {
+    const r = await TS.stravaSync({ force: true });
+    TS.toast(TS.stravaSyncMessage(r, true));
+  } catch (err) { TS.toast(err.message, 'error'); }
+  stravaRefreshing = false; renderStravaRefresh();
+}
+document.addEventListener('DOMContentLoaded', renderStravaRefresh);
 
 // ── Sessions render ───────────────────────────────────────────────────────────
 function toggleAdvancedFilters() {
