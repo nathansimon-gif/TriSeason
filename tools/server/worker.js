@@ -56,6 +56,10 @@ export default {
           }),
         });
         const t = await res.json().catch(() => ({}));
+        // Limite d'athlètes connectés atteinte (10 tant que Strava n'a pas validé l'appli)
+        if (res.status === 403 && /limit of connected athletes/i.test(JSON.stringify(t))) {
+          return json({ error: 'Limite d’athlètes connectés atteinte chez Strava.', code: 'athlete_limit' }, 403);
+        }
         if (!res.ok || !t.access_token) return json({ error: 'Strava a refusé la connexion (' + res.status + '). Réessaie.' }, 502);
         const a = t.athlete || {};
         return json({

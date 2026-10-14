@@ -369,6 +369,19 @@ async function main() {
     return '1 ajoutée, 1 reliée, 1 ignorée';
   });
 
+  await test('Strava : limite de comptes atteinte → message clair, archive proposée', async () => {
+    const v = await stravaUser();
+    await v.ctx.route(/serveur\.test\/strava\/token/, r => r.fulfill({ status: 403, contentType: 'application/json',
+      headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: 'Limite', code: 'athlete_limit' }) }));
+    await v.ctx.addInitScript(() => sessionStorage.setItem('triseason_strava_state', 'etat-ok'));
+    await v.page.goto(`${BASE}/profile.html?state=etat-ok&code=code-1&scope=read,activity:read_all`);
+    await v.page.waitForTimeout(1500);
+    const r = await v.page.evaluate(() => ({ st: TS.getData().strava, card: document.getElementById('stravaBody').innerText }));
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    assert(!r.st && r.card.includes('pas encore ouverte à tout le monde') && r.card.includes('Importer mon archive Strava'), 'carte : ' + r.card.slice(0, 200));
+  });
+
   await test('Strava : connexion refusée si le lien ne vient pas de TriSeason', async () => {
     const v = await stravaUser();
     await v.ctx.addInitScript(() => sessionStorage.setItem('triseason_strava_state', 'etat-ok'));
@@ -517,6 +530,18 @@ async function main() {
     assert(before === 40, `${before} séances avant validation : rien ne doit être importé avant le clic`);
     assert(after.length === 41 && after.find(s => s.strava_id === 502).date === day(-2) && after.find(s => s.id === 's1').strava_id === 501,
       `${after.length} séances après validation`);
+  });
+
+  await test('Serveur TriSeason : limite de comptes Strava signalée', async () => {
+    const { default: worker } = await import('../server/worker.js');
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify({ message: 'Forbidden', errors: [{ resource: 'Athlete', code: 'limit of connected athletes exceeded' }] }), { status: 403 });
+    try {
+      const res = await worker.fetch(new Request('https://w.test/strava/token', { method: 'POST', headers: { Origin: 'https://site.test', 'Content-Type': 'application/json' }, body: JSON.stringify({ code: 'c' }) }),
+        { STRAVA_CLIENT_ID: '1', STRAVA_CLIENT_SECRET: 's', ALLOWED_ORIGIN: 'https://site.test' });
+      const body = await res.json();
+      assert(res.status === 403 && body.code === 'athlete_limit', res.status + ' ' + JSON.stringify(body));
+    } finally { globalThis.fetch = realFetch; }
   });
 
   await test('Serveur TriSeason : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
