@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261016a"></script>
+  <script src="auth-guard.js?v=20261016b"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Compétitions</title>
-  <link rel="stylesheet" href="style.css?v=20261016a">
+  <link rel="stylesheet" href="style.css?v=20261016b">
   <script src="vendor/chart.umd.min.js"></script>
 </head>
 <body>
@@ -182,7 +182,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261016a"></script>
+<script src="app.js?v=20261016b"></script>
 <script>
 let editId = null;
 let currentFilter = 'all';
@@ -344,9 +344,7 @@ function renderCompPrep(c) {
 
     var sessHtml = prep.slice(0,4).map(function(s){
     var sp     = TS.SPORTS[s.sport]||{};
-    var hrs    = s.duration ? Math.floor(s.duration) : 0;
-    var mins   = s.duration ? Math.round((s.duration-hrs)*60) : 0;
-    var durStr = s.duration ? (hrs?hrs+'h':'')+(mins?String(mins).padStart(2,'0'):'') : '';
+    var durStr = s.duration ? TS.formatHours(s.duration) : '';
     var linked = s.comp_id === c.id;
     return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 7px;border-radius:10px;background:'+(linked?'rgba(185,236,74,.2)':'rgba(255,255,255,.05)')+';border:1px solid '+(linked?'var(--accent)':'var(--border)')+'">'
       +(sp.emoji||'')

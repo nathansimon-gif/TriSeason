@@ -80,7 +80,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `mergeFields: ['data', 'updatedAt']` pour ne pas les effacer : ne jamais
   revenir à un `set()` qui remplace tout le document.
 - Durées en **heures décimales**, à la seconde près (`Math.round(sec) / 3600`).
-  Temps de course et records en texte `h:mm:ss`.
+  Temps de course et records en texte `h:mm:ss`. **Affichage** : durées de
+  séance, temps de course et records en `h:mm:ss` ; tous les totaux et moyennes
+  d'heures au format `1h30` avec `TS.formatHours` (jamais « 7,5 h »).
 - Limite à garder en tête : un document Firestore fait **1 Mo maximum**. Avec
   beaucoup d'historique (surtout la nutrition), il faudra un jour découper les
   données (une collection par type), en particulier avant un usage commercial.

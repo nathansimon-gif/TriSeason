@@ -182,6 +182,13 @@ async function main() {
     const want = ['1:30:15', '1:30:15', '0:45:20', '1:30:00', '1:30:00', null];
     assert(JSON.stringify(r) === JSON.stringify(want), 'obtenu ' + JSON.stringify(r));
   });
+  await test('Heures au format 1h30 (totaux et moyennes)', async () => {
+    const r = await u.page.evaluate(() => [1.5, 0.75, 2, 7.999, 0, 10 + 5 / 60].map(TS.formatHours));
+    assert(JSON.stringify(r) === JSON.stringify(['1h30', '45min', '2h', '8h', '0h', '10h05']), JSON.stringify(r));
+    await u.page.goto(`${BASE}/index.html`); await u.page.waitForTimeout(700);
+    const t = await u.page.textContent('#totalH');
+    assert(/^(\d+h(\d\d)?|\d+min)$/.test(t.trim()), 'Heures semaine : ' + t);
+  });
   await test('Allure : arrondie à la seconde (pas de 3\'60")', async () => {
     const r = await u.page.evaluate(() => TS.calcPace(19.9667 / 60, 5, 'run'));
     assert(r === "4'00\"", 'obtenu ' + r);

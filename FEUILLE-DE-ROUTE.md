@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #21 (défis de la semaine et badges) puis recharger le site
+- [ ] 🧑 Fusionner la PR #22 (heures au format 1h30) puis recharger le site
 - [ ] 🧑 Vérifier sur strava.com/settings/api que le **domaine du rappel d'autorisation** est `nathansimon-gif.github.io`, et dans Cloudflare que `ALLOWED_ORIGIN` est `https://nathansimon-gif.github.io` (sans `/TriSeason`)
 - [ ] 🧑 Tester : Profil → « Connecter avec Strava », puis vérifier les séances des 30 derniers jours. Ensuite jusqu'à 9 testeurs (limite Strava sans validation)
 - [ ] 🧑 Tester sur ton téléphone la recherche et le scan de produits (Nutrition → Ajouter un repas)
@@ -70,6 +70,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/10/2026 | #22 | Heures au format **1h30** partout (Dashboard, Sports, objectifs, Profil, Séances) ; durées de séance, temps de course et records toujours en h:mm:ss |
 | 14/10/2026 | #21 | **Défis de la semaine** (2 défis choisis d'après les 4 semaines précédentes : un sport, un nutrition ; série de semaines réussies) sur le Dashboard, et **18 badges** (Profil) : sports, régularité, nutrition, compétitions |
 | 14/10/2026 | #20 | Bouton « Actualiser Strava » en haut de la page Séances (visible quand Strava est connecté) |
 | 15/10/2026 | #19 | Connexion Strava activée (ID client 287261, serveur Cloudflare `triseason.tri-season-tracker.workers.dev`) ; recherche d'aliments par le serveur |

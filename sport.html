@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261016a"></script>
+  <script src="auth-guard.js?v=20261016b"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261016a">
+  <link rel="stylesheet" href="style.css?v=20261016b">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -163,7 +163,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261016a"></script>
+<script src="app.js?v=20261016b"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -273,7 +273,7 @@ function renderSportKPIs(s, weekData) {
     </div>
     <div class="kpi">
       <div class="kpi__label">Heures</div>
-      <div><span class="kpi__value">${totalH.toFixed(1)}</span><span class="kpi__unit">h</span></div>
+      <div><span class="kpi__value">${TS.formatHours(totalH)}</span></div>
     </div>
     <div class="kpi">
       <div class="kpi__label">Séances</div>
@@ -397,7 +397,7 @@ function renderBestWeeks(s, weekData, weeks) {
             <div style="font-size:13px;font-weight:600;color:${color}">${x.data.dist.toFixed(1)} km</div>
             <div style="font-size:11px;color:var(--text-2)">${mon.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}${pace?' · '+pace:''}${s!=='nat'&&x.data.elevation?' · ⛰️ '+x.data.elevation.toFixed(0)+'m':''}</div>
           </div>
-          <div style="font-size:11px;color:var(--text-3)">${x.data.dur?x.data.dur.toFixed(1)+'h':''}</div>
+          <div style="font-size:11px;color:var(--text-3)">${x.data.dur?TS.formatHours(x.data.dur):''}</div>
         </div>`;
       }).join('')
     : '<div class="empty"><div class="empty__text">Aucune donnée</div></div>';
@@ -572,7 +572,8 @@ function renderGoals(s) {
       <div class="goal-progress">
         <div class="goal-label">${GOAL_LABELS[g.type]||g.type}</div>
         <div class="progress"><div class="progress__bar" style="width:${pct}%;background:${barColor}"></div></div>
-        <div class="goal-val">${prog.current.toFixed(g.type.startsWith('sessions')?0:1)} ${prog.unit} / ${g.target} ${prog.unit}</div>
+        <div class="goal-val">${prog.unit === 'h' ? TS.formatHours(prog.current) + ' / ' + TS.formatHours(g.target)
+          : prog.current.toFixed(g.type.startsWith('sessions')?0:1) + ' ' + prog.unit + ' / ' + g.target + ' ' + prog.unit}</div>
       </div>
       <div class="goal-pct" style="color:${barColor}">${pct}%</div>
       <button class="btn btn--ghost btn--sm btn--icon" onclick="askDeleteGoal('${g.id}')">×</button>
