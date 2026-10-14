@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261015b"></script>
+  <script src="auth-guard.js?v=20261016a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261015b">
+  <link rel="stylesheet" href="style.css?v=20261016a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -109,6 +109,14 @@
     <div style="margin-top:12px;text-align:center">
       <a href="records.html" class="btn btn--ghost btn--sm">Gérer mes records →</a>
     </div>
+  </div>
+
+  <!-- ── Badges ── -->
+  <div class="section-card" id="badges">
+    <div class="section-card__title" style="justify-content:space-between">
+      <span>Badges</span><span id="badgesCount" style="font-size:12px;font-weight:500;color:var(--text-2)"></span>
+    </div>
+    <div class="badge-list" id="badgesAll"></div>
   </div>
 
   <!-- ── Saison en cours ── -->
@@ -282,7 +290,7 @@
 </div>
 
 
-<script src="app.js?v=20261015b"></script>
+<script src="app.js?v=20261016a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -297,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSeasonStats();
   renderFCZones();
   renderStrava();
+  renderBadges();
   handleStravaReturn();
   loadEditForm();
   TS.initTooltips();
@@ -360,7 +369,16 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); });
+
+// Tous les badges : obtenus d'abord (du plus récent), puis les plus proches d'être obtenus.
+function renderBadges() {
+  const badges = TS.getAchievements();
+  const earned = badges.filter(b => b.earned).sort((a, b) => b.date.localeCompare(a.date));
+  const locked = badges.filter(b => !b.earned).sort((a, b) => b.value / b.target - a.value / a.target);
+  document.getElementById('badgesCount').textContent = earned.length + ' / ' + badges.length;
+  document.getElementById('badgesAll').innerHTML = earned.concat(locked).map(TS.badgeTileHtml).join('');
+}
 
 // ── Profile render ────────────────────────────────────────────────────────────
 function renderProfile() {

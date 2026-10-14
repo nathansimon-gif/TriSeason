@@ -42,7 +42,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - `app.js` : couche de données partagée, exposée via `window.TS` (séances,
   compétitions, records, poids, profil, saisons, synchro des compétitions et
   records automatiques, formats FFTri, helpers de dates et d'allure,
-  `getNutritionImpact` : croisement nutrition × séances affiché dans Forme).
+  `getNutritionImpact` : croisement nutrition × séances affiché dans Forme ;
+  `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la
+  semaine et badges, calculés à partir des données, seuls les badges déjà
+  annoncés sont gardés dans `data.achievements_seen`).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx.
 - **Strava** (dans `app.js`) : connexion depuis Profil, puis à chaque ouverture
   de l'appli (au plus toutes les 15 min par appareil) le navigateur lit les
