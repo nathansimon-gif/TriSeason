@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261016b"></script>
+  <script src="auth-guard.js?v=20261017a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261016b">
+  <link rel="stylesheet" href="style.css?v=20261017a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -396,7 +396,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261016b"></script>
+<script src="app.js?v=20261017a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -454,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderInsight() {
   const el = document.getElementById('insightBody');
   const res = TS.getNutritionImpact();
-  const fmt = (o, v) => o === 'sensation' ? v.toFixed(1).replace('.', ',') + '/5' : (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + ' %';
   let best = null;
   Object.entries(res.comparisons).forEach(([f, byO]) => Object.entries(byO).forEach(([o, c]) => {
     if (!c.enough || c.high.avg == null || c.low.avg == null) return;
@@ -462,11 +461,22 @@ function renderInsight() {
     if (!best || gap > best.gap) best = { f, o, c, gap };
   }));
   if (best && best.gap >= 0.05) {
-    const F = TS.NUTRI_FACTORS[best.f], O = TS.NUTRI_OUTCOMES[best.o];
-    const thr = Math.round(best.c.threshold).toLocaleString('fr-FR');
-    const what = best.o === 'sensation' ? 'ton ressenti moyen' : 'ta vitesse par rapport à ton habitude';
-    el.innerHTML = `<div style="font-size:14px;color:var(--text);line-height:1.55">Les jours avec plus de <b>${thr} ${F.unit}</b> de ${F.short},
-        ${what} est de <b style="color:var(--accent)">${fmt(best.o, best.c.high.avg)}</b>, contre <b>${fmt(best.o, best.c.low.avg)}</b> les autres jours.</div>
+    const t = best.c.threshold;
+    const when = {
+      carbs_prev: `Quand tu as mangé plus de <b>${Math.round(t)} g de glucides la veille</b>`,
+      carbs_day:  `Quand tu as mangé plus de <b>${Math.round(t)} g de glucides le jour de la séance</b>`,
+      kcal_prev:  `Quand tu as mangé plus de <b>${Math.round(t).toLocaleString('fr-FR')} kcal la veille</b>`,
+      hydration:  `Quand tu as bu plus de <b>${(t / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} L le jour de la séance</b>`,
+    }[best.f];
+    const pct = (v) => Math.abs(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' %';
+    const result = (v, strong) => {
+      const b = (x) => strong ? `<b style="color:var(--accent)">${x}</b>` : `<b>${x}</b>`;
+      if (best.o === 'sensation') return 'ton ressenti moyen est de ' + b(v.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' sur 5');
+      if (Math.abs(v) < 0.1) return 'tu vas ' + b('à ton rythme habituel');
+      return 'tu vas en moyenne ' + b(pct(v) + (v > 0 ? ' plus vite' : ' moins vite')) + ' que d’habitude';
+    };
+    el.innerHTML = `<div style="font-size:14px;color:var(--text);line-height:1.6">${when}, ${result(best.c.high.avg, true)}.<br>
+        Les autres fois, ${result(best.c.low.avg, false)}.</div>
       <div style="font-size:12px;color:var(--text-2);margin-top:6px">Calculé sur ${best.c.n} de tes séances. C'est un constat sur tes données, pas un conseil :
         d'autres choses (sommeil, fatigue, météo) comptent aussi.</div>`;
     return;

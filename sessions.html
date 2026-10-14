@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261016b"></script>
+  <script src="auth-guard.js?v=20261017a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261016b">
+  <link rel="stylesheet" href="style.css?v=20261017a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -97,7 +97,7 @@
 
   <!-- ── Avertissement nombre de fichiers ── -->
   <div style="font-size:12px;color:var(--text-2);margin-bottom:10px;text-align:center">
-    Importer maximum <b>100 fichiers</b> à la fois pour limiter le temps de traitement et les soucis de téléchargement des activités.
+    Importer maximum <b>50 fichiers</b> à la fois pour limiter le temps de traitement et les soucis de téléchargement des activités.
   </div>
 
   <!-- ── Drop zone ── -->
@@ -113,6 +113,30 @@
       Sélectionner des fichiers
       <input type="file" accept=".gpx,.fit,.tcx" multiple style="display:none" onchange="handleImportFiles(event)">
     </label>
+  </div>
+
+  <!-- ── Archive Strava : tout l'historique d'un coup ── -->
+  <div class="card" style="margin-bottom:16px" id="archiveCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="min-width:0;flex:1 1 280px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Tout ton historique Strava d'un coup</div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:3px">Avec l'archive que Strava t'envoie par e-mail (fichier .zip). Seul le résumé de tes activités est lu : rapide, même pour plusieurs années.</div>
+      </div>
+      <label class="btn btn--ghost btn--sm" style="cursor:pointer">
+        Choisir l'archive (.zip)
+        <input type="file" id="archiveInput" accept=".zip,.csv" style="display:none" onchange="handleArchive(event)">
+      </label>
+    </div>
+    <details style="margin-top:10px;font-size:12px;color:var(--text-2)">
+      <summary style="cursor:pointer;color:var(--text)">Comment obtenir mon archive Strava ?</summary>
+      <ol style="margin:8px 0 0;padding-left:18px;line-height:1.7">
+        <li>Sur strava.com (ordinateur) : ta photo → <b>Paramètres</b> → <b>Mon compte</b>.</li>
+        <li>En bas : <b>Télécharger ou supprimer votre compte</b> → <b>Commencer</b> → <b>Demander une archive</b> (ton compte n'est pas supprimé).</li>
+        <li>Strava t'envoie un e-mail avec un lien (en général en quelques minutes ou heures). Télécharge le fichier .zip.</li>
+        <li>Choisis ce fichier ici, sans le décompresser.</li>
+      </ol>
+    </details>
+    <div id="archiveResult"></div>
   </div>
 
   <!-- ── Filter bar ── -->
@@ -343,9 +367,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261016b"></script>
-<script src="import.js?v=20261016b"></script>
-<script src="app.js?v=20261016b"></script>
+<script src="fit-parser.js?v=20261017a"></script>
+<script src="import.js?v=20261017a"></script>
+<script src="app.js?v=20261017a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -844,6 +868,74 @@ function handleDrop(e) {
   processImportFiles(files);
 }
 
+// ── Archive Strava ────────────────────────────────────────────────────────────
+let archiveActs = null;
+async function handleArchive(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const box = document.getElementById('archiveResult');
+  box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)">Lecture de l’archive…</div>';
+  try {
+    archiveActs = await window.TriImport.readStravaArchive(file);
+    renderArchivePlan();
+  } catch (err) {
+    archiveActs = null;
+    box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--red)">' + escHtml(err.message) + '</div>';
+  }
+}
+
+function archiveSince() {
+  const v = document.getElementById('archiveSince')?.value || '';
+  if (!v) return null;
+  const d = new Date(); d.setFullYear(d.getFullYear() - Number(v));
+  return TS.localDateStr(d);
+}
+
+function renderArchivePlan() {
+  const box = document.getElementById('archiveResult');
+  const since = archiveSince();
+  const prev = document.getElementById('archiveSince')?.value || '';
+  const plan = TS.planStravaArchive(archiveActs, { since });
+  const by = { nat: 0, velo: 0, run: 0 };
+  plan.add.forEach(s => { by[s.sport]++; });
+  const years = [...new Set(archiveActs.map(a => a.start.getFullYear()))].sort();
+  const lines = [
+    archiveActs.length + ' activités dans l’archive' + (years.length ? ' (' + years[0] + (years.length > 1 ? '–' + years[years.length - 1] : '') + ')' : '') + '.',
+    plan.add.length ? '<b style="color:var(--text)">' + plan.add.length + ' séance' + (plan.add.length > 1 ? 's' : '') + ' à ajouter</b> : '
+      + ['nat', 'velo', 'run'].filter(k => by[k]).map(k => by[k] + ' ' + TS.SPORTS[k].label.toLowerCase()).join(', ') + '.' : 'Aucune nouvelle séance à ajouter.',
+    plan.already + plan.link.length ? (plan.already + plan.link.length) + ' déjà dans TriSeason (pas de doublon).' : '',
+    plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, musculation, autres sports).' : '',
+    plan.before ? plan.before + ' plus ancienne' + (plan.before > 1 ? 's' : '') + ' que la période choisie.' : '',
+    plan.dropped ? '<span style="color:var(--velo)">' + plan.dropped + ' séance' + (plan.dropped > 1 ? 's' : '') + ' plus ancienne' + (plan.dropped > 1 ? 's' : '')
+      + ' que le ' + TS.formatDate(plan.oldestKept) + ' ne rentre' + (plan.dropped > 1 ? 'nt' : '') + ' pas : la place par compte est limitée pour l’instant (un rangement des données est prévu).</span>' : '',
+  ].filter(Boolean);
+  box.innerHTML = `<div style="margin-top:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--text-2);line-height:1.6">
+      ${lines.map(l => '<div>' + l + '</div>').join('')}
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+        <label for="archiveSince" style="font-size:12px">Période</label>
+        <select class="form-select" id="archiveSince" style="width:auto" onchange="renderArchivePlan()">
+          <option value="">Tout l’historique</option><option value="1">La dernière année</option>
+          <option value="2">Les 2 dernières années</option><option value="3">Les 3 dernières années</option>
+        </select>
+        ${plan.add.length || plan.link.length ? `<button class="btn btn--primary btn--sm" onclick="confirmArchive()">Importer ${plan.add.length} séance${plan.add.length > 1 ? 's' : ''}</button>` : ''}
+        <button class="btn btn--ghost btn--sm" onclick="archiveActs=null;document.getElementById('archiveResult').innerHTML=''">Annuler</button>
+      </div>
+    </div>`;
+  document.getElementById('archiveSince').value = prev;
+}
+
+function confirmArchive() {
+  if (!archiveActs) return;
+  const r = TS.applyStravaArchive(TS.planStravaArchive(archiveActs, { since: archiveSince() }));
+  archiveActs = null;
+  document.getElementById('archiveResult').innerHTML = '';
+  populateSeasonFilter();
+  renderSessions();
+  TS.toast(r.added + ' séance' + (r.added > 1 ? 's' : '') + ' importée' + (r.added > 1 ? 's' : '') + ' depuis ton archive Strava'
+    + (r.linked ? ' (' + r.linked + ' déjà présente' + (r.linked > 1 ? 's' : '') + ', reliée' + (r.linked > 1 ? 's' : '') + ' à Strava)' : ''));
+}
+
 // ── Similar session detection ────────────────────────────────────────────────
 function findSimilarSession(candidate) {
   const existing = TS.getSessions({ sport: candidate.sport });
@@ -898,6 +990,7 @@ function renderIgnoredNotice(ignored, container) {
   container.appendChild(box);
 }
 
+const IMPORT_MAX_FILES = 50;
 async function processImportFiles(files) {
   const zone     = document.getElementById('importZone');
   const progress = document.getElementById('importProgress');
@@ -911,8 +1004,13 @@ async function processImportFiles(files) {
   let imported = 0, similar = 0, errors = 0;
   const ignored = [];
 
-  for (const file of files) {
-    progress.innerHTML = '<span style="color:var(--accent2)">\u23f3 Lecture de ' + file.name + '\u2026</span>';
+  if (files.length > IMPORT_MAX_FILES) {
+    TS.toast(files.length + ' fichiers choisis : les ' + IMPORT_MAX_FILES + ' premiers sont lus. Importe les autres ensuite, ou utilise l’archive Strava pour tout l’historique.', 'error');
+    files = files.slice(0, IMPORT_MAX_FILES);
+  }
+  for (const [i, file] of files.entries()) {
+    progress.innerHTML = '<span style="color:var(--accent2)">\u23f3 Lecture de ' + escHtml(file.name) + ' (' + (i + 1) + ' / ' + files.length + ')\u2026</span>';
+    await new Promise(r => setTimeout(r, 0)); // laisse la page respirer entre deux fichiers
     try {
       const session = await window.TriImport.parseActivityFile(file);
       if (session._skip) {           // marche / musculation : jamais importées
@@ -1108,18 +1206,19 @@ function renderFeelingNudge() {
 
 function importAll() {
   const cards = document.querySelectorAll('#importResults [data-session]');
-  const importedIds = [];
-  let count = 0;
+  const list = [];
   cards.forEach(card => {
     try {
       const session = JSON.parse(decodeURIComponent(card.dataset.session));
       const sportSel = card.querySelector('select');
       if (sportSel) session.sport = sportSel.value;
       delete session._source; delete session._skip;
-      importedIds.push(TS.saveSession(session).id);
-      count++;
+      list.push(session);
     } catch(e) {}
   });
+  // Un seul enregistrement pour toutes les séances (évite de saturer la page)
+  const importedIds = TS.saveSessions(list).map(s => s.id);
+  const count = importedIds.length;
   document.getElementById('importZone').style.display = 'none';
   renderSessions();
   TS.toast(`${count} séance${count>1?'s':''} importée${count>1?'s':''}`);

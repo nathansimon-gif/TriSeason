@@ -337,5 +337,174 @@ function parseTCX(xmlText) {
   };
 }
 
+// ── Archive Strava (export complet du compte) ────────────────────────────────
+// On ne lit QUE le tableau activities.csv (un résumé par activité), jamais les
+// milliers de fichiers GPS de l'archive : quelques centaines de Ko à traiter,
+// même pour une archive de plusieurs Go. Le .zip est lu par morceaux (File.slice),
+// sans le charger en entier.
+async function readStravaArchive(file) {
+  if (/\.csv$/i.test(file.name)) return parseStravaCsv(await file.text());
+  if (!/\.zip$/i.test(file.name)) throw new Error('Choisis le fichier .zip de l’archive Strava, ou le fichier activities.csv qu’il contient.');
+  return parseStravaCsv(await readZipEntry(file, /(^|\/)activities\.csv$/i));
+}
+
+async function sliceBytes(file, start, end) {
+  return new DataView(await file.slice(start, end).arrayBuffer());
+}
+
+async function readZipEntry(file, nameRe) {
+  // Fin de l'archive : enregistrement « fin du répertoire central »
+  const tailLen = Math.min(file.size, 66000);
+  const tail = await sliceBytes(file, file.size - tailLen, file.size);
+  let eocd = -1;
+  for (let i = tailLen - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('Ce fichier n’est pas une archive .zip valide.');
+  let cdSize = tail.getUint32(eocd + 12, true), cdOffset = tail.getUint32(eocd + 16, true);
+  if (cdOffset === 0xFFFFFFFF || cdSize === 0xFFFFFFFF) {
+    // Archive de plus de 4 Go (ZIP64)
+    const loc = eocd - 20;
+    if (loc < 0 || tail.getUint32(loc, true) !== 0x07064b50) throw new Error('Archive .zip non reconnue.');
+    const z64Off = Number(tail.getBigUint64(loc + 8, true));
+    const z64 = await sliceBytes(file, z64Off, z64Off + 56);
+    cdSize = Number(z64.getBigUint64(40, true)); cdOffset = Number(z64.getBigUint64(48, true));
+  }
+  const cd = await sliceBytes(file, cdOffset, cdOffset + cdSize);
+  const dec = new TextDecoder();
+  for (let p = 0; p + 46 <= cd.byteLength && cd.getUint32(p, true) === 0x02014b50;) {
+    const method = cd.getUint16(p + 10, true);
+    let compSize = cd.getUint32(p + 20, true);
+    const nameLen = cd.getUint16(p + 28, true), extraLen = cd.getUint16(p + 30, true), commentLen = cd.getUint16(p + 32, true);
+    let localOff = cd.getUint32(p + 42, true);
+    const name = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nameLen));
+    if (nameRe.test(name)) {
+      if (compSize === 0xFFFFFFFF || localOff === 0xFFFFFFFF) { // tailles ZIP64 dans le champ « extra »
+        let e = p + 46 + nameLen;
+        const end = e + extraLen;
+        while (e + 4 <= end) {
+          const id = cd.getUint16(e, true), len = cd.getUint16(e + 2, true);
+          if (id === 1) {
+            let q = e + 4;
+            if (cd.getUint32(p + 24, true) === 0xFFFFFFFF) q += 8;           // taille décompressée
+            if (compSize === 0xFFFFFFFF) { compSize = Number(cd.getBigUint64(q, true)); q += 8; }
+            if (localOff === 0xFFFFFFFF) localOff = Number(cd.getBigUint64(q, true));
+          }
+          e += 4 + len;
+        }
+      }
+      const lh = await sliceBytes(file, localOff, localOff + 30);
+      const start = localOff + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+      const blob = file.slice(start, start + compSize);
+      if (method === 0) return await blob.text();
+      if (method !== 8) throw new Error('Format de compression non pris en charge : décompresse l’archive et choisis activities.csv.');
+      if (typeof DecompressionStream === 'undefined') throw new Error('Ce navigateur ne sait pas ouvrir le .zip : décompresse l’archive et choisis activities.csv.');
+      return await new Response(blob.stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    }
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  throw new Error('Pas de fichier activities.csv dans cette archive. Vérifie que c’est bien l’archive envoyée par Strava.');
+}
+
+// CSV (guillemets, virgules et retours à la ligne dans les descriptions)
+function parseCsv(text) {
+  const rows = []; let row = [], field = '', inQ = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function csvNum(v) {
+  if (v == null) return null;
+  v = String(v).trim();
+  if (!v) return null;
+  v = v.includes('.') ? v.replace(/,/g, '') : v.replace(',', '.');
+  const n = parseFloat(v);
+  return isFinite(n) ? n : null;
+}
+
+const MONTHS = { jan: 0, janv: 0, feb: 1, fev: 1, févr: 1, fevr: 1, mar: 2, mars: 2, apr: 3, avr: 3, may: 4, mai: 4, jun: 5, juin: 5,
+  jul: 6, juil: 6, aug: 7, aou: 7, août: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11, déc: 11 };
+// Date de l'archive Strava (heure UTC) → instant. Formats : « Oct 12, 2026, 6:30:00 AM »,
+// « 12 oct. 2026, 06:30:00 », « 2026-10-12 06:30:00 ».
+function parseStravaDate(v) {
+  v = String(v || '').trim();
+  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)));
+  const low = v.toLowerCase();
+  let d, mon, y;
+  if ((m = low.match(/^([a-zéû]+)\.? (\d{1,2}),? (\d{4})/))) { mon = m[1]; d = +m[2]; y = +m[3]; }
+  else if ((m = low.match(/^(\d{1,2}) ([a-zéû]+)\.? (\d{4})/))) { d = +m[1]; mon = m[2]; y = +m[3]; }
+  else return null;
+  const mi = MONTHS[mon] ?? MONTHS[mon.slice(0, 3)];
+  if (mi == null) return null;
+  const t = low.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]\.?m\.?)?/);
+  let h = t ? +t[1] : 12; const min = t ? +t[2] : 0, sec = t && t[3] ? +t[3] : 0;
+  if (t && t[4]) { const pm = t[4][0] === 'p'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  return new Date(Date.UTC(y, mi, d, h, min, sec));
+}
+
+function stravaTypeToSport(type) {
+  const t = String(type || '').toLowerCase();
+  if (/swim|natation|nage/.test(t)) return 'nat';
+  if (/ride|v[ée]lo|vtt|gravel|bike|cycl|velomobile|handcycle/.test(t)) return 'velo';
+  if (/run|course|trail|jogging/.test(t)) return 'run';
+  return null;
+}
+
+// activities.csv → [{ id, start (Date), name, type, sport, elapsed, distance_m, ... }]
+// Les colonnes sont cherchées par leur nom (anglais ou français) ; la 2e colonne
+// « Distance » (en mètres) et « Elapsed Time » (en secondes, précise) sont préférées.
+function parseStravaCsv(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) throw new Error('Le fichier activities.csv est vide.');
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const all = (...names) => head.map((h, i) => names.includes(h) ? i : -1).filter(i => i >= 0);
+  const first = (...names) => all(...names)[0];
+  const last = (...names) => { const a = all(...names); return a[a.length - 1]; };
+  const col = {
+    id: first('activity id', 'id de l’activité', "id de l'activité") ?? 0,
+    date: first('activity date', 'date de l’activité', "date de l'activité") ?? 1,
+    name: first('activity name', 'nom de l’activité', "nom de l'activité") ?? 2,
+    type: first('activity type', 'type d’activité', "type d'activité") ?? 3,
+    elapsed: last('elapsed time', 'temps écoulé') ?? 5,
+    distance: last('distance') ?? 6,
+    elevation: first('elevation gain', 'dénivelé positif'),
+    hrAvg: first('average heart rate', 'fréquence cardiaque moyenne'),
+    hrMax: last('max heart rate', 'fréquence cardiaque max.', 'fréquence cardiaque maximale'),
+    watts: first('average watts', 'puissance moyenne'),
+    wattsMax: first('max watts', 'puissance max.', 'puissance maximale'),
+    np: first('weighted average power', 'puissance moyenne pondérée'),
+    kcal: first('calories'),
+  };
+  const twoDistances = all('distance').length > 1; // sinon la seule colonne est en km
+  const out = [];
+  rows.slice(1).forEach(r => {
+    const id = csvNum(r[col.id]);
+    const start = parseStravaDate(r[col.date]);
+    if (!id || !start || isNaN(start)) return;
+    const dist = csvNum(r[col.distance]);
+    const g = (k) => col[k] == null ? null : csvNum(r[col[k]]);
+    out.push({ id, start, name: r[col.name] || '', type: r[col.type] || '', sport: stravaTypeToSport(r[col.type]),
+      elapsed: csvNum(r[col.elapsed]), distance_m: dist == null ? null : (twoDistances ? dist : dist * 1000),
+      elevation: g('elevation'), hrAvg: g('hrAvg'), hrMax: g('hrMax'), watts: g('watts'), wattsMax: g('wattsMax'), np: g('np'), kcal: g('kcal') });
+  });
+  if (!out.length) throw new Error('Aucune activité lisible dans activities.csv.');
+  return out;
+}
+
 // ── Expose ────────────────────────────────────────────────────────────────────
-window.TriImport = { parseActivityFile, detectSport, classifyFit, classifyText };
+window.TriImport = { parseActivityFile, detectSport, classifyFit, classifyText,
+  readStravaArchive, parseStravaCsv, parseStravaDate, parseCsv, readZipEntry };
