@@ -11,11 +11,13 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [ ] 🧑 Fusionner la PR #24 (archive Strava, import groupé plus solide, phrase de la carte constat) puis recharger le site
 - [ ] 🧑 Tester l'**archive Strava** : la demander sur strava.com (Paramètres → Mon compte → Télécharger ou supprimer votre compte → Demander une archive), puis Séances → « Choisir l'archive (.zip) »
-- [ ] 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets ») et les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload »), pour la demande de validation
 
 ## Bientôt (dans le mois)
 
-- [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti) : dès que les logos officiels sont dans le dépôt, Claude remplace le bouton et la mention « Powered by Strava », prépare les captures d'écran et le texte ; Nathan envoie la demande depuis strava.com/settings/api
+- [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
+  1. 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets »), les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload ») et prévenir Claude
+  2. 🤖 Claude remplace le bouton « Connecter avec Strava » et la mention « Powered by Strava » par les logos officiels, prépare les captures d'écran et le texte de la demande
+  3. 🧑 Envoyer la demande depuis strava.com/settings/api
 - [ ] 🤖 *Plus tard* : séances en temps réel avec les alertes Strava (« webhooks »), au lieu d'attendre l'ouverture de l'appli. Demande que le serveur puisse écrire dans Firestore
 - [ ] 🤖 *Facultatif* : lancer aussi les tests automatiques sur GitHub à chaque pull request (coche verte / croix rouge avant la fusion). Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
