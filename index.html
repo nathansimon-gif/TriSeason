@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261017b"></script>
+  <script src="auth-guard.js?v=20261018a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261017b">
+  <link rel="stylesheet" href="style.css?v=20261018a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -408,7 +408,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261017b"></script>
+<script src="app.js?v=20261018a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -465,7 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Ce que Strava ne te montre pas : ta dernière séance avec ce que tu as mangé
 // et bu autour, puis tes glucides les jours d'entraînement et de repos.
 // Des faits sur tes données, jamais un conseil.
-const FUEL_CARBS = { gel: 25, barre: 30, banane: 25, 'boisson-iso': 30, flasque: 40, 'pâte-de-fruit': 20, autre: 20 }; // g par unité, ordre de grandeur
 function dayNutrition(nutri, day) {
   const meals = (nutri.meals || []).filter(m => m.date === day);
   return {
@@ -504,13 +503,14 @@ function renderInsight() {
   const prev = dayNutrition(nutri, shift(last.date, -1));
   const day = dayNutrition(nutri, last.date);
   const fuel = (nutri.fuel || []).filter(f => f.date === last.date);
-  const fuelCarbs = fuel.reduce((a, f) => a + (FUEL_CARBS[f.type] || 20) * (f.qty || 1), 0);
+  const fuelCarbs = fuel.reduce((a, f) => a + TS.fuelCarbs(f).carbs, 0);
+  const fuelApprox = fuel.some(f => TS.fuelCarbs(f).estimated) ? '≈ ' : '';
   const perHour = last.duration >= 0.75 && fuelCarbs ? Math.round(fuelCarbs / last.duration) : null;
   const tiles = [
     prev.meals ? tile('La veille', n0(prev.carbs) + ' g de glucides', n0(prev.kcal) + ' kcal · ' + prev.meals + ' repas') : tile('La veille', 'Repas non notés', '', true),
     day.meals || day.water ? tile('Le jour même', day.meals ? n0(day.carbs) + ' g de glucides' : 'Repas non notés', day.water ? fmtL(day.water) + ' d’eau' : 'Eau non notée', !day.meals)
       : tile('Le jour même', 'Rien de noté', '', true),
-    fuel.length ? tile('Pendant l’effort', '≈ ' + n0(fuelCarbs) + ' g de glucides', fuel.reduce((a, f) => a + (f.qty || 1), 0) + ' ravitaillement' + (fuel.length > 1 || (fuel[0].qty || 1) > 1 ? 's' : '') + (perHour ? ' · ≈ ' + perHour + ' g par heure' : ''))
+    fuel.length ? tile('Pendant l’effort', fuelApprox + n0(fuelCarbs) + ' g de glucides', fuel.reduce((a, f) => a + (f.qty || 1), 0) + ' ravitaillement' + (fuel.length > 1 || (fuel[0].qty || 1) > 1 ? 's' : '') + (perHour ? ' · ' + fuelApprox + perHour + ' g par heure' : ''))
       : tile('Pendant l’effort', last.duration >= 1.5 ? 'Aucun ravitaillement noté' : 'Rien de noté', '', true),
   ];
 

@@ -43,6 +43,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   compétitions, records, poids, profil, saisons, synchro des compétitions et
   records automatiques, formats FFTri, helpers de dates et d'allure,
   `getNutritionImpact` : croisement nutrition × séances affiché dans Forme ;
+  `FUEL_PRESETS` / `fuelCarbs` : glucides des ravitaillements (valeurs indicatives
+  des fabricants, octobre 2026, à mettre à jour si les formules changent) ;
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la
   semaine et badges, calculés à partir des données, seuls les badges déjà
   annoncés sont gardés dans `data.achievements_seen`).

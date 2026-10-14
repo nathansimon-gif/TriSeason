@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261017b"></script>
+  <script src="auth-guard.js?v=20261018a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261017b">
+  <link rel="stylesheet" href="style.css?v=20261018a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -37,6 +37,12 @@
     .meal-card:hover { border-color:var(--border2); }
     .fav-btn { background:none; border:1px solid var(--border2); color:var(--text-3); border-radius:var(--r-sm); width:28px; height:28px; font-size:15px; line-height:1; cursor:pointer; }
     .fav-btn.on { color:var(--accent); border-color:rgba(185,236,74,.4); background:var(--accent-dim); }
+    .fuel-presets { display:flex; gap:6px; flex-wrap:wrap; }
+    .fuel-presets + .fuel-presets { margin-top:6px; }
+    .fuel-chip { font:500 12px var(--sans); color:var(--text-2); background:var(--surface2); border:1px solid var(--border); border-radius:99px; padding:4px 10px; cursor:pointer; }
+    .fuel-chip b { color:var(--text); font-weight:600; }
+    .fuel-chip.on { border-color:var(--accent); background:var(--accent-dim); color:var(--text); }
+    .fuel-presets__title { font-size:11px; color:var(--text-3); margin:8px 0 4px; }
     .quick-meals { margin-bottom:12px; }
     .off-search { display:flex; gap:6px; }
     .off-search .form-input { flex:1; min-width:0; }
@@ -400,13 +406,14 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Type</label>
-          <select class="form-select" id="f_type">
+          <select class="form-select" id="f_type" onchange="renderFuelPresets()">
             <option value="gel">🟡 Gel énergétique</option>
             <option value="barre">🍫 Barre énergétique</option>
             <option value="banane">🍌 Banane / fruit</option>
             <option value="boisson-iso">💧 Boisson isotonique</option>
             <option value="flasque">🧃 Flasque maison</option>
             <option value="pâte-de-fruit">🍬 Pâte de fruit</option>
+            <option value="compote">Compote / gourde</option>
             <option value="autre">Autre</option>
           </select>
         </div>
@@ -414,6 +421,19 @@
           <label class="form-label">Quantité</label>
           <input class="form-input" type="number" step="1" id="f_qty" placeholder="1" value="1">
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Glucides <span id="f_unit" style="font-weight:400;color:var(--text-3)"></span></label>
+        <div id="f_presets"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">
+            <input class="form-input" type="number" min="0" step="1" id="f_carbs" placeholder="g" style="width:80px" oninput="fuelPresetPicked=null;markFuelPreset()">
+            <span style="font-size:12px;color:var(--text-2)">g de glucides</span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">
+            <input class="form-input" type="number" min="0" step="1" id="f_prot" placeholder="g" style="width:70px">
+            <span style="font-size:12px;color:var(--text-2)">g de protéines (facultatif)</span></span>
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px">Valeurs indicatives des fabricants : le chiffre exact est sur l'emballage.</div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -437,7 +457,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261017b"></script>
+<script src="app.js?v=20261018a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -747,7 +767,7 @@ function renderMealsList() {
 }
 
 const FUEL_ICONS = {
-  'gel':'🟡','barre':'🍫','banane':'🍌','boisson-iso':'💧','flasque':'🧃','pâte-de-fruit':'🍬','autre':'📦'
+  'gel':'🟡','barre':'🍫','banane':'🍌','boisson-iso':'💧','flasque':'🧃','pâte-de-fruit':'🍬','compote':'🍎','autre':'📦'
 };
 
 function renderFuelList() {
@@ -761,7 +781,7 @@ function renderFuelList() {
     <div class="fuel-row">
       <div class="fuel-row__icon">${FUEL_ICONS[f.type]||'📦'}</div>
       <div class="fuel-row__label">${f.qty > 1 ? f.qty+'× ' : ''}${f.name||f.type}</div>
-      <div class="fuel-row__val">${f.timing ? 'min '+f.timing : ''}</div>
+      <div class="fuel-row__val">${(() => { const c = TS.fuelCarbs(f); return (c.estimated ? '≈ ' : '') + Math.round(c.carbs) + ' g gluc.' + (c.prot ? ' · ' + Math.round(c.prot) + ' g prot.' : ''); })()}${f.timing ? ' · min '+f.timing : ''}</div>
       <button class="btn btn--danger btn--sm btn--icon" onclick="deleteFuel('${f.id}')">×</button>
     </div>`).join('');
 }
@@ -1752,7 +1772,46 @@ function deleteCurrentMeal() {
 }
 
 // ── Fuel ──────────────────────────────────────────────────────────────────────
-function openFuelModal()  { document.getElementById('fuelModal').classList.add('open'); }
+function openFuelModal()  {
+  document.getElementById('f_carbs').value = ''; document.getElementById('f_prot').value = '';
+  fuelPresetPicked = null; fuelAutoName = '';
+  renderFuelPresets();
+  document.getElementById('fuelModal').classList.add('open');
+}
+
+// Cases à cliquer : tailles génériques puis produits courants, selon le type choisi.
+let fuelPresetPicked = null, fuelAutoName = '';
+function renderFuelPresets() {
+  const type = document.getElementById('f_type').value;
+  const P = TS.FUEL_PRESETS[type] || { generic: [], brands: [] };
+  document.getElementById('f_unit').textContent = P.unit ? '(' + P.unit + ')' : '';
+  const chip = (list, kind) => list.map((x, i) => `<button type="button" class="fuel-chip" data-k="${kind}${i}" onclick="pickFuelPreset('${kind}', ${i})">${x[0]} <b>${x[1]} g</b>${x[2] ? ' · ' + x[2] + ' g prot.' : ''}</button>`).join('');
+  document.getElementById('f_presets').innerHTML =
+    (P.generic.length ? `<div class="fuel-presets">${chip(P.generic, 'g')}</div>` : '')
+    + (P.brands.length ? `<div class="fuel-presets__title">Produits courants</div><div class="fuel-presets">${chip(P.brands, 'b')}</div>` : '')
+    + (!P.generic.length && !P.brands.length ? '<div style="font-size:12px;color:var(--text-3)">Indique les glucides lus sur l’emballage.</div>' : '');
+  // Pas de choix : on vide les chiffres (ils dépendaient de l'ancien type)
+  if (fuelPresetPicked) { document.getElementById('f_carbs').value = ''; document.getElementById('f_prot').value = ''; fuelPresetPicked = null; }
+  const name = document.getElementById('f_name');
+  if (fuelAutoName && name.value === fuelAutoName) name.value = '';
+  fuelAutoName = '';
+  if (P.generic.length === 1 && !P.brands.length) pickFuelPreset('g', 0); // banane : une seule valeur
+}
+function pickFuelPreset(kind, i) {
+  const P = TS.FUEL_PRESETS[document.getElementById('f_type').value];
+  const x = (kind === 'g' ? P.generic : P.brands)[i];
+  if (!x) return;
+  document.getElementById('f_carbs').value = x[1];
+  document.getElementById('f_prot').value = x[2] || '';
+  const name = document.getElementById('f_name');
+  if (kind === 'b' && (!name.value || name.value === fuelAutoName)) { name.value = x[0]; fuelAutoName = x[0]; }
+  if (kind === 'g' && name.value === fuelAutoName) { name.value = ''; fuelAutoName = ''; }
+  fuelPresetPicked = kind + i;
+  markFuelPreset();
+}
+function markFuelPreset() {
+  document.querySelectorAll('#f_presets .fuel-chip').forEach(b => b.classList.toggle('on', b.dataset.k === fuelPresetPicked));
+}
 function closeFuelModal() { document.getElementById('fuelModal').classList.remove('open'); }
 
 function saveFuelForm() {
@@ -1765,6 +1824,10 @@ function saveFuelForm() {
     timing: parseInt(document.getElementById('f_timing').value)||null,
     notes:  document.getElementById('f_notes').value,
   };
+  const carbs = parseFloat(document.getElementById('f_carbs').value);
+  const prot = parseFloat(document.getElementById('f_prot').value);
+  if (isFinite(carbs) && carbs >= 0) fuel.carbs = carbs;  // g par unité
+  if (isFinite(prot) && prot > 0) fuel.prot = prot;
   const nutri = getNutrition();
   nutri.fuel.push(fuel);
   saveNutrition(nutri);

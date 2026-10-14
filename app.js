@@ -1198,6 +1198,34 @@ function importData(file) {
   });
 }
 
+// ── Ravitaillements : glucides par unité ────────────────────────────────────
+// Valeurs indicatives relevées chez les fabricants et revendeurs (octobre 2026) ;
+// les formules changent : l'utilisateur peut toujours corriger le chiffre.
+// g = glucides, p = protéines, par unité (gel, barre, pâte, gourde, bidon de 500 ml).
+const FUEL_PRESETS = {
+  gel: { unit: 'par gel', generic: [['Petit gel', 20], ['Gel standard', 25], ['Gros gel', 40]], brands: [
+    ['Maurten Gel 100', 25], ['Maurten Gel 160', 40], ['SIS GO Isotonic', 22], ['SIS Beta Fuel', 40], ['GU Energy Gel', 22],
+    ['Decathlon Energy Gel 32 g', 23], ['Overstims Coup de fouet', 26], ['Näak Ultra Energy', 27], ['Baouw', 30], ['Meltonic', 15], ['Meltonic XL', 30]] },
+  barre: { unit: 'par barre', generic: [['Barre de céréales', 15], ['Barre énergétique', 35], ['Grosse barre', 45]], brands: [
+    ['Clif Bar', 43, 10]] },
+  'pâte-de-fruit': { unit: 'par pâte', generic: [['Pâte de fruits 25 g', 20]], brands: [
+    ['Decathlon 25 g', 21], ['Overstims Fruit’n Perf', 20], ['Punch Power', 21]] },
+  compote: { unit: 'par gourde', generic: [['Compote classique 90 g', 12], ['Compote énergétique', 30]], brands: [
+    ['Atlet énergétique', 30], ['Endur’activ 70 g', 27], ['Atlet protéinée', 23, 10], ['Andros Sport Whey & Fruits', 11, 10]] },
+  'boisson-iso': { unit: 'par bidon de 500 ml', generic: [['Boisson légère', 20], ['Boisson isotonique', 35], ['Boisson très dosée', 80]], brands: [
+    ['Maurten Drink Mix 160', 40], ['Maurten Drink Mix 320', 80], ['Isostar Hydrate & Perform', 35], ['Tailwind 1 dose', 25], ['Tailwind 2 doses', 50]] },
+  flasque: { unit: 'par flasque', generic: [['Flasque légère', 30], ['Flasque moyenne', 50], ['Flasque chargée', 80]], brands: [] },
+  banane: { unit: 'par fruit', generic: [['Banane', 25]], brands: [] },
+  autre: { unit: 'par unité', generic: [], brands: [] },
+};
+const FUEL_DEFAULT_CARBS = { gel: 25, barre: 30, banane: 25, 'boisson-iso': 30, flasque: 40, 'pâte-de-fruit': 20, compote: 25, autre: 20 };
+// Glucides d'un ravitaillement (quantité comprise). estimated = valeur par défaut du type.
+function fuelCarbs(f) {
+  const per = f.carbs != null && f.carbs !== '' ? Number(f.carbs) : null;
+  const unit = per != null && isFinite(per) ? per : (FUEL_DEFAULT_CARBS[f.type] || 20);
+  return { carbs: unit * (f.qty || 1), prot: (Number(f.prot) || 0) * (f.qty || 1), estimated: per == null };
+}
+
 // ── Défis de la semaine et badges ───────────────────────────────────────────
 // Tout est calculé à partir des données (rien n'est stocké, sauf la liste des
 // badges déjà annoncés : data.achievements_seen). Visible seulement par
@@ -1829,7 +1857,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
-  formatHours, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
+  formatHours, FUEL_PRESETS, fuelCarbs, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES,
