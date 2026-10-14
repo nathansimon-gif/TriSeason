@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261017a"></script>
+  <script src="auth-guard.js?v=20261017b"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261017a">
+  <link rel="stylesheet" href="style.css?v=20261017b">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -116,16 +116,19 @@
   </div>
 
   <!-- ── Archive Strava : tout l'historique d'un coup ── -->
-  <div class="card" style="margin-bottom:16px" id="archiveCard">
+  <div class="card" style="margin-bottom:16px" id="historique-strava">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="min-width:0;flex:1 1 280px">
         <div style="font-size:14px;font-weight:600;color:var(--text)">Tout ton historique Strava d'un coup</div>
-        <div style="font-size:12px;color:var(--text-2);margin-top:3px">Avec l'archive que Strava t'envoie par e-mail (fichier .zip). Seul le résumé de tes activités est lu : rapide, même pour plusieurs années.</div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:3px" id="archiveIntro">Avec l'archive que Strava t'envoie par e-mail (fichier .zip). Seul le résumé de tes activités est lu : rapide, même pour plusieurs années.</div>
       </div>
-      <label class="btn btn--ghost btn--sm" style="cursor:pointer">
-        Choisir l'archive (.zip)
-        <input type="file" id="archiveInput" accept=".zip,.csv" style="display:none" onchange="handleArchive(event)">
-      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn--ghost btn--sm" id="historyFromStravaBtn" onclick="loadStravaHistory()" style="display:none">Depuis mon compte Strava</button>
+        <label class="btn btn--ghost btn--sm" style="cursor:pointer">
+          Choisir l'archive (.zip)
+          <input type="file" id="archiveInput" accept=".zip,.csv" style="display:none" onchange="handleArchive(event)">
+        </label>
+      </div>
     </div>
     <details style="margin-top:10px;font-size:12px;color:var(--text-2)">
       <summary style="cursor:pointer;color:var(--text)">Comment obtenir mon archive Strava ?</summary>
@@ -367,9 +370,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261017a"></script>
-<script src="import.js?v=20261017a"></script>
-<script src="app.js?v=20261017a"></script>
+<script src="fit-parser.js?v=20261017b"></script>
+<script src="import.js?v=20261017b"></script>
+<script src="app.js?v=20261017b"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -878,12 +881,51 @@ async function handleArchive(e) {
   box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)">Lecture de l’archive…</div>';
   try {
     archiveActs = await window.TriImport.readStravaArchive(file);
+    archiveSource = 'archive';
     renderArchivePlan();
   } catch (err) {
     archiveActs = null;
     box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--red)">' + escHtml(err.message) + '</div>';
   }
 }
+
+// Même aperçu, mais depuis le compte Strava connecté (bouton ici, ou « Récupérer
+// tout l'historique » dans Profil qui ouvre cette page sur #historique-strava).
+let archiveSource = 'archive';
+async function loadStravaHistory() {
+  const box = document.getElementById('archiveResult');
+  box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)" id="historyProgress">Récupération de ton historique sur Strava…</div>';
+  document.getElementById('historique-strava').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try {
+    archiveActs = await TS.stravaFetchHistory(n => {
+      const el = document.getElementById('historyProgress');
+      if (el && n) el.textContent = 'Récupération de ton historique sur Strava… ' + n + ' activités';
+    });
+    archiveSource = 'strava';
+    if (!archiveActs.length) { box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--text-2)">Aucune activité sur ton compte Strava.</div>'; return; }
+    renderArchivePlan();
+  } catch (err) {
+    archiveActs = null;
+    box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--red)">' + escHtml(err.message) + '</div>';
+  }
+}
+function renderHistoryButton() {
+  const btn = document.getElementById('historyFromStravaBtn');
+  const connected = TS.stravaAvailable() && TS.getStrava();
+  if (btn) btn.style.display = connected ? '' : 'none';
+  const intro = document.getElementById('archiveIntro');
+  if (intro) intro.textContent = connected
+    ? 'Depuis ton compte Strava connecté, ou avec l’archive que Strava t’envoie par e-mail (.zip). Tu vois les séances avant de les importer.'
+    : 'Avec l’archive que Strava t’envoie par e-mail (fichier .zip). Seul le résumé de tes activités est lu : rapide, même pour plusieurs années.';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  renderHistoryButton();
+  if (location.hash === '#historique-strava' && TS.stravaAvailable() && TS.getStrava()) {
+    history.replaceState(null, '', location.pathname);
+    loadStravaHistory();
+  }
+});
+window.addEventListener('triseason:update', renderHistoryButton);
 
 function archiveSince() {
   const v = document.getElementById('archiveSince')?.value || '';
@@ -901,7 +943,7 @@ function renderArchivePlan() {
   plan.add.forEach(s => { by[s.sport]++; });
   const years = [...new Set(archiveActs.map(a => a.start.getFullYear()))].sort();
   const lines = [
-    archiveActs.length + ' activités dans l’archive' + (years.length ? ' (' + years[0] + (years.length > 1 ? '–' + years[years.length - 1] : '') + ')' : '') + '.',
+    archiveActs.length + (archiveSource === 'strava' ? ' activités sur ton compte Strava' : ' activités dans l’archive') + (years.length ? ' (' + years[0] + (years.length > 1 ? '–' + years[years.length - 1] : '') + ')' : '') + '.',
     plan.add.length ? '<b style="color:var(--text)">' + plan.add.length + ' séance' + (plan.add.length > 1 ? 's' : '') + ' à ajouter</b> : '
       + ['nat', 'velo', 'run'].filter(k => by[k]).map(k => by[k] + ' ' + TS.SPORTS[k].label.toLowerCase()).join(', ') + '.' : 'Aucune nouvelle séance à ajouter.',
     plan.already + plan.link.length ? (plan.already + plan.link.length) + ' déjà dans TriSeason (pas de doublon).' : '',
@@ -932,7 +974,7 @@ function confirmArchive() {
   document.getElementById('archiveResult').innerHTML = '';
   populateSeasonFilter();
   renderSessions();
-  TS.toast(r.added + ' séance' + (r.added > 1 ? 's' : '') + ' importée' + (r.added > 1 ? 's' : '') + ' depuis ton archive Strava'
+  TS.toast(r.added + ' séance' + (r.added > 1 ? 's' : '') + ' importée' + (r.added > 1 ? 's' : '') + (archiveSource === 'strava' ? ' depuis Strava' : ' depuis ton archive Strava')
     + (r.linked ? ' (' + r.linked + ' déjà présente' + (r.linked > 1 ? 's' : '') + ', reliée' + (r.linked > 1 ? 's' : '') + ' à Strava)' : ''));
 }
 
