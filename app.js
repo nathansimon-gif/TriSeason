@@ -91,11 +91,26 @@ function pushToCloud(data) {
   if (!cloudLoaded) return; // données cloud pas encore récupérées : ne pas les écraser
   const ref = getUserDocRef(user.uid);
   if (!ref) return;
+  // Un seul envoi à la fois : si des enregistrements arrivent pendant un envoi
+  // (import de nombreuses séances), seule la dernière version est envoyée
+  // ensuite. Évite des dizaines d'envois complets d'affilée qui saturent la page.
+  cloudPending = data;
+  if (!cloudSending) sendToCloud(ref);
+}
+let cloudSending = false, cloudPending = null;
+function sendToCloud(ref) {
+  const data = cloudPending;
+  cloudPending = null;
+  cloudSending = true;
   // mergeFields : remplace entièrement data et updatedAt, sans toucher aux autres
   // champs du document (ex. activeDays, utilisé pour le rapport d'activité).
   ref.set({ data: data, updatedAt: Date.now() }, { mergeFields: ['data', 'updatedAt'] })
     .catch(err => {
       console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
+    })
+    .finally(() => {
+      cloudSending = false;
+      if (cloudPending) sendToCloud(ref);
     });
 }
 
@@ -423,6 +438,19 @@ function saveSession(session) {
   else data.sessions.push(session);
   saveData(data);
   return session;
+}
+
+// Plusieurs séances en un seul enregistrement (import groupé).
+function saveSessions(list) {
+  const data = getData();
+  const saved = list.map(session => {
+    if (!session.id) session.id = newId();
+    const idx = data.sessions.findIndex(s => s.id === session.id);
+    if (idx >= 0) data.sessions[idx] = session; else data.sessions.push(session);
+    return session;
+  });
+  saveData(data);
+  return saved;
 }
 
 function deleteSession(id) {
@@ -1514,6 +1542,68 @@ function stravaFindSimilar(sessions, c) {
   });
 }
 
+// ── Archive Strava (fichier .zip / activities.csv) ──────────────────────────
+// Prépare l'import : séances à ajouter, séances déjà présentes (même activité
+// Strava, ou même séance importée par fichier), activités ignorées (marche…).
+// Limite de taille : un compte est un seul document Firestore (1 Mo max). On
+// garde une marge et, si besoin, on n'ajoute que les séances les plus récentes.
+const DATA_MAX_BYTES = 850 * 1024;
+function dataBytes(data) { return new TextEncoder().encode(JSON.stringify(data)).length; }
+
+function archiveToSession(a) {
+  const sec = a.elapsed || 0;
+  const s = {
+    date: localDateStr(a.start), sport: a.sport,
+    duration: sec ? Math.round(sec) / 3600 : null,
+    distance: a.distance_m ? Math.round(a.distance_m / 10) / 100 : null,
+    elevation: a.elevation ? Math.round(a.elevation) : null,
+    fc_avg: a.hrAvg ? Math.round(a.hrAvg) : null, fc_max: a.hrMax ? Math.round(a.hrMax) : null,
+    power_avg: a.watts ? Math.round(a.watts) : null, power_max: a.wattsMax ? Math.round(a.wattsMax) : null,
+    np: a.np ? Math.round(a.np) : null, kcal: a.kcal ? Math.round(a.kcal) : null,
+    notes: (a.name ? a.name.slice(0, 80) + ' · ' : '') + 'Strava', strava_id: a.id,
+  };
+  Object.keys(s).forEach(k => { if (s[k] == null) delete s[k]; }); // pas de champs vides : place gagnée
+  return s;
+}
+
+function planStravaArchive(acts, { since = null } = {}) {
+  const data = getData();
+  const known = new Set(data.sessions.map(s => s.strava_id).filter(Boolean).map(Number));
+  const plan = { add: [], link: [], already: 0, ignored: 0, before: 0, dropped: 0, oldestKept: null };
+  const sessions = data.sessions.slice();
+  acts.slice().sort((x, y) => y.start - x.start).forEach(a => {   // les plus récentes d'abord
+    if (known.has(Number(a.id))) { plan.already++; return; }
+    if (!a.sport) { plan.ignored++; return; }
+    const s = archiveToSession(a);
+    if (since && s.date < since) { plan.before++; return; }
+    const twin = stravaFindSimilar(sessions, s);
+    if (twin) { plan.link.push({ id: twin.id, strava_id: a.id }); twin.strava_id = a.id; return; }
+    plan.add.push(s);
+  });
+  // Taille : on retire les plus anciennes si on dépasse la limite
+  const base = dataBytes(data);
+  let total = base;
+  const kept = [];
+  for (const s of plan.add) {
+    const size = new TextEncoder().encode(JSON.stringify({ ...s, id: 'x'.repeat(16) })).length + 1; // id réel : 14 caractères
+    if (total + size > DATA_MAX_BYTES) { plan.dropped = plan.add.length - kept.length; break; }
+    total += size; kept.push(s);
+  }
+  plan.add = kept;
+  plan.oldestKept = kept.length ? kept[kept.length - 1].date : null;
+  plan.bytesAfter = total; plan.bytesBefore = base;
+  return plan;
+}
+
+// Un seul enregistrement pour toute l'archive.
+function applyStravaArchive(plan) {
+  const data = getData();
+  plan.link.forEach(l => { const s = data.sessions.find(x => x.id === l.id); if (s) s.strava_id = l.strava_id; });
+  plan.add.forEach(s => { data.sessions.push({ ...s, id: newId() }); });
+  saveData(data);
+  return { added: plan.add.length, linked: plan.link.length };
+}
+
 let stravaRunning = null;
 // Va chercher les nouvelles activités Strava. { force } : ignore le délai de 15 min ;
 // { full } : reprend tout l'historique. Renvoie { added, linked, ignored }.
@@ -1699,7 +1789,7 @@ window.TS = {
   getData, saveData, loadData, newId, resetAllData, deleteAccount, clearLocalUserData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,
-  getSessions, saveSession, deleteSession,
+  getSessions, saveSession, saveSessions, deleteSession,
   getCompetitions, saveCompetition, deleteCompetition,
   syncCompetition, refreshCompetitionRecords, linkSessionsToCompetition,
   checkCompetitionLegs, describeCompSync, describeCompRecords, compClosestFormat, COMP_FORMATS,
@@ -1714,5 +1804,6 @@ window.TS = {
   formatHours, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
+  planStravaArchive, applyStravaArchive, dataBytes, DATA_MAX_BYTES,
   SPORTS, COMP_TYPES,
 };

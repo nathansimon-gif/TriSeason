@@ -46,7 +46,11 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la
   semaine et badges, calculés à partir des données, seuls les badges déjà
   annoncés sont gardés dans `data.achievements_seen`).
-- `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx.
+- `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
+  plus, enregistrés en une fois avec `TS.saveSessions`) et de l'**archive
+  Strava** (`readStravaArchive` : lit seulement `activities.csv` dans le .zip,
+  par morceaux ; `TS.planStravaArchive` / `applyStravaArchive` : doublons
+  écartés, place limitée à `DATA_MAX_BYTES` en gardant les plus récentes).
 - **Strava** (dans `app.js`) : connexion depuis Profil, puis à chaque ouverture
   de l'appli (au plus toutes les 15 min par appareil) le navigateur lit les
   nouvelles activités chez Strava et crée les séances (`strava_id` sur la
@@ -74,6 +78,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   la renvoie (`pushToCloud`).
 - `pushToCloud` n'envoie rien tant que les données du compte n'ont pas été lues
   (`cloudLoaded`) : un navigateur vide ne doit jamais écraser le cloud.
+  Un seul envoi à la fois : pendant un envoi, seule la dernière version attend
+  (jamais d'enregistrement séance par séance dans une boucle : `saveSessions`).
 - Les séances ne stockent que des résumés (pas de traces GPS).
 - Le document `users/{uid}` contient aussi `activeDays` (jours d'ouverture de
   l'appli, via `markActiveToday`) et `lastActive`. `pushToCloud` écrit avec

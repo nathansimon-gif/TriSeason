@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { deflateRawSync, crc32 } from 'node:zlib';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TZ = 'Europe/Paris';
@@ -250,7 +251,7 @@ async function main() {
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
     const empty = await v.page.textContent('#insightBody');
     await v.ctx.close();
-    assert(/Les jours avec plus de .* contre .* les autres jours/s.test(full) && full.includes('pas un conseil'), 'avec données : ' + full.slice(0, 160));
+    assert(/Quand tu as (mangé|bu) plus de .*Les autres fois, /s.test(full) && full.includes('pas un conseil'), 'avec données : ' + full.slice(0, 160));
     assert(/Encore\s+6 séances/.test(empty), 'sans données : ' + empty.slice(0, 200));
   });
   await test('Identifiants uniques (rien ne s’écrase lors d’un import groupé)', async () => {
@@ -404,6 +405,89 @@ async function main() {
     assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
     assert(hiddenBefore, 'bouton visible alors que Strava n’est pas connecté');
     assert(n === 41, `${n} séances au lieu de 41`);
+  });
+
+  // Petite archive .zip construite pour le test (un fichier GPS stocké, activities.csv compressé)
+  function makeZip(entries) {
+    const locals = [], centrals = []; let off = 0;
+    entries.forEach(({ name, data, deflate }) => {
+      const raw = Buffer.from(data), comp = deflate ? deflateRawSync(raw) : raw, nb = Buffer.from(name);
+      const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(deflate ? 8 : 0, 8);
+      lh.writeUInt32LE(crc32(raw), 14); lh.writeUInt32LE(comp.length, 18); lh.writeUInt32LE(raw.length, 22); lh.writeUInt16LE(nb.length, 26);
+      const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(deflate ? 8 : 0, 10);
+      ch.writeUInt32LE(crc32(raw), 16); ch.writeUInt32LE(comp.length, 20); ch.writeUInt32LE(raw.length, 24); ch.writeUInt16LE(nb.length, 28); ch.writeUInt32LE(off, 42);
+      locals.push(lh, nb, comp); centrals.push(ch, nb); off += 30 + nb.length + comp.length;
+    });
+    const cd = Buffer.concat(centrals), end = Buffer.alloc(22);
+    end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+    end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16);
+    return Buffer.concat([...locals, cd, end]);
+  }
+
+  await test('Archive Strava (.zip) : historique importé sans doublon, date locale', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    // s1 = vélo de la veille (42 km, 1h30) ; la séance s2 est déjà reliée à l'activité 900
+    await v.page.evaluate(() => { const d = TS.getData(); d.sessions.find(s => s.id === 's2').strava_id = 900; TS.saveData(d); });
+    const [y1, m1, d1] = day(-1).split('-');
+    const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m1 - 1];
+    const head = 'Activity ID,Activity Date,Activity Name,Activity Type,Activity Description,Elapsed Time,Distance,Max Heart Rate,Relative Effort,Commute,Activity Private Note,Activity Gear,Filename,Athlete Weight,Bike Weight,Elapsed Time,Moving Time,Distance,Max Speed,Average Speed,Elevation Gain,Elevation Loss,Elevation Low,Elevation High,Max Grade,Average Grade,Average Positive Grade,Average Negative Grade,Max Cadence,Average Cadence,Max Heart Rate,Average Heart Rate,Max Watts,Average Watts,Calories';
+    const row = (id, date, name, type, sec, m, desc = '') => [id, `"${date}"`, `"${name}"`, type, `"${desc}"`, sec, (m / 1000).toFixed(2), 170, '', 'false', '', '', '', '', '',
+      sec + '.0', sec, m + '.0', '', '', '120.0', '', '', '', '', '', '', '', '', '', '171.0', '148.4', '', '', '640.0'].join(',');
+    const csv = [head,
+      row(901, `${mon} ${+d1}, ${y1}, 10:30:00 PM`, 'Course du soir, en ville', 'Run', 3615, 10012, 'Bonne sortie,\navec "pluie"'),  // 22h30 UTC → lendemain 00h30 à Paris
+      row(902, `${mon} ${+d1}, ${y1}, 7:00:00 AM`, 'Sortie vélo', 'Ride', 5400, 42100),  // même séance que s1 (déjà importée par fichier)
+      row(900, `${mon} ${+d1}, ${y1}, 6:00:00 AM`, 'Natation', 'Swim', 2700, 2000),       // déjà reliée
+      row(903, `${mon} ${+d1}, ${y1}, 9:00:00 AM`, 'Balade', 'Walk', 3600, 4000),
+    ].join('\n');
+    const zip = makeZip([{ name: 'export_1/activities/123.fit.gz', data: 'x'.repeat(5000) }, { name: 'export_1/activities.csv', data: csv, deflate: true }]);
+    await v.page.setInputFiles('#archiveInput', { name: 'export_1.zip', mimeType: 'application/zip', buffer: zip });
+    await v.page.waitForSelector('#archiveResult button.btn--primary', { timeout: 5000 });
+    const summary = await v.page.textContent('#archiveResult');
+    await v.page.click('#archiveResult button.btn--primary');
+    await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => TS.getData().sessions);
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    const run = r.find(s => s.strava_id === 901);
+    assert(summary.includes('1 séance à ajouter') && summary.includes('1 ignorée'), 'résumé : ' + summary.replace(/\s+/g, ' ').slice(0, 200));
+    assert(r.length === 41 && r.find(s => s.id === 's1').strava_id === 902, `${r.length} séances, s1 reliée : ${r.find(s => s.id === 's1').strava_id}`);
+    assert(run && run.date === day(0) && run.sport === 'run' && run.duration === 3615 / 3600 && run.distance === 10.01 && run.fc_avg === 148 && run.elevation === 120,
+      'course : ' + JSON.stringify(run) + ' (date attendue ' + day(0) + ')');
+  });
+
+  await test('Archive Strava : limite de 1 Mo par compte respectée', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => {
+      const acts = [];
+      for (let i = 0; i < 9000; i++) acts.push({ id: 10000 + i, start: new Date(Date.UTC(2014, 0, 1) + i * 36e5 * 10), name: 'Sortie numéro ' + i,
+        sport: ['run', 'velo', 'nat'][i % 3], elapsed: 3600, distance_m: 10000, elevation: 50, hrAvg: 140, hrMax: 170, kcal: 500 });
+      const plan = TS.planStravaArchive(acts);
+      TS.applyStravaArchive(plan);
+      return { dropped: plan.dropped, added: plan.add.length, bytes: TS.dataBytes(TS.getData()), max: TS.DATA_MAX_BYTES,
+        newest: plan.add[0].date, oldest: plan.oldestKept };
+    });
+    await v.ctx.close();
+    assert(r.dropped > 0 && r.bytes <= r.max && r.newest > r.oldest, JSON.stringify(r));
+    return `${r.added} ajoutées, ${r.dropped} trop anciennes, ${Math.round(r.bytes / 1024)} Ko`;
+  });
+
+  await test('Import groupé : un seul envoi au cloud à la fois', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    const n = await v.page.evaluate(async () => {
+      let sets = 0;
+      const fs = firebase.firestore;
+      firebase.firestore = () => { const db = fs(); return { collection: (c) => ({ doc: (id) => { const d = db.collection(c).doc(id);
+        return { ...d, set: (...a) => { sets++; return new Promise(r => setTimeout(r, 50)).then(() => d.set(...a)); } }; } }) }; };
+      firebase.firestore.FieldValue = fs.FieldValue;
+      for (let i = 0; i < 40; i++) TS.saveSession({ date: '2026-08-01', sport: 'run', duration: 0.5, distance: 5 });
+      await new Promise(r => setTimeout(r, 400));
+      return { sets, cloud: JSON.parse(localStorage.getItem('__fb')).docs.testeur.data.sessions.length };
+    });
+    await v.ctx.close();
+    assert(n.sets <= 3 && n.cloud === 80, `${n.sets} envois, ${n.cloud} séances dans le cloud (80 attendues)`);
   });
 
   await test('Serveur TriSeason : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
