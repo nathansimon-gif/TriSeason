@@ -203,6 +203,39 @@ async function main() {
     assert(r.n > 0 && r.enough, `${r.n} séances utilisables, groupes ${r.high.n}/${r.low.n}`);
     return `${r.high.n} / ${r.low.n} séances`;
   });
+  await test('Badges : obtenus à la bonne date', async () => {
+    const r = await u.page.evaluate(() => {
+      const d = { sessions: [
+        { id: 'a', date: '2026-10-05', sport: 'velo', distance: 60, duration: 2 },
+        { id: 'b', date: '2026-10-05', sport: 'run', distance: 10, duration: 1 },
+        { id: 'c', date: '2026-10-07', sport: 'nat', distance: 2.2, duration: 1 },
+        { id: 'e', date: '2026-10-08', sport: 'velo', distance: 45, duration: 1.5 },
+        { id: 'f', date: '2026-10-11', sport: 'run', distance: 5, duration: 0.5 } ],
+        nutrition: { meals: ['01', '02', '03', '04', '05', '06', '07'].map((x, i) => ({ id: 'm' + i, date: '2026-10-' + x })), hydration: {} },
+        competitions: [{ id: 'c1', date: '2026-10-04', actual_time: '0:41:07', goal_time: '0:42:00' }] };
+      const b = Object.fromEntries(TS.getAchievements(d).map(x => [x.id, x]));
+      return { brick: b.brick.date, tri: b.tri_week.date, velo: b.velo100.date, swim: b.swim2k.date, meals7: b.meals7.date,
+        goal: b.goal.date, finisher: b.finisher.date, half: b.half.earned, halfProg: b.half.value, s50: b.s50.value };
+    });
+    const want = { brick: '2026-10-05', tri: '2026-10-07', velo: '2026-10-08', swim: '2026-10-07', meals7: '2026-10-07', goal: '2026-10-04', finisher: '2026-10-04' };
+    Object.entries(want).forEach(([k, v]) => assert(r[k] === v, `${k} : ${r[k]} au lieu de ${v}`));
+    assert(!r.half && r.halfProg === 10 && r.s50 === 5, 'progression : ' + JSON.stringify(r));
+  });
+  await test('Défis de la semaine : choisis d’après les 4 semaines précédentes', async () => {
+    const r = await u.page.evaluate(() => {
+      const sessions = [];
+      // 4 semaines avant la semaine du 12/10/2026 : 3 courses et 2 vélos par semaine, pas de natation
+      [-28, -21, -14, -7].forEach(off => {
+        const day = (n) => { const x = TS.parseLocalDate('2026-10-12'); x.setDate(x.getDate() + off + n); return TS.localDateStr(x); };
+        [0, 2, 4].forEach(n => sessions.push({ date: day(n), sport: 'run' }));
+        [1, 5].forEach(n => sessions.push({ date: day(n), sport: 'velo' }));
+      });
+      sessions.push({ date: '2026-10-13', sport: 'velo' }, { date: '2026-10-18', sport: 'velo' });
+      const d = { sessions, nutrition: { meals: [{ date: '2026-10-12' }], hydration: {} } };
+      return TS.weeklyChallenges('2026-W42', d).map(c => [c.label, c.value, c.done]);
+    });
+    assert(JSON.stringify(r) === JSON.stringify([['3 séances de vélo', 2, false], ['Repas notés 3 jours', 1, false]]), JSON.stringify(r));
+  });
   await test('Identifiants uniques (rien ne s’écrase lors d’un import groupé)', async () => {
     const r = await u.page.evaluate(() => { const before = TS.getData().sessions.length;
       for (let i = 0; i < 30; i++) TS.saveSession({ date: '2026-08-0' + (1 + i % 9), sport: 'nat', duration: 0.5, distance: 1 });

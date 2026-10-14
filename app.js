@@ -1159,6 +1159,218 @@ function importData(file) {
   });
 }
 
+// ── Défis de la semaine et badges ───────────────────────────────────────────
+// Tout est calculé à partir des données (rien n'est stocké, sauf la liste des
+// badges déjà annoncés : data.achievements_seen). Visible seulement par
+// l'utilisateur lui-même (règle Strava : pas de partage des séances Strava).
+const HYDRO_TARGET_ML = 2500;   // même objectif que la page Nutrition
+const SPORT_WORDS = { nat: 'natation', velo: 'vélo', run: 'course à pied' };
+
+function addDaysStr(day, n) { const d = parseLocalDate(day); d.setDate(d.getDate() + n); return localDateStr(d); }
+function weekDays(weekKey) { const m = localDateStr(getWeekMonday(weekKey)); return [0, 1, 2, 3, 4, 5, 6].map(i => addDaysStr(m, i)); }
+function prevWeekKey(weekKey, n = 1) { return getISOWeek(addDaysStr(localDateStr(getWeekMonday(weekKey)), -7 * n)); }
+
+// Index par jour : séances, repas, hydratation (calculé une fois par appel)
+function activityIndex(data) {
+  const byWeek = {}, mealDays = new Set(), hydro = {};
+  (data.sessions || []).forEach(s => {
+    if (!s.date) return;
+    const wk = getISOWeek(s.date);
+    (byWeek[wk] = byWeek[wk] || []).push(s);
+  });
+  const nutri = data.nutrition || {};
+  (nutri.meals || []).forEach(m => { if (m.date) mealDays.add(m.date); });
+  Object.entries(nutri.hydration || {}).forEach(([d, v]) => { hydro[d] = v || 0; });
+  return { byWeek, mealDays, hydro };
+}
+
+// Deux défis par semaine, choisis selon les 4 semaines précédentes :
+// un d'entraînement (le sport le moins pratiqué) et un de nutrition.
+function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) {
+  const prev = [1, 2, 3, 4].map(n => prevWeekKey(weekKey, n));
+  const recent = [].concat(...[1, 2, 3, 4, 5, 6, 7, 8].map(n => idx.byWeek[prevWeekKey(weekKey, n)] || []));
+  const practiced = ['nat', 'velo', 'run'].filter(sp => recent.some(s => s.sport === sp));
+  const avg = (fn) => prev.reduce((a, wk) => a + fn(wk), 0) / prev.length;
+  const days = weekDays(weekKey);
+  const inWeek = idx.byWeek[weekKey] || [];
+  const list = [];
+
+  if (practiced.length >= 2) {
+    const counts = practiced.map(sp => ({ sp, a: avg(wk => (idx.byWeek[wk] || []).filter(s => s.sport === sp).length) }));
+    counts.sort((x, y) => x.a - y.a);
+    const { sp, a } = counts[0];
+    const target = Math.min(3, Math.max(1, Math.round(a) + 1));
+    list.push({ id: 'sport', kind: sp, label: `${target} séance${target > 1 ? 's' : ''} de ${SPORT_WORDS[sp]}`,
+      target, value: inWeek.filter(s => s.sport === sp).length });
+  } else {
+    const a = avg(wk => (idx.byWeek[wk] || []).length);
+    const target = Math.min(6, Math.max(2, Math.round(a) + 1));
+    list.push({ id: 'sessions', kind: practiced[0] || 'all', label: `${target} séances dans la semaine`, target, value: inWeek.length });
+  }
+
+  const mealAvg = avg(wk => weekDays(wk).filter(d => idx.mealDays.has(d)).length);
+  if (mealAvg < 5) {
+    const target = Math.min(7, Math.max(3, Math.ceil(mealAvg) + 2));
+    list.push({ id: 'meals', kind: 'nutri', label: `Repas notés ${target} jours`, target, value: days.filter(d => idx.mealDays.has(d)).length });
+  } else {
+    const hAvg = avg(wk => weekDays(wk).filter(d => (idx.hydro[d] || 0) >= HYDRO_TARGET_ML).length);
+    const target = Math.min(7, Math.max(3, Math.ceil(hAvg) + 1));
+    list.push({ id: 'hydro', kind: 'nutri', label: `2,5 L d’eau ${target} jours`, target, value: days.filter(d => (idx.hydro[d] || 0) >= HYDRO_TARGET_ML).length });
+  }
+  list.forEach(c => { c.done = c.value >= c.target; });
+  return list;
+}
+
+// Semaines d'affilée avec les deux défis réussis (la semaine en cours compte si elle est déjà réussie).
+function challengeHistory(data = getData(), idx = activityIndex(data)) {
+  const today = localDateStr();
+  const current = getISOWeek(today);
+  const firstDay = [...(data.sessions || []).map(s => s.date), ...idx.mealDays].filter(Boolean).sort()[0];
+  const out = { current: weeklyChallenges(current, data, idx), streak: 0, best: 0, doneWeeks: [] };
+  if (!firstDay) return out;
+  const firstWeek = getISOWeek(firstDay);
+  const weeks = [];
+  for (let wk = prevWeekKey(current), i = 0; wk >= firstWeek && i < 260; wk = prevWeekKey(wk), i++) weeks.push(wk);
+  weeks.reverse();
+  let run = 0;
+  weeks.forEach(wk => {
+    const ok = weeklyChallenges(wk, data, idx).every(c => c.done);
+    if (ok) { out.doneWeeks.push(wk); run++; out.best = Math.max(out.best, run); } else run = 0;
+  });
+  out.streak = run + (out.current.every(c => c.done) ? 1 : 0);
+  if (out.current.every(c => c.done)) { out.doneWeeks.push(current); out.best = Math.max(out.best, out.streak); }
+  return out;
+}
+
+// Badges : { id, label, desc, kind, earned, date, value, target }
+function getAchievements(data = getData()) {
+  const idx = activityIndex(data);
+  const sessions = (data.sessions || []).filter(s => s.date).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const badges = [];
+  const add = (id, label, desc, kind, date, value, target) =>
+    badges.push({ id, label, desc, kind, earned: !!date, date: date || null, value: Math.min(value || 0, target), target });
+
+  // Nombre de séances
+  [[1, 'first', 'Premier pas', 'Ta première séance enregistrée'], [50, 's50', '50 séances', '50 séances enregistrées'],
+   [100, 's100', '100 séances', '100 séances enregistrées']].forEach(([n, id, label, desc]) =>
+    add(id, label, desc, 'all', sessions[n - 1] && sessions[n - 1].date, sessions.length, n));
+
+  // Par semaine : trois sports, 100 km de vélo, 10 h d'entraînement, 3 séances
+  const weekKeys = Object.keys(idx.byWeek).sort();
+  let triDate = null, veloDate = null, hoursDate = null, bestVelo = 0, bestHours = 0, bestSports = 0;
+  weekKeys.forEach(wk => {
+    const list = idx.byWeek[wk].slice().sort((a, b) => a.date.localeCompare(b.date));
+    const seen = new Set(); let km = 0, h = 0;
+    list.forEach(s => {
+      seen.add(s.sport);
+      if (!triDate && seen.has('nat') && seen.has('velo') && seen.has('run')) triDate = s.date;
+      if (s.sport === 'velo') km += s.distance || 0;
+      h += s.duration || 0;
+      if (!veloDate && km >= 100) veloDate = s.date;
+      if (!hoursDate && h >= 10) hoursDate = s.date;
+    });
+    bestVelo = Math.max(bestVelo, km); bestHours = Math.max(bestHours, h); bestSports = Math.max(bestSports, seen.size);
+  });
+  add('tri_week', 'Triathlète', 'Les 3 sports dans la même semaine', 'all', triDate, bestSports, 3);
+  add('velo100', '100 km de vélo', '100 km de vélo en une semaine', 'velo', veloDate, Math.round(bestVelo), 100);
+  add('hours10', '10 heures', '10 h d’entraînement en une semaine', 'all', hoursDate, Math.round(bestHours * 10) / 10, 10);
+
+  // Enchaînement vélo puis course le même jour
+  const byDay = {};
+  sessions.forEach(s => { (byDay[s.date] = byDay[s.date] || new Set()).add(s.sport); });
+  const brick = Object.keys(byDay).sort().find(d => byDay[d].has('velo') && byDay[d].has('run'));
+  add('brick', 'Enchaînement', 'Vélo et course à pied le même jour', 'run', brick, brick ? 1 : 0, 1);
+
+  // Longues distances
+  const firstOver = (sport, km) => (sessions.find(s => s.sport === sport && (s.distance || 0) >= km) || {}).date;
+  const maxDist = (sport) => Math.max(0, ...sessions.filter(s => s.sport === sport).map(s => s.distance || 0));
+  add('swim2k', 'Nageur', '2 km de natation en une séance', 'nat', firstOver('nat', 2), Math.round(maxDist('nat') * 10) / 10, 2);
+  add('half', 'Semi-marathon', '21,1 km de course en une séance', 'run', firstOver('run', 21.0975), Math.round(maxDist('run') * 10) / 10, 21.1);
+
+  // Régularité : 4 semaines d'affilée avec au moins 3 séances
+  let regDate = null, run = 0, bestRun = 0, prevWk = null;
+  weekKeys.forEach(wk => {
+    const ok = idx.byWeek[wk].length >= 3;
+    run = ok ? (prevWk && prevWeekKey(wk) === prevWk && run ? run + 1 : 1) : 0;
+    if (ok) prevWk = wk;
+    bestRun = Math.max(bestRun, run);
+    if (!regDate && run >= 4) regDate = idx.byWeek[wk].map(s => s.date).sort().pop();
+  });
+  add('regular4', 'Régulier', '4 semaines d’affilée avec au moins 3 séances', 'all', regDate, bestRun, 4);
+
+  // Nutrition : jours d'affilée avec repas notés, 30 jours notés, hydratation tenue 5 jours
+  const streakDate = (okDay, n) => {
+    const daysList = Object.keys(okDay).sort();
+    let best = 0, cur = 0, prev = null, date = null;
+    daysList.forEach(d => {
+      cur = prev && addDaysStr(prev, 1) === d ? cur + 1 : 1;
+      prev = d; best = Math.max(best, cur);
+      if (!date && cur >= n) date = d;
+    });
+    return { date, best };
+  };
+  const mealObj = {}; idx.mealDays.forEach(d => { mealObj[d] = 1; });
+  const m7 = streakDate(mealObj, 7);
+  add('meals7', 'Semaine notée', 'Repas notés 7 jours d’affilée', 'nutri', m7.date, m7.best, 7);
+  const mealSorted = [...idx.mealDays].sort();
+  add('meals30', 'Carnet tenu', 'Repas notés sur 30 jours', 'nutri', mealSorted[29], mealSorted.length, 30);
+  const hydObj = {}; Object.entries(idx.hydro).forEach(([d, v]) => { if (v >= HYDRO_TARGET_ML) hydObj[d] = 1; });
+  const h5 = streakDate(hydObj, 5);
+  add('hydro5', 'Bien hydraté', '2,5 L d’eau 5 jours d’affilée', 'nutri', h5.date, h5.best, 5);
+
+  // Ressenti noté sur 10 séances d'affilée
+  let fRun = 0, fBest = 0, fDate = null;
+  sessions.forEach(s => { fRun = s.sensation ? fRun + 1 : 0; fBest = Math.max(fBest, fRun); if (!fDate && fRun >= 10) fDate = s.date; });
+  add('feel10', 'À l’écoute', 'Ressenti noté sur 10 séances d’affilée', 'nutri', fDate, fBest, 10);
+
+  // Compétitions
+  const today = localDateStr();
+  const comps = (data.competitions || []).filter(c => c.date && c.date <= today && c.actual_time).sort((a, b) => a.date.localeCompare(b.date));
+  add('finisher', 'Finisher', 'Une compétition terminée', 'all', comps[0] && comps[0].date, comps.length, 1);
+  const goal = comps.find(c => c.goal_time && compTimeToSec(c.actual_time) && compTimeToSec(c.actual_time) <= compTimeToSec(c.goal_time));
+  add('goal', 'Objectif atteint', 'Temps visé atteint en compétition', 'all', goal && goal.date, goal ? 1 : 0, 1);
+
+  // Défis de la semaine
+  const hist = challengeHistory(data, idx);
+  const w = hist.doneWeeks;
+  const weekEnd = (wk) => { const ds = weekDays(wk); return ds[6] > today ? today : ds[6]; };
+  add('challenge1', 'Défi relevé', 'Les deux défis d’une semaine réussis', 'all', w[0] && weekEnd(w[0]), w.length, 1);
+  add('challenge4', 'Série de 4', 'Défis réussis 4 semaines d’affilée', 'all', hist.best >= 4 ? weekEnd(w[w.length - 1]) : null, hist.best, 4);
+  return badges;
+}
+
+// Affichage d'un badge (Dashboard et Profil) : médaille avec un repère court, pas d'emoji.
+const BADGE_MARKS = { first: '1', s50: '50', s100: '100', tri_week: '3', velo100: 'km', hours10: '10h', brick: 'V+C',
+  swim2k: '2k', half: '21', regular4: '4×3', meals7: '7j', meals30: '30j', hydro5: 'H2O', feel10: '10',
+  finisher: 'F', goal: 'OK', challenge1: '1', challenge4: '4' };
+function badgeTileHtml(b) {
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const when = b.earned ? 'Obtenu le ' + parseLocalDate(b.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const pct = b.target ? Math.round(b.value / b.target * 100) : 0;
+  return `<div class="badge-tile${b.earned ? '' : ' locked'}" title="${esc(b.desc)}">
+    <div class="badge-tile__medal badge-kind--${b.kind}">${BADGE_MARKS[b.id] || '★'}</div>
+    <div style="min-width:0">
+      <div class="badge-tile__name">${esc(b.label)}</div>
+      <div class="badge-tile__desc">${esc(b.earned ? when : b.desc)}</div>
+      ${b.earned ? '' : `<div class="badge-tile__prog"><b style="width:${pct}%"></b></div>`}
+    </div>
+  </div>`;
+}
+
+// Badges obtenus mais pas encore annoncés ; les marque comme vus.
+// Première fois : tout est marqué vu, et on renvoie seulement le nombre.
+function takeNewAchievements() {
+  if (!cloudLoaded) return null;
+  const data = getData();
+  const earned = getAchievements(data).filter(b => b.earned);
+  const seen = data.achievements_seen;
+  const fresh = seen ? earned.filter(b => !seen.includes(b.id)) : [];
+  if (seen && !fresh.length) return { fresh: [], first: false };
+  data.achievements_seen = earned.map(b => b.id);
+  saveData(data);
+  return { fresh, first: !seen, count: earned.length };
+}
+
 // ── Strava : les séances arrivent toutes seules ─────────────────────────────
 // Réglages publics (ils ne sont pas secrets). La clé secrète de l'appli Strava
 // est gardée par le petit serveur TriSeason (tools/server, Cloudflare), jamais
@@ -1488,6 +1700,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
+  weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   SPORTS, COMP_TYPES,

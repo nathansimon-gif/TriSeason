@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #20 (bouton « Actualiser Strava » sur la page Séances) puis recharger le site
+- [ ] 🧑 Fusionner la PR #21 (défis de la semaine et badges) puis recharger le site
 - [ ] 🧑 Vérifier sur strava.com/settings/api que le **domaine du rappel d'autorisation** est `nathansimon-gif.github.io`, et dans Cloudflare que `ALLOWED_ORIGIN` est `https://nathansimon-gif.github.io` (sans `/TriSeason`)
 - [ ] 🧑 Tester : Profil → « Connecter avec Strava », puis vérifier les séances des 30 derniers jours. Ensuite jusqu'à 9 testeurs (limite Strava sans validation)
 - [ ] 🧑 Tester sur ton téléphone la recherche et le scan de produits (Nutrition → Ajouter un repas)
@@ -30,6 +30,13 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [ ] 🤖 **Comptes inactifs depuis 3 ans** : les lister dans le rapport du lundi (engagement de la politique de confidentialité ; suppression manuelle sur décision de Nathan). Premiers comptes concernés : pas avant 2029
 - [ ] 🤖 **Préparer l'offre gratuite / payante dans le code** (savoir quelles pages sont gratuites ou payantes, sans rien faire payer encore)
 - [ ] 🧑 Faire relire la page *Confidentialité et mentions légales* par une personne compétente
+
+## Plus tard : idées pour rendre l'appli plus vivante
+
+- [ ] 🤖 **Partage en story** (Instagram, WhatsApp…) : bouton « Partager » sur une séance, une compétition ou la semaine, qui crée une image verticale avec ce que Strava ne montre pas (glucides par heure, ressenti, repas notés 7/7). Image fabriquée sur le téléphone, rien envoyé à un service extérieur. Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
+- [ ] 🤖 **Parcours des sorties** : tracé simplifié fourni par Strava (ou tiré des fichiers .fit), dessiné sur la fiche de la séance et sur l'image story, sans fond de carte (une vraie carte = service extérieur, à ajouter à la politique de confidentialité). **Après** le découpage du stockage (sinon limite de 1 Mo par compte)
+- [ ] 🤖 **Défis entre amis** : défi créé avec un code d'invitation, chacun accepte de partager **seulement son score**, classement simple ; plus tard des défis de club. Demande de nouvelles règles Firebase et une mise à jour de la confidentialité. **Règle Strava** : les séances venues de Strava ne peuvent pas être montrées à d'autres personnes, donc défis sur ce qui est propre à TriSeason (jours de repas notés, hydratation, ressenti) ou sur les séances importées par fichier
+- [ ] 🧑 *Avec la version payante* : vraies récompenses avec des partenaires (ex. réductions sur la nutrition sportive)
 
 ## Dans 1 an, ou quand l'appli grandit
 
@@ -63,6 +70,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/10/2026 | #21 | **Défis de la semaine** (2 défis choisis d'après les 4 semaines précédentes : un sport, un nutrition ; série de semaines réussies) sur le Dashboard, et **18 badges** (Profil) : sports, régularité, nutrition, compétitions |
 | 14/10/2026 | #20 | Bouton « Actualiser Strava » en haut de la page Séances (visible quand Strava est connecté) |
 | 15/10/2026 | #19 | Connexion Strava activée (ID client 287261, serveur Cloudflare `triseason.tri-season-tracker.workers.dev`) ; recherche d'aliments par le serveur |
 | 15/10/2026 | #18 | **Connexion Strava** prête (Profil → « Connecter avec Strava », séances ajoutées à l'ouverture de l'appli, doublons reliés, lien « Voir sur Strava », déconnexion) + petit serveur Cloudflare (`tools/server`) ; recherche d'aliments : 3 essais et passage par le serveur (Open Food Facts souvent saturé) |
