@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #19 (connexion Strava activée) puis recharger le site
+- [ ] 🧑 Fusionner la PR #20 (bouton « Actualiser Strava » sur la page Séances) puis recharger le site
 - [ ] 🧑 Vérifier sur strava.com/settings/api que le **domaine du rappel d'autorisation** est `nathansimon-gif.github.io`, et dans Cloudflare que `ALLOWED_ORIGIN` est `https://nathansimon-gif.github.io` (sans `/TriSeason`)
 - [ ] 🧑 Tester : Profil → « Connecter avec Strava », puis vérifier les séances des 30 derniers jours. Ensuite jusqu'à 9 testeurs (limite Strava sans validation)
 - [ ] 🧑 Tester sur ton téléphone la recherche et le scan de produits (Nutrition → Ajouter un repas)
@@ -63,6 +63,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/10/2026 | #20 | Bouton « Actualiser Strava » en haut de la page Séances (visible quand Strava est connecté) |
 | 15/10/2026 | #19 | Connexion Strava activée (ID client 287261, serveur Cloudflare `triseason.tri-season-tracker.workers.dev`) ; recherche d'aliments par le serveur |
 | 15/10/2026 | #18 | **Connexion Strava** prête (Profil → « Connecter avec Strava », séances ajoutées à l'ouverture de l'appli, doublons reliés, lien « Voir sur Strava », déconnexion) + petit serveur Cloudflare (`tools/server`) ; recherche d'aliments : 3 essais et passage par le serveur (Open Food Facts souvent saturé) |
 | 14/10/2026 | #17 | Nutrition : recherche de produits du commerce et **scan du code-barres** (Open Food Facts) ; phrase « Strava et Garmin suivent tes séances, TriSeason les relie à ce que tu manges et à ta forme » (connexion + Aide) ; nouvelle simulation des 100 clients |

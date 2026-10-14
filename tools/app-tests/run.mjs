@@ -340,6 +340,22 @@ async function main() {
     assert(v.calls.filter(c => c.startsWith('/strava/deauthorize')).length === 2, 'Strava non prévenu');
   });
 
+  await test('Strava : bouton « Actualiser Strava » sur la page Séances', async () => {
+    const v = await stravaUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    const hiddenBefore = await v.page.locator('#stravaRefreshBtn').isHidden();
+    await v.page.evaluate(() => { const d = TS.getData();
+      d.strava = { access_token: 'acces-1', refresh_token: 'r', expires_at: Date.now() / 1000 + 9999, after: 0 }; TS.saveData(d); });
+    await v.page.waitForTimeout(200);
+    await v.page.click('#stravaRefreshBtn');
+    await v.page.waitForFunction(() => TS.getData().sessions.some(s => s.strava_id === 502), null, { timeout: 8000 });
+    const n = await v.page.evaluate(() => TS.getData().sessions.length);
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    assert(hiddenBefore, 'bouton visible alors que Strava n’est pas connecté');
+    assert(n === 41, `${n} séances au lieu de 41`);
+  });
+
   await test('Serveur TriSeason : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
     const { default: worker } = await import('../server/worker.js');
     const env = { STRAVA_CLIENT_ID: '12345', STRAVA_CLIENT_SECRET: 'SECRET-XYZ', ALLOWED_ORIGIN: 'https://site.test' };
