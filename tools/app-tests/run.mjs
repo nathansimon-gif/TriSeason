@@ -243,6 +243,16 @@ async function main() {
     });
     assert(JSON.stringify(r) === JSON.stringify([['3 séances de vélo', 2, false], ['Repas notés 3 jours', 1, false]]), JSON.stringify(r));
   });
+  await test('Dashboard : carte « Ce que Strava ne te montre pas »', async () => {
+    await u.page.goto(`${BASE}/index.html`); await u.page.waitForTimeout(800);
+    const full = await u.page.textContent('#insightBody');
+    const v = await newUser({ data: { profile: {}, sessions: [], nutrition: { meals: [], hydration: {} } } });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const empty = await v.page.textContent('#insightBody');
+    await v.ctx.close();
+    assert(/Les jours avec plus de .* contre .* les autres jours/s.test(full) && full.includes('pas un conseil'), 'avec données : ' + full.slice(0, 160));
+    assert(/Encore\s+6 séances/.test(empty), 'sans données : ' + empty.slice(0, 200));
+  });
   await test('Identifiants uniques (rien ne s’écrase lors d’un import groupé)', async () => {
     const r = await u.page.evaluate(() => { const before = TS.getData().sessions.length;
       for (let i = 0; i < 30; i++) TS.saveSession({ date: '2026-08-0' + (1 + i % 9), sport: 'nat', duration: 0.5, distance: 1 });
