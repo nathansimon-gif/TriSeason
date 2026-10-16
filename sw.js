@@ -1,11 +1,13 @@
 // TriSeason Tracker — Service Worker
-const CACHE = 'triseason-v10';
+const CACHE = 'triseason-v11';
+// Adresses relatives au service worker : le site est servi dans un sous-dossier
+// (nathansimon-gif.github.io/TriSeason/), un « / » au début viserait la racine.
 const ASSETS = [
-  '/', '/index.html', '/sport.html', '/sessions.html',
-  '/competitions.html', '/nutrition.html', '/records.html',
-  '/profile.html', '/forme.html',
-  '/app.js', '/style.css', '/fit-parser.js', '/import.js',
-  '/vendor/chart.umd.min.js',
+  './', './index.html', './sport.html', './sessions.html',
+  './competitions.html', './nutrition.html', './records.html',
+  './profile.html', './forme.html', './login.html', './aide.html',
+  './app.js', './style.css', './fit-parser.js', './import.js', './auth-guard.js',
+  './vendor/chart.umd.min.js', './manifest.json',
 ];
 
 self.addEventListener('install', e => {
