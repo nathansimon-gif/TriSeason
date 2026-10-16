@@ -1226,6 +1226,80 @@ function fuelCarbs(f) {
   return { carbs: unit * (f.qty || 1), prot: (Number(f.prot) || 0) * (f.qty || 1), estimated: per == null };
 }
 
+// ── Séances prévues (planification) ────────────────────────────────────────
+// data.plans = [{ id, date 'YYYY-MM-DD', sport, distance (km|null), duration (h|null), notes }]
+// Une séance prévue est « réalisée » dès qu'une séance du même sport existe le
+// même jour (rien à cocher). Chaque séance ne compte que pour une seule prévue.
+function getPlans() { return (getData().plans || []).slice().sort((a, b) => a.date.localeCompare(b.date)); }
+function savePlan(plan) {
+  const data = getData();
+  data.plans = data.plans || [];
+  if (!plan.id) plan.id = newId();
+  const i = data.plans.findIndex(p => p.id === plan.id);
+  if (i >= 0) data.plans[i] = plan; else data.plans.push(plan);
+  saveData(data);
+  return plan;
+}
+function deletePlan(id) {
+  const data = getData();
+  data.plans = (data.plans || []).filter(p => p.id !== id);
+  saveData(data);
+}
+
+// Durée saisie (« 1h30 », « 45min », « 1:30:00 », « 1.5 ») → heures décimales.
+function parseDuration(val) {
+  if (!val) return null;
+  val = String(val).trim().toLowerCase().replace(/\s+/g, '').replace(',', '.');
+  const toH = (h, m, s) => Math.round((+h || 0) * 3600 + (+m || 0) * 60 + (+s || 0)) / 3600;
+  let r;
+  if ((r = val.match(/^(\d+):(\d{1,2}):(\d{1,2})$/))) return toH(r[1], r[2], r[3]);
+  if ((r = val.match(/^(\d+):(\d{2})$/))) return toH(r[1], r[2], 0);
+  if ((r = val.match(/^(\d+)h(\d{1,2})?$/))) return toH(r[1], r[2], 0);
+  if ((r = val.match(/^(?:(\d+)h)?(\d{1,3})(?:min|mn|m|')$/))) return toH(r[1], r[2], 0);
+  if (/^\d+(\.\d+)?$/.test(val)) return toH(parseFloat(val), 0, 0);
+  return null;
+}
+
+// Part de l'objectif atteinte (distance et/ou durée), null si pas d'objectif chiffré.
+function planRatio(plan, s) {
+  const parts = [];
+  if (plan.distance) parts.push((s.distance || 0) / plan.distance);
+  if (plan.duration) parts.push((s.duration || 0) / plan.duration);
+  return parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;
+}
+
+// Statut de chaque séance prévue : 'done' (objectif atteint à 90 % ou plus, ou sans
+// objectif chiffré), 'partial', 'missed' (jour passé sans séance), 'today', 'upcoming'.
+function planStatuses(data = getData()) {
+  const today = localDateStr();
+  const plans = (data.plans || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const used = new Set();
+  const out = {};
+  plans.forEach(plan => {
+    const cands = (data.sessions || []).filter(s => s.date === plan.date && s.sport === plan.sport && !used.has(s.id));
+    let best = null, bestGap = Infinity;
+    cands.forEach(s => { const r = planRatio(plan, s); const gap = r == null ? 0 : Math.abs(1 - r); if (gap < bestGap) { bestGap = gap; best = s; } });
+    if (best) {
+      used.add(best.id);
+      const ratio = planRatio(plan, best);
+      out[plan.id] = { state: ratio == null || ratio >= 0.9 ? 'done' : 'partial', session: best, ratio };
+    } else out[plan.id] = { state: plan.date < today ? 'missed' : plan.date === today ? 'today' : 'upcoming', session: null, ratio: null };
+  });
+  return out;
+}
+
+// Séances prévues réalisées depuis la dernière fois (pour un message unique).
+function takeDonePlans() {
+  if (!cloudLoaded) return [];
+  const data = getData();
+  const st = planStatuses(data);
+  const fresh = (data.plans || []).filter(p => st[p.id] && st[p.id].session && !p.announced);
+  if (!fresh.length) return [];
+  fresh.forEach(p => { p.announced = true; });
+  saveData(data);
+  return fresh.map(p => ({ plan: p, ...st[p.id] }));
+}
+
 // ── Défis de la semaine et badges ───────────────────────────────────────────
 // Tout est calculé à partir des données (rien n'est stocké, sauf la liste des
 // badges déjà annoncés : data.achievements_seen). Visible seulement par
@@ -1753,6 +1827,19 @@ async function stravaDisconnect({ deleteSessions = false } = {}) {
   try { localStorage.removeItem(STRAVA_CHECK_KEY); } catch {}
 }
 
+// Annonce « séance prévue réalisée » sur n'importe quelle page (import, Strava…).
+let planAnnounceTimer = null;
+window.addEventListener('triseason:update', () => {
+  clearTimeout(planAnnounceTimer);
+  planAnnounceTimer = setTimeout(() => {
+    takeDonePlans().forEach((d, i) => setTimeout(() => {
+      const sp = (SPORTS[d.plan.sport] || {}).label || '';
+      toast(d.state === 'done' ? 'Séance prévue réalisée : ' + sp.toLowerCase() + ' du ' + parseLocalDate(d.plan.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+        : 'Séance prévue faite en partie (' + Math.round(d.ratio * 100) + ' % de l’objectif) : ' + sp.toLowerCase() + ' du ' + parseLocalDate(d.plan.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }));
+    }, i * 3000));
+  }, 400);
+});
+
 // ── Toast notifications ───────────────────────────────────────────────────────
 function toast(msg, type = 'success') {
   const t = document.createElement('div');
@@ -1867,7 +1954,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
-  formatHours, FUEL_PRESETS, fuelCarbs, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
+  formatHours, FUEL_PRESETS, fuelCarbs, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES,

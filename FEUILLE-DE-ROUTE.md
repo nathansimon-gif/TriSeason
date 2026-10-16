@@ -9,7 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #28 (message clair quand la limite de comptes Strava est atteinte) puis recharger le site
+- [ ] 🧑 Fusionner la PR #29 (planification des séances + feuille de route : prix et espace pro) puis recharger le site
+- [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
 - [ ] 🧑 Passer la limite Strava de 1 à **10 comptes** : strava.com/settings/api, sur la page de l'appli TriSeason (gratuit, sans validation)
 - [ ] 🧑 *Facultatif* : recopier le nouveau `tools/server/worker.js` dans Cloudflare (Edit code → coller → Deploy). L'appli reconnaît déjà la limite avec l'ancienne version ; la nouvelle la signale plus proprement
 - [ ] 🧑 Tester l'import de **beaucoup de fichiers .fit** (50 d'un coup) : si ça ne plante plus, Claude peut rendre l'import automatique par paquets de 50
@@ -46,6 +47,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Plus tard : idées pour rendre l'appli plus vivante
 
+- [ ] 🤖 *Planification, ensuite* : répéter une séance chaque semaine (ex. natation tous les mardis), déplacer une séance prévue en la glissant dans le calendrier, voir les séances prévues de la semaine sur la page Séances
+
 - [ ] 🤖 **Parcours des sorties** : tracé simplifié fourni par Strava (ou tiré des fichiers .fit), dessiné sur la fiche de la séance et sur l'image story, sans fond de carte (une vraie carte = service extérieur, à ajouter à la politique de confidentialité). **Après** le rangement en tiroirs (sinon limite de 1 Mo par compte)
 - [ ] 🤖 **Défis entre amis** : défi créé avec un code d'invitation, chacun accepte de partager **seulement son score**, classement simple ; plus tard des défis de club. Demande de nouvelles règles Firebase et une mise à jour de la confidentialité. **Règle Strava** : les séances venues de Strava ne peuvent pas être montrées à d'autres personnes, donc défis sur ce qui est propre à TriSeason (jours de repas notés, hydratation, ressenti) ou sur les séances importées par fichier
 - [ ] 🧑 *Avec la version payante* : vraies récompenses avec des partenaires (ex. réductions sur la nutrition sportive)
@@ -57,15 +60,25 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Quand l'appli devient payante
 
-- [ ] 🧑 Choisir le découpage : **gratuit** (import des séances, Dashboard, sports, compétitions, records) / **payant** (Forme, Nutrition, IA) — un ou deux forfaits
+- [ ] 🧑 **Prix conseillés** (rapport du 18/10, à confirmer avec les testeurs) :
+  - **Sportifs** : **gratuit** (séances, Strava, Dashboard, sports, compétitions, records, défis et badges) + **« Performance » 2,99 €/mois ou 24,99 €/an** (Nutrition, Forme, carte « Ce que Strava ne te montre pas »). Plus tard, quand l'IA existera : « Performance + IA » autour de 4,99 €/mois
+  - **Pros** : **« Pro » 12 €/mois** (10 clients inclus, +1 € par client en plus) et **« Pro + IA » 24 €/mois** (10 clients inclus, +0,50 € par client en plus)
+  - Simulateur pour tester d'autres prix : claude.ai/artifact/YbZgjx1DvaoPJkrxahaUzM · rapport : claude.ai/artifact/Cwp3rux55rdrj5FCVZSZTs
+- [ ] 🧑 Avant de fixer les prix : poser 4 questions de prix aux testeurs (trop cher / cher / bon marché / trop bon marché), et montrer l'idée de l'espace pro à 3 ou 4 coachs ou nutritionnistes
 - [ ] 🤖 Paiement par **Stripe** (gère lui-même les données bancaires) + **conditions générales de vente** avec droit de rétractation
 - [ ] 🤖 **IA** (statistique descriptive sur les données de l'utilisateur, jamais de conseil), dans cet ordre :
   1. Saisie des repas en texte libre ou en photo → macros
   2. Bilan de la semaine en quelques phrases (Dashboard)
   3. Commentaire automatique après une séance importée
   - Conditions : fournisseur **payant qui ne réutilise pas les données** (ex. Mistral, hébergé en Europe), petit serveur intermédiaire (Cloudflare Workers gratuit ou Firebase Functions), limite d'usage par utilisateur, **accord de l'utilisateur** avant d'envoyer ses données, mise à jour de la politique de confidentialité
-- [ ] 🤖 **Espace coach / nutritionniste** : d'après la 3e simulation (15/10), c'est le plus gros levier restant pour les abonnements (+5 payants sur 100). Même chantier que l'accès nutritionniste ci-dessous
-- [ ] 🤖 **Accès nutritionniste** : accord explicite du client, nouvelles règles Firestore, contrat entre l'éditeur et le nutritionniste
+- [ ] 🤖🧑 **Espace pro (coachs et nutritionnistes)** — le plus gros levier pour les abonnements d'après les simulations (environ 7 fois plus que les sportifs, et des centaines de clients amenés dans l'appli). **Après** le rangement des données en tiroirs :
+  - **Ce que le pro voit** de chaque client qui l'a accepté : séances, nutrition et hydratation, forme ; les compétitions en option (pas forcément). Jamais sans l'accord du client, qui peut le retirer à tout moment
+  - **Son interface**, deux pistes à choisir : (a) l'appli normale, avec un sélecteur pour passer d'un client à l'autre ; (b) une **interface pro** à part, avec un Dashboard différent : liste de ses clients, et pour chacun ses séances, sa nutrition, son hydratation, sa forme
+  - **Pour lui-même** : le suivi des séances offert avec tout forfait pro (pour découvrir l'appli comme ses clients), et une **option d'environ 1 à 2 €/mois** pour avoir aussi la nutrition et la forme pour lui (ou incluse dans « Pro + IA ») — à tester dans le simulateur
+  - **Comptes clients offerts** : les clients d'un pro utilisent l'appli sans payer (inclus dans le forfait du pro)
+  - **IA pour le pro seulement** au début (résumé de la semaine de chaque client, jamais de conseil : c'est le pro qui conseille) ; coût environ 0,30 € par client et par mois, d'où le supplément par client
+  - Ce qui fait le plus hésiter les coachs : ne pas pouvoir **créer des séances pour leurs athlètes** (outil du coach, pas un conseil de TriSeason) — à envisager ensuite
+  - À prévoir : accord explicite du client, nouvelles règles Firestore (le pro ne lit que les tiroirs autorisés), contrat entre l'éditeur et le pro, mise à jour de la politique de confidentialité
 
 ## Idées écartées (et pourquoi)
 
@@ -82,6 +95,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 18/10/2026 | #29 | **Planification des séances** : clic sur un jour du calendrier du Dashboard → sport, distance et/ou durée, notes ; la séance faite ce jour-là est reconnue toute seule (« Réalisée », « En partie », « Pas faite »), liste des séances prévues sous le calendrier. Feuille de route : prix conseillés et espace pro |
 | 17/10/2026 | #28 | Limite de comptes Strava atteinte : au lieu d'une erreur, message « la connexion à Strava n'est pas encore ouverte à tout le monde, elle arrive bientôt » + bouton vers l'import de l'archive Strava |
 | 17/10/2026 | #27 | Ravitaillements : glucides (et protéines) par unité, en un clic — tailles génériques et produits courants (Maurten, SIS, GU, Decathlon, Overstims, Näak, Baouw, Meltonic, Clif, Atlet, Andros Sport, Isostar, Tailwind…), nouveau type « Compote / gourde », chiffre modifiable ; utilisés par la carte du Dashboard |
 | 16/10/2026 | #26 | Feuille de route : prochaines tâches (rangement des données en tiroirs, tests GitHub avant chaque fusion, partage en story) ; carte **« Ce que Strava ne te montre pas »** refaite : ta dernière séance avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort (≈ g de glucides par heure), et tes glucides les jours d'entraînement / de repos |
