@@ -9,7 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #29 (feuille de route : prix et espace pro) — rien ne change dans l'appli
+- [ ] 🧑 Fusionner la PR #29 (planification des séances + feuille de route : prix et espace pro) puis recharger le site
+- [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
 - [ ] 🧑 Passer la limite Strava de 1 à **10 comptes** : strava.com/settings/api, sur la page de l'appli TriSeason (gratuit, sans validation)
 - [ ] 🧑 *Facultatif* : recopier le nouveau `tools/server/worker.js` dans Cloudflare (Edit code → coller → Deploy). L'appli reconnaît déjà la limite avec l'ancienne version ; la nouvelle la signale plus proprement
 - [ ] 🧑 Tester l'import de **beaucoup de fichiers .fit** (50 d'un coup) : si ça ne plante plus, Claude peut rendre l'import automatique par paquets de 50
@@ -45,6 +46,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [ ] 🧑 Faire relire la page *Confidentialité et mentions légales* par une personne compétente
 
 ## Plus tard : idées pour rendre l'appli plus vivante
+
+- [ ] 🤖 *Planification, ensuite* : répéter une séance chaque semaine (ex. natation tous les mardis), déplacer une séance prévue en la glissant dans le calendrier, voir les séances prévues de la semaine sur la page Séances
 
 - [ ] 🤖 **Parcours des sorties** : tracé simplifié fourni par Strava (ou tiré des fichiers .fit), dessiné sur la fiche de la séance et sur l'image story, sans fond de carte (une vraie carte = service extérieur, à ajouter à la politique de confidentialité). **Après** le rangement en tiroirs (sinon limite de 1 Mo par compte)
 - [ ] 🤖 **Défis entre amis** : défi créé avec un code d'invitation, chacun accepte de partager **seulement son score**, classement simple ; plus tard des défis de club. Demande de nouvelles règles Firebase et une mise à jour de la confidentialité. **Règle Strava** : les séances venues de Strava ne peuvent pas être montrées à d'autres personnes, donc défis sur ce qui est propre à TriSeason (jours de repas notés, hydratation, ressenti) ou sur les séances importées par fichier
@@ -92,7 +95,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
-| 18/10/2026 | #29 | Feuille de route : prix conseillés (sportifs et pros) d'après le simulateur de forfaits, et description de l'espace pro (accès aux données des clients, interface, option personnelle) |
+| 18/10/2026 | #29 | **Planification des séances** : clic sur un jour du calendrier du Dashboard → sport, distance et/ou durée, notes ; la séance faite ce jour-là est reconnue toute seule (« Réalisée », « En partie », « Pas faite »), liste des séances prévues sous le calendrier. Feuille de route : prix conseillés et espace pro |
 | 17/10/2026 | #28 | Limite de comptes Strava atteinte : au lieu d'une erreur, message « la connexion à Strava n'est pas encore ouverte à tout le monde, elle arrive bientôt » + bouton vers l'import de l'archive Strava |
 | 17/10/2026 | #27 | Ravitaillements : glucides (et protéines) par unité, en un clic — tailles génériques et produits courants (Maurten, SIS, GU, Decathlon, Overstims, Näak, Baouw, Meltonic, Clif, Atlet, Andros Sport, Isostar, Tailwind…), nouveau type « Compote / gourde », chiffre modifiable ; utilisés par la carte du Dashboard |
 | 16/10/2026 | #26 | Feuille de route : prochaines tâches (rangement des données en tiroirs, tests GitHub avant chaque fusion, partage en story) ; carte **« Ce que Strava ne te montre pas »** refaite : ta dernière séance avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort (≈ g de glucides par heure), et tes glucides les jours d'entraînement / de repos |

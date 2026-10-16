@@ -262,6 +262,52 @@ async function main() {
       'entraînement / repos : ' + mixed.slice(0, 400));
     assert(empty.includes('Importe une séance'), 'sans données : ' + empty.slice(0, 200));
   });
+  await test('Séances prévues : réalisées, en partie, pas faites (une séance ne compte qu’une fois)', async () => {
+    const r = await u.page.evaluate(() => {
+      const d = { sessions: [
+          { id: 'a', date: '2026-10-05', sport: 'run', distance: 10.2, duration: 0.85 },
+          { id: 'b', date: '2026-10-06', sport: 'velo', distance: 30, duration: 1 },
+          { id: 'c', date: '2026-10-07', sport: 'nat', distance: 2, duration: 0.7 },
+          { id: 'd', date: '2026-10-07', sport: 'nat', distance: 1, duration: 0.4 } ],
+        plans: [
+          { id: 'p1', date: '2026-10-05', sport: 'run', distance: 10, duration: 0.83 },
+          { id: 'p2', date: '2026-10-06', sport: 'velo', duration: 2 },
+          { id: 'p3', date: '2026-10-04', sport: 'run', distance: 8 },
+          { id: 'p4', date: '2030-01-01', sport: 'nat' },
+          { id: 'p5', date: '2026-10-07', sport: 'nat', distance: 1 },
+          { id: 'p6', date: '2026-10-07', sport: 'nat', distance: 2 },
+          { id: 'p7', date: '2026-10-06', sport: 'run' } ] };
+      const st = TS.planStatuses(d);
+      return Object.fromEntries(Object.entries(st).map(([k, v]) => [k, v.state + (v.session ? ':' + v.session.id : '')]));
+    });
+    const want = { p1: 'done:a', p2: 'partial:b', p3: 'missed', p4: 'upcoming', p5: 'done:d', p6: 'done:c', p7: 'missed' };
+    Object.entries(want).forEach(([k, v]) => assert(r[k] === v, `${k} : ${r[k]} au lieu de ${v}`));
+    const durs = await u.page.evaluate(() => ['1h30', '45min', '1:15:00', '2', '1h'].map(TS.parseDuration));
+    assert(JSON.stringify(durs) === JSON.stringify([1.5, 0.75, 1.25, 2, 1]), 'durées : ' + JSON.stringify(durs));
+  });
+  await test('Séances prévues : planifier depuis le calendrier, séance reconnue toute seule', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const today = day(0);
+    await v.page.click(`.cal-cell--click[onclick*="${today}"]`);
+    await v.page.click('#pl_sport [data-sport="velo"]');
+    await v.page.fill('#pl_dist', '40'); await v.page.fill('#pl_dur', '1h30'); await v.page.fill('#pl_notes', 'Sortie tranquille');
+    await v.page.click('#planModal .btn--primary');
+    await v.page.waitForTimeout(300);
+    const plan = await v.page.evaluate(() => TS.getPlans()[0]);
+    const listBefore = await v.page.innerText('#planList');
+    const toasts = [];
+    await v.page.exposeFunction('__toast', t => toasts.push(t));
+    await v.page.evaluate(() => { const o = TS.toast; TS.toast = (m, t) => { window.__toast(m); o(m, t); }; });
+    await v.page.evaluate((d) => TS.saveSession({ date: d, sport: 'velo', distance: 41, duration: 1.45 }), today);
+    await v.page.waitForTimeout(1200);
+    const after = await v.page.evaluate(() => ({ list: document.getElementById('planList').innerText, ann: TS.getPlans()[0].announced, marks: document.querySelectorAll('.cal-plan--done').length }));
+    await v.ctx.close();
+    assert(!v.errors.length, 'erreur JavaScript : ' + v.errors[0]);
+    assert(plan && plan.sport === 'velo' && plan.distance === 40 && plan.duration === 1.5 && plan.date === today && plan.notes === 'Sortie tranquille', 'séance prévue : ' + JSON.stringify(plan));
+    assert(/Aujourd’hui/.test(listBefore), 'liste avant : ' + listBefore);
+    assert(/Réalisée/.test(after.list) && after.ann && after.marks === 1, 'après : ' + JSON.stringify(after));
+  });
   await test('Identifiants uniques (rien ne s’écrase lors d’un import groupé)', async () => {
     const r = await u.page.evaluate(() => { const before = TS.getData().sessions.length;
       for (let i = 0; i < 30; i++) TS.saveSession({ date: '2026-08-0' + (1 + i % 9), sport: 'nat', duration: 0.5, distance: 1 });
