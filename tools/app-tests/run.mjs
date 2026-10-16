@@ -147,6 +147,17 @@ async function main() {
     assert(!others.length, 'contacté : ' + others.join(', '));
   });
 
+  await test('Appli installée : adresses relatives (le site est dans un sous-dossier)', async () => {
+    const m = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
+    const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
+    const assets = (sw.match(/const ASSETS = \[([\s\S]*?)\];/) || [])[1] || '';
+    const absolute = (assets.match(/'\/[^']*'/g) || []);
+    assert(m.start_url && !m.start_url.startsWith('/') && m.scope && !m.scope.startsWith('/'), 'manifest : ' + m.start_url + ' / ' + m.scope);
+    assert(assets && !absolute.length, 'sw.js : adresses absolues ' + absolute.join(', '));
+    const missing = (assets.match(/'\.\/([^']+)'/g) || []).map(x => x.slice(3, -1)).filter(f => f && !existsSync(join(ROOT, f)));
+    assert(!missing.length, 'fichiers absents : ' + missing.join(', '));
+  });
+
   // 3. Même version des fichiers partout
   await test('Même numéro de version des fichiers sur toutes les pages', async () => {
     const versions = {};

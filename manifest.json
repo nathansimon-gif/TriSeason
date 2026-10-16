@@ -2,7 +2,7 @@
   "name": "TriSeason Tracker",
   "short_name": "TriSeason",
   "description": "Suivi de saison triathlon — natation, vélo, course",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d1016",
   "theme_color": "#0d1016",
@@ -21,6 +21,12 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["sports", "health", "fitness"],
-  "screenshots": []
+  "categories": [
+    "sports",
+    "health",
+    "fitness"
+  ],
+  "screenshots": [],
+  "scope": "./",
+  "id": "./index.html"
 }
