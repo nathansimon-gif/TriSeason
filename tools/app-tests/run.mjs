@@ -165,6 +165,22 @@ async function main() {
     assert((css.match(/\.page \{ padding-top: calc\([^;]*var\(--safe-top\)/g) || []).length >= 2, 'pages sans marge du haut');
   });
 
+  await test('Connexion : l\'œil affiche le mot de passe, « Créer un compte » est un bouton', async () => {
+    const v = await newUser({ uid: null }); const p = v.page;
+    await p.goto(`${BASE}/login.html`); await p.waitForTimeout(400);
+    const type = () => p.$eval('#authPassword', i => i.type);
+    assert(await type() === 'password', 'mot de passe visible au départ');
+    await p.click('#authPassword + .pw-eye');
+    assert(await type() === 'text', 'l\'œil n\'affiche pas le mot de passe');
+    await p.click('#authPassword + .pw-eye');
+    assert(await type() === 'password', 'l\'œil ne recache pas le mot de passe');
+    await p.click('#authSwitch .btn');
+    assert((await p.textContent('#authTitle')).includes('Créer un compte'), 'le bouton ne passe pas en création de compte');
+    assert(await p.$('#authPassword + .pw-eye'), 'œil absent en création de compte');
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+  });
+
   // 3. Même version des fichiers partout
   await test('Même numéro de version des fichiers sur toutes les pages', async () => {
     const versions = {};

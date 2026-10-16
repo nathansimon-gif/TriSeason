@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #31 (appli installée sur iPhone : le menu ne passe plus sous l'heure et la batterie) puis recharger le site ; si besoin, fermer complètement l'appli et la rouvrir
+- [ ] 🧑 Fusionner la PR #32 (œil sur les mots de passe, bouton « Créer un compte » plus visible, icônes calendrier en clair) puis recharger le site
 - [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
 - [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
 - [ ] 🧑 Passer la limite Strava de 1 à **10 comptes** : strava.com/settings/api, sur la page de l'appli TriSeason (gratuit, sans validation)
@@ -96,6 +96,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 20/10/2026 | #32 | Connexion : œil pour afficher le mot de passe (connexion, création de compte, suppression du compte), « Créer un compte » en grand bouton ; icônes calendrier et horloge des champs date/heure en clair sur toutes les pages |
 | 20/10/2026 | #31 | Appli installée sur iPhone : la barre du haut (logo, menu) se place sous l'heure et la batterie au lieu d'être cachée dessous |
 | 19/10/2026 | #30 | Appli installée sur le téléphone : page de démarrage et dossier corrects (`manifest.json`), fichiers gardés pour le hors-connexion au bon endroit (`sw.js`, cache v11) |
 | 18/10/2026 | #29 | **Planification des séances** : clic sur un jour du calendrier du Dashboard → sport, distance et/ou durée, notes ; la séance faite ce jour-là est reconnue toute seule (« Réalisée », « En partie », « Pas faite »), liste des séances prévues sous le calendrier. Feuille de route : prix conseillés et espace pro |

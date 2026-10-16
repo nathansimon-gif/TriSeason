@@ -243,6 +243,21 @@ input, select, textarea { font-family: var(--font); }
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .form-input::placeholder { color: var(--text-3); }
+/* Icône calendrier / horloge des champs date et heure : en clair sur le fond sombre */
+input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .85; cursor: pointer; }
+input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+/* Mot de passe : bouton œil au bout du champ pour voir ce qu'on tape */
+.pw-field { position: relative; }
+.pw-field .form-input { padding-right: 44px; }
+.pw-eye {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 42px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: 0; color: var(--text); opacity: .85;
+}
+.pw-eye:hover, .pw-eye:focus-visible { opacity: 1; }
+.pw-eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pw-eye__hide, .pw-eye[aria-pressed="true"] .pw-eye__show { display: none; }
+.pw-eye[aria-pressed="true"] .pw-eye__hide { display: block; }
 .form-select option { background: var(--surface2); }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
