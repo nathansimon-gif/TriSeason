@@ -6,9 +6,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261020a"></script>
+  <script src="auth-guard.js?v=20261020b"></script>
   <title>TriSeason — Connexion</title>
-  <link rel="stylesheet" href="style.css?v=20261020a">
+  <link rel="stylesheet" href="style.css?v=20261020b">
   <style>
     body {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -44,7 +44,8 @@
       cursor: pointer; transition: opacity .15s;
     }
     .btn--google:hover { opacity: .9; }
-    .auth-switch { text-align: center; font-size: 12px; color: var(--text-2); margin-top: 18px; }
+    .auth-switch { text-align: center; font-size: 13px; color: var(--text-2); margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .auth-switch .btn.btn--ghost { width: 100%; justify-content: center; margin-top: 8px; padding: 11px 14px; font-size: 15px; font-weight: 600; color: var(--text); border-color: var(--text-3); }
     .auth-info {
       display: none; background: var(--green-dim); border: 1px solid rgba(52,196,139,.35);
       color: var(--text); font-size: 12px; padding: 9px 12px; border-radius: var(--r-sm);
@@ -59,7 +60,6 @@
     .auth-consent input { margin-top: 2px; accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
     .auth-consent a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
     .auth-legal { text-align: center; margin-top: 14px; }
-    .auth-switch a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; font-weight: 500; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -96,14 +96,15 @@
       </div>
       <div class="form-group">
         <label class="form-label">Mot de passe</label>
-        <input class="form-input" type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" required>
+        <div class="pw-field"><input class="form-input" type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" required><button type="button" class="pw-eye" aria-label="Afficher le mot de passe" aria-pressed="false" onclick="const i=this.previousElementSibling,v=i.type==='password';i.type=v?'text':'password';this.setAttribute('aria-pressed',v);this.setAttribute('aria-label',v?'Cacher le mot de passe':'Afficher le mot de passe')"><svg class="pw-eye__show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="pw-eye__hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></button></div>
       </div>
       <div class="auth-forgot" id="authForgot"><a onclick="resetPassword()">Mot de passe oublié ?</a></div>
-      <button class="btn btn--primary" style="width:100%;margin-top:6px" onclick="submitEmailAuth()" id="authSubmitBtn">Se connecter</button>
+      <button class="btn btn--primary" style="width:100%;margin-top:6px;justify-content:center" onclick="submitEmailAuth()" id="authSubmitBtn">Se connecter</button>
     </form>
 
     <div class="auth-switch" id="authSwitch">
-      Pas encore de compte ? <a onclick="toggleMode()">Créer un compte</a>
+      Pas encore de compte ?
+      <button type="button" class="btn btn--ghost" onclick="toggleMode()">Créer un compte</button>
     </div>
     <div class="auth-legal"><a href="aide.html?depuis=login.html">Besoin d’aide ?</a> · <a href="confidentialite.html">Confidentialité et mentions légales</a></div>
   </div>
@@ -126,8 +127,8 @@ function toggleMode() {
   document.getElementById('authConsent').style.display = isSignup ? 'flex' : 'none';
   document.getElementById('authForgot').style.display = isSignup ? 'none' : 'block';
   document.getElementById('authSwitch').innerHTML = isSignup
-    ? 'Déjà un compte ? <a onclick="toggleMode()">Se connecter</a>'
-    : 'Pas encore de compte ? <a onclick="toggleMode()">Créer un compte</a>';
+    ? 'Déjà un compte ? <button type="button" class="btn btn--ghost" onclick="toggleMode()">Se connecter</button>'
+    : 'Pas encore de compte ? <button type="button" class="btn btn--ghost" onclick="toggleMode()">Créer un compte</button>';
   hideError();
   hideInfo();
 }
