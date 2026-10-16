@@ -158,6 +158,13 @@ async function main() {
     assert(!missing.length, 'fichiers absents : ' + missing.join(', '));
   });
 
+  await test('Appli installée : le menu passe sous la barre d\'état du téléphone', async () => {
+    const css = readFileSync(join(ROOT, 'style.css'), 'utf8');
+    assert(/--safe-top:\s*env\(safe-area-inset-top/.test(css), 'variable --safe-top absente');
+    assert(/\.nav \{[^}]*padding-top: var\(--safe-top\)/.test(css), 'barre de navigation sans marge du haut');
+    assert((css.match(/\.page \{ padding-top: calc\([^;]*var\(--safe-top\)/g) || []).length >= 2, 'pages sans marge du haut');
+  });
+
   // 3. Même version des fichiers partout
   await test('Même numéro de version des fichiers sur toutes les pages', async () => {
     const versions = {};
