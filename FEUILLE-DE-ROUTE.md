@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #32 (œil sur les mots de passe, bouton « Créer un compte » plus visible, icônes calendrier en clair) puis recharger le site
+- [ ] 🧑 Fusionner la PR #33 (feuille de route : blessures, reprise et cycle menstruel ajoutés aux prochaines tâches) puis recharger le site
 - [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
 - [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
 - [ ] 🧑 Passer la limite Strava de 1 à **10 comptes** : strava.com/settings/api, sur la page de l'appli TriSeason (gratuit, sans validation)
@@ -27,6 +27,21 @@ Les cases cochées passent dans « Fait » en bas de page.
   - Étapes : (a) 🧑 ajouter dans les règles Firebase la ligne pour les sous-tiroirs (texte exact fourni par Claude) **avant** la fusion ; (b) 🧑 exporter ses données par prudence (Profil → Exporter) ; (c) 🤖 déménagement automatique à la première ouverture, vérifié avant de basculer ; (d) l'ancien grand tiroir est gardé en secours environ 30 jours, supprimé seulement avec l'accord de Nathan ; (e) 🤖 rapport du lundi et tests automatiques adaptés (déménagement, deux appareils, connexion lente)
 - [ ] 🤖🧑 **2. Tests automatiques sur GitHub avant chaque fusion** : à chaque pull request, GitHub lance les tests et affiche une coche verte (tout passe) ou une croix rouge (ne pas fusionner) à côté du bouton de fusion. Gratuit. Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
 - [ ] 🤖 **3. Partage en story** (Instagram, WhatsApp…) : bouton « Partager » qui crée une image verticale des résultats, fabriquée sur le téléphone, rien envoyé à un service extérieur. **Le contenu des stories sera précisé ensemble plus tard**, avant de commencer (pistes : une séance, une compétition, le bilan de la semaine, avec ce que Strava ne montre pas : glucides par heure, ressenti, repas notés 7/7). Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
+
+**Forme : prendre en compte la santé** (tâches 4 et 5 ; deux options séparées, chacune activée par la personne elle-même dans Profil, désactivée au départ, avec son propre accord coché ; à écrire dans *Confidentialité* ; jamais partagées par défaut avec un futur coach ou nutritionniste ; effaçables d'un coup ; uniquement des faits tirés des données de la personne, **jamais de conseil médical**) :
+
+- [ ] 🤖 **4. Blessures, maladie, reprise, grossesse** (utile à tout le monde) :
+  - journal des « périodes de santé » : blessure (zone du corps, sports touchés), maladie, grossesse, après l'accouchement, arrêt ; date de début, de fin si connue ; statut en cours / en reprise / guérie ; les anciennes restent en « antécédents »
+  - pendant une blessure : case « Douleur 0 à 10 » dans le formulaire de séance, et courbe douleur + volume côte à côte dans Forme
+  - **mode reprise** : forme comparée à la progression depuis le retour (pas à l'avant-arrêt), repère factuel « volume +40 % par rapport à la semaine dernière », défis de la semaine tournés vers la régularité, séries mises en pause sans perdre les badges
+  - Records : séances pendant une blessure ou une grossesse marquables pour ne pas fausser les comparaisons ; « jalons de reprise » (premier 5 km, première heure de vélo…)
+  - grossesse / après l'accouchement : une simple phrase invitant à valider la reprise avec un professionnel de santé (sage-femme, kiné), sans programme ni conseil
+- [ ] 🧑 Avant la tâche 5 : demander à une ou deux testeuses ce qu'elles voudraient voir et ce qui les gênerait
+- [ ] 🤖 **5. Cycle menstruel** :
+  - bouton « Mes règles ont commencé » (jour au choix) ; l'appli calcule la durée moyenne du cycle et la phase du moment ; petits signes du jour à cocher (crampes, fatigue, sommeil…)
+  - cas prévus : pilule ou stérilet hormonal, cycle irrégulier, grossesse, ménopause (pas de phases inventées)
+  - Forme : phases en légère couleur de fond sur le graphique ; croisement comme pour la nutrition (« pendant tes règles, ressenti moyen 6/10 contre 7,5/10 le reste du mois »)
+  - calendrier du Dashboard : petit repère sur les jours de règles prévus, pour placer une compétition ou une grosse séance
 
 **Ensuite :**
 
@@ -96,6 +111,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 21/10/2026 | #33 | Feuille de route : « blessures, reprise, grossesse » et « cycle menstruel » ajoutés dans les prochaines tâches (4 et 5) pour la page Forme |
 | 20/10/2026 | #32 | Connexion : œil pour afficher le mot de passe (connexion, création de compte, suppression du compte), « Créer un compte » en grand bouton ; icônes calendrier et horloge des champs date/heure en clair sur toutes les pages |
 | 20/10/2026 | #31 | Appli installée sur iPhone : la barre du haut (logo, menu) se place sous l'heure et la batterie au lieu d'être cachée dessous |
 | 19/10/2026 | #30 | Appli installée sur le téléphone : page de démarrage et dossier corrects (`manifest.json`), fichiers gardés pour le hors-connexion au bon endroit (`sw.js`, cache v11) |
