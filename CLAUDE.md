@@ -49,7 +49,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   toutes seules quand une séance du même sport existe le même jour ;
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la
   semaine et badges, calculés à partir des données, seuls les badges déjà
-  annoncés sont gardés dans `data.achievements_seen`).
+  annoncés sont gardés dans `data.achievements_seen`) ;
+  option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
+  et `pain` (0-10) sur les séances, voir RGPD ci-dessous).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
   plus, enregistrés en une fois avec `TS.saveSessions`) et de l'**archive
   Strava** (`readStravaArchive` : lit seulement `activities.csv` dans le .zip,
@@ -142,6 +144,13 @@ le dire dans `confidentialite.html` et sans accord explicite.
   consentement à jour, `showConsentGate` bloque l'appli. Augmenter
   `CONSENT_VERSION` (app.js) redemande l'accord à tous, par ex. après une
   modification importante de la politique de confidentialité.
+- **Option « Blessures, maladie et reprise »** (page Forme) : accord **séparé**,
+  stocké dans `data.health.consent` (`HEALTH_CONSENT_VERSION`). Sans lui, rien
+  n'est enregistré (`saveHealthPeriod` refuse, case douleur cachée). Retirer
+  l'accord (`TS.disableHealth`) efface `data.health` et tous les `pain`. Pendant
+  un arrêt ou une reprise, les défis s'adaptent et la série est en pause
+  (`healthWeekPhase`). Uniquement des faits, aucun conseil médical. Un futur accès
+  coach/nutritionniste ne doit **jamais** montrer ces informations par défaut.
 - **Effacement** : `TS.resetAllData()` (données à zéro, compte gardé) et
   `TS.deleteAccount(password)` (réauthentification, suppression du document
   Firestore puis du compte Auth). Profil → « Supprimer mon compte ».

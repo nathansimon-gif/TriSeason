@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261020b"></script>
+  <script src="auth-guard.js?v=20261021a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261020b">
+  <link rel="stylesheet" href="style.css?v=20261021a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -470,7 +470,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261020b"></script>
+<script src="app.js?v=20261021a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -616,10 +616,13 @@ function renderChallenges() {
     </div>`;
   }).join('');
   const allDone = hist.current.every(c => c.done);
-  document.getElementById('challengeNote').textContent = allDone
-    ? 'Les deux défis sont réussis. Nouveaux défis lundi.'
-    : (daysLeft ? `Encore ${daysLeft} jour${daysLeft > 1 ? 's' : ''} pour les relever.` : 'Dernier jour pour les relever.')
-      + ' Ils sont choisis d’après tes 4 dernières semaines.';
+  const n = hist.current.length;
+  document.getElementById('challengeNote').textContent = (allDone
+    ? (n > 1 ? 'Les deux défis sont réussis.' : 'Défi réussi.') + ' Nouveaux défis lundi.'
+    : (daysLeft ? `Encore ${daysLeft} jour${daysLeft > 1 ? 's' : ''} pour ${n > 1 ? 'les relever' : 'le relever'}.` : `Dernier jour pour ${n > 1 ? 'les relever' : 'le relever'}.`)
+      + (hist.paused ? '' : ' Ils sont choisis d’après tes 4 dernières semaines.'))
+    + (hist.paused === 'arret' ? ' Pendant ton arrêt, pas de défi d’entraînement et ta série est en pause.'
+      : hist.paused === 'reprise' ? ' Pendant ta reprise, le défi porte sur la régularité et une semaine ratée ne casse pas ta série.' : '');
   document.getElementById('challengeStreak').textContent = hist.streak
     ? `Série : ${hist.streak} semaine${hist.streak > 1 ? 's' : ''}` : (hist.best ? `Record : ${hist.best} semaine${hist.best > 1 ? 's' : ''}` : '');
 

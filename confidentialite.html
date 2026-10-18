@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0d1016">
   <title>TriSeason — Confidentialité et mentions légales</title>
-  <link rel="stylesheet" href="style.css?v=20261020b">
+  <link rel="stylesheet" href="style.css?v=20261021a">
   <style>
     .legal { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; color: var(--text-2); font-size: 14px; line-height: 1.7; }
     .legal h1 { color: var(--text); font-size: 26px; font-weight: 600; margin-bottom: 4px; }
@@ -29,7 +29,7 @@
 <main class="legal">
   <a class="back" href="index.html">← Retour à TriSeason</a>
   <h1>Confidentialité et mentions légales</h1>
-  <div class="meta">Version 1 — dernière mise à jour : 13 octobre 2026</div>
+  <div class="meta">Version 2 — dernière mise à jour : 18 octobre 2026 (ajout de l'option « Blessures, maladie et reprise »)</div>
 
   <nav class="toc" aria-label="Sommaire">
     <a href="#confidentialite">1. Politique de confidentialité</a>
@@ -53,6 +53,7 @@
     <tr><td><b>Compte</b></td><td>Adresse e-mail, mode de connexion (e-mail ou Google). Le mot de passe est géré par Google Firebase : TriSeason n'y a jamais accès.</td></tr>
     <tr><td><b>Entraînement</b></td><td>Séances (date, sport, durée, distance, dénivelé), compétitions, records, objectifs, fichiers importés depuis ta montre ou séances reçues de Strava si tu le connectes (seul un résumé est conservé, pas les traces GPS).</td></tr>
     <tr><td><b>Données de santé</b></td><td>Poids, taille, fréquence cardiaque, puissance, ressenti et effort perçu (RPE), repas (glucides, protéines, lipides, calories), hydratation, ravitaillements.</td></tr>
+    <tr><td><b>Blessures, maladie et reprise</b> (option, accord à part)</td><td>Seulement si tu actives l'option : type d'arrêt (blessure, maladie, grossesse, après l'accouchement, autre), zone du corps blessée, sports touchés, dates de début, de reprise et de fin, notes, douleur notée de 0 à 10 sur tes séances.</td></tr>
     <tr><td><b>Utilisation</b></td><td>Les jours où tu ouvres l'appli, pour compter le nombre d'utilisateurs actifs.</td></tr>
   </table>
   <p>Les données de santé sont des « données sensibles » au sens de l'article 9 du RGPD : elles ne sont
@@ -84,6 +85,22 @@
   <p>Le site est servi par GitHub Pages (GitHub, Inc.), qui reçoit comme tout hébergeur l'adresse IP des visiteurs.
   Le chargement de la page fait aussi appel aux serveurs de Google pour la connexion (bibliothèque Firebase).
   Les polices de caractères et les graphiques sont servis directement par TriSeason.</p>
+
+  <h3 id="sante">Option « Blessures, maladie et reprise » (facultative)</h3>
+  <p>Cette option, désactivée au départ, sert à noter une blessure, une maladie, une grossesse, la période après
+  l'accouchement ou un autre arrêt, et la douleur ressentie pendant tes séances. Elle n'est activée que si tu coches
+  une case d'accord <b>spécifique</b> (page Forme), en plus de l'accord donné à la création du compte.</p>
+  <ul>
+    <li><b>À quoi ça sert</b> : adapter tes défis de la semaine et mettre ta série en pause pendant un arrêt, suivre ta reprise
+      semaine après semaine, afficher la douleur notée à côté de ton volume d'entraînement, marquer ces périodes sur ton graphique de forme.
+      Ce sont des chiffres tirés de tes propres saisies : <b>aucun diagnostic, aucun conseil médical</b>.</li>
+    <li><b>Qui les voit</b> : toi seul. Elles sont stockées avec tes autres données (Google Firebase, Union européenne) et ne sont
+      montrées à aucun autre utilisateur. Si un accès pour un coach ou un nutritionniste existe un jour, ces informations ne seront
+      <b>jamais partagées par défaut</b> : tu choisiras toi-même ce que tu partages.</li>
+    <li><b>Retirer ton accord</b> : à tout moment (Profil → « Retirer mon accord et tout effacer », ou Forme → « Désactiver l'option
+      et tout effacer »). Toutes les informations de l'option sont alors effacées, sur tous tes appareils ; le reste de ton compte est gardé.</li>
+    <li>Base légale : ton consentement explicite (art. 6.1.a et 9.2.a du RGPD).</li>
+  </ul>
 
   <h3>Connexion à Strava (facultative)</h3>
   <p>Si tu connectes ton compte Strava (Profil → « Connecter avec Strava »), TriSeason lit le <b>résumé de tes
@@ -126,7 +143,8 @@
     <li><b>Accès et portabilité</b> : Profil → « Exporter mes données » (fichier complet au format JSON).</li>
     <li><b>Rectification</b> : directement dans l'appli (chaque séance, repas, record est modifiable).</li>
     <li><b>Effacement</b> : Profil → « Effacer toutes mes données » (le compte reste ouvert) ou « Supprimer mon compte » (tout est supprimé).</li>
-    <li><b>Retrait du consentement</b> : à tout moment, en supprimant ton compte. Le retrait ne remet pas en cause ce qui a été fait avant.</li>
+    <li><b>Retrait du consentement</b> : à tout moment, en supprimant ton compte ; pour l'option « Blessures, maladie et reprise »,
+      en la désactivant (ses informations sont effacées). Le retrait ne remet pas en cause ce qui a été fait avant.</li>
     <li><b>Opposition et limitation</b>, et toute autre demande : écris à <a href="mailto:tri.season.tracker@gmail.com">tri.season.tracker@gmail.com</a>. Réponse sous un mois.</li>
     <li><b>Réclamation</b> : tu peux saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr/fr/plaintes</a>).</li>
   </ul>
