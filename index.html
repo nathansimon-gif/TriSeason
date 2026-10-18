@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261021a"></script>
+  <script src="auth-guard.js?v=20261022a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261021a">
+  <link rel="stylesheet" href="style.css?v=20261022a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -112,6 +112,19 @@
     .plan-state--today, .plan-state--upcoming { background:var(--surface); color:var(--text-2); border:1px solid var(--border); }
     .sport-pick { display:flex; gap:6px; flex-wrap:wrap; }
     .sport-pick button { display:inline-flex; align-items:center; gap:6px; }
+    .day-sec { font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 6px; }
+    .day-sec:first-child { margin-top:0; }
+    .day-sess { border:1px solid var(--border); border-left:3px solid var(--text-3); border-radius:var(--r-sm); background:var(--surface2); padding:10px 12px; margin-bottom:6px; }
+    .day-sess--nat { border-left-color:var(--nat); } .day-sess--velo { border-left-color:var(--velo); } .day-sess--run { border-left-color:var(--run); }
+    .day-sess__head { display:flex; align-items:center; gap:8px; }
+    .day-sess__title { font-size:13px; font-weight:600; flex:1; min-width:0; }
+    .day-sess__main { font-family:var(--mono); font-size:14px; margin-top:4px; }
+    .day-sess__chips { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:6px; font-size:12px; color:var(--text-2); }
+    .day-sess__chips b { color:var(--text); font-weight:600; }
+    .day-sess__notes { font-size:12px; color:var(--text-2); margin-top:6px; white-space:pre-line; }
+    .day-sess__plan { font-size:11px; color:var(--text-3); margin-top:4px; }
+    .day-nutri { font-size:12px; color:var(--text-2); line-height:1.6; }
+    .day-nutri b { color:var(--text); font-weight:600; }
     .cal-legend { display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap; font-size:11px; color:var(--text-2); }
     .cal-legend__dot { display:inline-flex; align-items:center; gap:5px; }
 
@@ -418,6 +431,7 @@
       <button class="modal__close" onclick="closeModal('planModal')">×</button>
     </div>
     <div id="planDayBody"></div>
+    <button type="button" class="btn btn--sm" id="planFormOpen" style="margin-top:14px" onclick="showPlanForm(true)">+ Planifier une séance ce jour-là</button>
     <div class="stack" id="planForm" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:13px;font-weight:600;color:var(--text)" id="planFormTitle">Planifier une séance</div>
       <div class="form-group">
@@ -470,7 +484,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261021a"></script>
+<script src="app.js?v=20261022a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -1014,14 +1028,63 @@ function openPlanDay(date, focusForm, planId) {
   document.getElementById('planDayTitle').textContent = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const st = TS.planStatuses();
   const plans = TS.getPlans().filter(p => p.date === date);
-  const linked = new Set(plans.map(p => st[p.id].session && st[p.id].session.id).filter(Boolean));
-  const others = TS.getSessions().filter(s => s.date === date && !linked.has(s.id));
-  document.getElementById('planDayBody').innerHTML =
-    (plans.length ? '<div class="plan-list" style="margin-top:0">' + plans.map(p => planRowHtml(p, st[p.id], false)).join('') + '</div>' : '')
-    + (others.length ? '<div style="font-size:12px;color:var(--text-2);margin-top:10px">Séances faites sans être prévues : ' + others.map(s => (TS.SPORTS[s.sport] || {}).label + (s.distance ? ' ' + s.distance + ' km' : '') + (s.duration ? ' ' + TS.formatHours(s.duration) : '')).join(', ') + '</div>' : '')
-    + (!plans.length && !others.length ? '<div style="font-size:12px;color:var(--text-3)">Rien de prévu ni de fait ce jour-là.</div>' : '');
+  const planOf = {};
+  plans.forEach(p => { if (st[p.id].session) planOf[st[p.id].session.id] = p; });
+  const sessions = TS.getSessions().filter(s => s.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+  const data = TS.getData();
+  const nutri = dayNutrition(data.nutrition || {}, date);
+  const today = TS.localDateStr();
+  let html = '';
+  if (sessions.length) {
+    const tot = sessions.reduce((a, s) => a + (s.duration || 0), 0);
+    html += `<div class="day-sec">${sessions.length > 1 ? sessions.length + ' séances · <span style="text-transform:none">' + TS.formatHours(tot) + '</span>' : 'Séance du jour'}</div>`
+      + sessions.map(s => daySessionHtml(s, planOf[s.id], st, data)).join('');
+  }
+  const open = plans.filter(p => !st[p.id].session);
+  if (open.length) html += `<div class="day-sec">Prévu</div><div class="plan-list" style="margin-top:0">${open.map(p => planRowHtml(p, st[p.id], false)).join('')}</div>`;
+  if (nutri.meals || nutri.water) {
+    html += `<div class="day-sec">Nutrition du jour</div><div class="day-nutri">`
+      + (nutri.meals ? `${nutri.meals} repas · <b>${Math.round(nutri.carbs)} g</b> de glucides · ${Math.round(nutri.prot)} g de protéines · ${Math.round(nutri.kcal).toLocaleString('fr-FR')} kcal` : 'Pas de repas noté')
+      + (nutri.water ? ` · eau : <b>${(nutri.water / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} L</b>` : '') + `</div>`;
+  }
+  if (!html) html = `<div style="font-size:12px;color:var(--text-3)">${date > today ? 'Rien de prévu ce jour-là.' : 'Rien de fait ni de prévu ce jour-là.'}</div>`;
+  document.getElementById('planDayBody').innerHTML = html;
   fillPlanForm(planId ? plans.find(p => p.id === planId) : null, date);
+  // Le formulaire est ouvert d'emblée pour un jour vide à venir, ou pour modifier une séance prévue.
+  showPlanForm(!!(focusForm || planId || (!sessions.length && !plans.length && date >= today)));
   openModal('planModal');
+}
+function showPlanForm(on) {
+  document.getElementById('planForm').style.display = on ? '' : 'none';
+  document.getElementById('planFormOpen').style.display = on ? 'none' : '';
+}
+// Détail d'une séance faite (dans la fenêtre du jour).
+function daySessionHtml(s, plan, st, data) {
+  const sp = TS.SPORTS[s.sport] || { label: s.sport };
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hms = h => { const sec = Math.round(h * 3600); return Math.floor(sec / 3600) + ':' + String(Math.floor(sec % 3600 / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); };
+  const main = [s.duration ? hms(s.duration) : '', s.distance ? s.distance.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' km' : '',
+    s.duration && s.distance ? TS.calcPace(s.duration, s.distance, s.sport) + (s.sport === 'run' ? '/km' : s.sport === 'nat' ? '/100 m' : '') : ''].filter(Boolean).join(' · ');
+  const chip = (label, val) => val ? `<span>${label} <b>${val}</b></span>` : '';
+  const chips = [
+    chip('D+', s.elevation ? Math.round(s.elevation) + ' m' : ''),
+    chip('FC moy.', s.fc_avg ? Math.round(s.fc_avg) + ' bpm' : ''),
+    chip('FC max', s.fc_max ? Math.round(s.fc_max) + ' bpm' : ''),
+    chip('Puissance', s.power_avg ? Math.round(s.power_avg) + ' W' : ''),
+    chip('NP', s.np ? Math.round(s.np) + ' W' : ''),
+    chip('RPE', s.rpe ? s.rpe + '/10' : ''),
+    chip('Ressenti', s.sensation ? s.sensation + '/5' : ''),
+    chip('Dépense', s.kcal ? Math.round(s.kcal).toLocaleString('fr-FR') + ' kcal' : ''),
+    chip('Douleur', s.pain != null && TS.healthEnabled(data) ? s.pain + '/10' : ''),
+  ].join('');
+  return `<div class="day-sess day-sess--${s.sport}">
+    <div class="day-sess__head"><span class="sport-dot sport-dot--${s.sport}"></span><span class="day-sess__title">${esc(s.name || sp.label)}</span>
+      <a class="btn btn--sm" href="sessions.html?seance=${encodeURIComponent(s.id)}">Modifier</a></div>
+    ${main ? `<div class="day-sess__main">${main}</div>` : ''}
+    ${chips ? `<div class="day-sess__chips">${chips}</div>` : ''}
+    ${s.notes ? `<div class="day-sess__notes">${esc(s.notes)}</div>` : ''}
+    ${plan ? `<div class="day-sess__plan">Prévue : ${planTarget(plan)} · ${PLAN_STATE_LABEL[st[plan.id].state]}${st[plan.id].ratio != null ? ' (' + Math.round(st[plan.id].ratio * 100) + ' %)' : ''}</div>` : ''}
+  </div>`;
 }
 function fillPlanForm(p, date) {
   planEditId = p ? p.id : null;

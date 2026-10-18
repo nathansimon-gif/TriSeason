@@ -694,6 +694,32 @@ async function main() {
     assert(shown, 'fenêtre non affichée');
   });
 
+  await test('Calendrier : un jour montre le détail des séances faites, « Modifier » ouvre la séance', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    await v.page.evaluate((d) => openPlanDay(d), day(-2));
+    await v.page.waitForTimeout(200);
+    const r = await v.page.evaluate(() => ({ body: document.getElementById('planDayBody').innerText,
+      form: getComputedStyle(document.getElementById('planForm')).display,
+      btn: getComputedStyle(document.getElementById('planFormOpen')).display }));
+    const s2 = sampleData().sessions.find(x => x.date === day(-2));
+    await v.page.click('#planDayBody .day-sess a.btn');
+    await v.page.waitForURL(/sessions\.html/); await v.page.waitForTimeout(600);
+    const modal = await v.page.evaluate(() => ({ open: document.getElementById('sessionModal').classList.contains('open'), date: document.getElementById('s_date').value }));
+    // Jour à venir vide : le formulaire de planification s'ouvre directement
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate((d) => openPlanDay(d), day(3));
+    const future = await v.page.evaluate(() => getComputedStyle(document.getElementById('planForm')).display);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const hms = s2.sport === 'velo' ? '1:30:00' : '0:45:00';
+    assert(r.body.includes(hms) && r.body.includes('FC moy.') && r.body.includes('RPE'), 'détail absent : ' + r.body.slice(0, 200));
+    assert(/nutrition du jour/i.test(r.body), 'nutrition du jour absente');
+    assert(r.form === 'none' && r.btn !== 'none', 'le formulaire de planification cache le détail');
+    assert(modal.open && modal.date === day(-2), 'la séance ne s’ouvre pas dans Séances');
+    assert(future !== 'none', 'formulaire fermé pour un jour à venir');
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();
