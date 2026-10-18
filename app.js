@@ -1300,6 +1300,83 @@ function takeDonePlans() {
   return fresh.map(p => ({ plan: p, ...st[p.id] }));
 }
 
+// ── Santé : blessures, maladie, grossesse, reprise (option) ────────────────
+// Option facultative, activée par la personne elle-même avec un accord à part
+// (en plus de l'accord général) : data.health = { consent: { version, at }, periods }.
+// periods = [{ id, type, zone, sports: [], start, end (reprise du sport, facultatif),
+//   status: 'en_cours' | 'reprise' | 'guerie', healed (jour où elle est marquée terminée), notes }]
+// Séances : champ facultatif pain (douleur 0 à 10), seulement avec l'option.
+// Désactiver = retirer son accord : tout ce que l'option a enregistré est effacé.
+// Jamais montré à quelqu'un d'autre ; uniquement des faits, aucun conseil médical.
+const HEALTH_CONSENT_VERSION = 1;
+const HEALTH_TYPES = { blessure: 'Blessure', maladie: 'Maladie', grossesse: 'Grossesse',
+  post_partum: 'Après l’accouchement', arret: 'Arrêt (autre raison)' };
+const HEALTH_STATUS = { en_cours: 'En cours', reprise: 'En reprise', guerie: 'Terminée' };
+const HEALTH_ZONES = ['Pied', 'Cheville', 'Tendon d’Achille', 'Mollet', 'Tibia', 'Genou', 'Cuisse', 'Ischios',
+  'Hanche', 'Dos', 'Épaule', 'Coude', 'Poignet', 'Cou', 'Autre'];
+
+function healthEnabled(data = getData()) {
+  const c = data.health && data.health.consent;
+  return !!(c && c.version >= HEALTH_CONSENT_VERSION);
+}
+function enableHealth() {
+  const data = getData();
+  data.health = { periods: [], ...(data.health || {}), consent: { version: HEALTH_CONSENT_VERSION, at: Date.now() } };
+  saveData(data);
+}
+function disableHealth() {
+  const data = getData();
+  delete data.health;
+  (data.sessions || []).forEach(s => { delete s.pain; });
+  saveData(data);
+}
+function getHealthPeriods(data = getData()) {
+  if (!healthEnabled(data)) return [];
+  return (data.health.periods || []).slice().sort((a, b) => b.start.localeCompare(a.start));
+}
+function saveHealthPeriod(p) {
+  const data = getData();
+  if (!healthEnabled(data)) throw new Error('Option « Blessures et reprise » non activée');
+  const list = data.health.periods = data.health.periods || [];
+  if (!p.id) p.id = newId();
+  const old = list.find(x => x.id === p.id);
+  if (p.status === 'guerie') {
+    // Jour de fin gardé tel quel ensuite : l'historique des défis ne bouge plus.
+    p.healed = old && old.status === 'guerie' && old.healed ? old.healed
+      : old ? localDateStr() : (p.end || p.start);
+    if (p.healed < p.start) p.healed = p.start;
+  } else delete p.healed;
+  const i = list.indexOf(old);
+  if (i >= 0) list[i] = p; else list.push(p);
+  saveData(data);
+  return p;
+}
+function deleteHealthPeriod(id) {
+  const data = getData();
+  if (!data.health) return;
+  data.health.periods = (data.health.periods || []).filter(p => p.id !== id);
+  saveData(data);
+}
+// Phase d'une période un jour donné : 'arret' (avant la reprise du sport),
+// 'reprise' (après), ou null (hors période).
+function healthPhase(p, day) {
+  const to = p.status === 'guerie' ? (p.healed || p.end || p.start) : '9999-12-31';
+  if (day < p.start || day > to) return null;
+  const back = p.end || (p.status === 'en_cours' ? null : p.start);
+  return back && day >= back ? 'reprise' : 'arret';
+}
+function healthPeriodsOn(day, data = getData()) {
+  return getHealthPeriods(data).filter(p => healthPhase(p, day));
+}
+// Phase d'une semaine : 'arret' si un jour est en arrêt, sinon 'reprise', sinon null.
+function healthWeekPhase(weekKey, data = getData()) {
+  const periods = getHealthPeriods(data);
+  if (!periods.length) return null;
+  const phases = new Set();
+  weekDays(weekKey).forEach(d => periods.forEach(p => { const ph = healthPhase(p, d); if (ph) phases.add(ph); }));
+  return phases.has('arret') ? 'arret' : phases.has('reprise') ? 'reprise' : null;
+}
+
 // ── Défis de la semaine et badges ───────────────────────────────────────────
 // Tout est calculé à partir des données (rien n'est stocké, sauf la liste des
 // badges déjà annoncés : data.achievements_seen). Visible seulement par
@@ -1335,8 +1412,17 @@ function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) 
   const days = weekDays(weekKey);
   const inWeek = idx.byWeek[weekKey] || [];
   const list = [];
+  const health = healthWeekPhase(weekKey, data);
 
-  if (practiced.length >= 2) {
+  if (health === 'arret') {
+    // Pendant un arrêt : pas de défi d'entraînement, seulement celui de nutrition.
+  } else if (health === 'reprise') {
+    // En reprise : la régularité plutôt que le volume.
+    const a = [1, 2].reduce((t, n) => t + (idx.byWeek[prevWeekKey(weekKey, n)] || []).length, 0) / 2;
+    const target = Math.min(3, Math.max(1, Math.round(a) + 1));
+    list.push({ id: 'regular', kind: 'all', label: `${target} séance${target > 1 ? 's' : ''}, même courte${target > 1 ? 's' : ''}`,
+      target, value: inWeek.length });
+  } else if (practiced.length >= 2) {
     const counts = practiced.map(sp => ({ sp, a: avg(wk => (idx.byWeek[wk] || []).filter(s => s.sport === sp).length) }));
     counts.sort((x, y) => x.a - y.a);
     const { sp, a } = counts[0];
@@ -1359,6 +1445,7 @@ function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) 
     list.push({ id: 'hydro', kind: 'nutri', label: `2,5 L d’eau ${target} jours`, target, value: days.filter(d => (idx.hydro[d] || 0) >= HYDRO_TARGET_ML).length });
   }
   list.forEach(c => { c.done = c.value >= c.target; });
+  list.health = health;
   return list;
 }
 
@@ -1368,6 +1455,7 @@ function challengeHistory(data = getData(), idx = activityIndex(data)) {
   const current = getISOWeek(today);
   const firstDay = [...(data.sessions || []).map(s => s.date), ...idx.mealDays].filter(Boolean).sort()[0];
   const out = { current: weeklyChallenges(current, data, idx), streak: 0, best: 0, doneWeeks: [] };
+  out.paused = out.current.health;
   if (!firstDay) return out;
   const firstWeek = getISOWeek(firstDay);
   const weeks = [];
@@ -1375,8 +1463,10 @@ function challengeHistory(data = getData(), idx = activityIndex(data)) {
   weeks.reverse();
   let run = 0;
   weeks.forEach(wk => {
-    const ok = weeklyChallenges(wk, data, idx).every(c => c.done);
-    if (ok) { out.doneWeeks.push(wk); run++; out.best = Math.max(out.best, run); } else run = 0;
+    const list = weeklyChallenges(wk, data, idx);
+    const ok = list.every(c => c.done);
+    // Semaine d'arrêt ou de reprise ratée : la série est en pause, pas perdue.
+    if (ok) { out.doneWeeks.push(wk); run++; out.best = Math.max(out.best, run); } else if (!list.health) run = 0;
   });
   out.streak = run + (out.current.every(c => c.done) ? 1 : 0);
   if (out.current.every(c => c.done)) { out.doneWeeks.push(current); out.best = Math.max(out.best, out.streak); }
@@ -1954,6 +2044,8 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   toast, initTooltips,
+  healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
+  healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
   formatHours, FUEL_PRESETS, fuelCarbs, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,

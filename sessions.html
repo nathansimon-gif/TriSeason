@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261020b"></script>
+  <script src="auth-guard.js?v=20261021a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261020b">
+  <link rel="stylesheet" href="style.css?v=20261021a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -275,7 +275,7 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Date</label>
-          <input class="form-input" type="date" id="s_date">
+          <input class="form-input" type="date" id="s_date" onchange="updatePainField()">
         </div>
         <div class="form-group">
           <label class="form-label">Sport</label>
@@ -318,6 +318,10 @@
           <button type="button" class="sensation-btn" data-val="5" onclick="setSensation(5)" title="Excellent">😄</button>
         </div>
         <input type="hidden" id="s_sensation" value="">
+      </div>
+      <div class="form-group" id="painGroup" style="display:none">
+        <label class="form-label" for="s_pain" id="painLabel" data-tip="Option « Blessures et reprise » (page Forme) : la douleur notée sur tes séances est affichée à côté de ton volume d'entraînement.">Douleur (0 à 10)</label>
+        <input class="form-input" type="number" min="0" max="10" step="1" id="s_pain" placeholder="0 = aucune douleur" style="max-width:180px">
       </div>
       <div class="form-group">
         <label class="form-label" data-tip="Associez cette séance à une compétition pour suivre l'impact de votre préparation nutritionnelle">Associer à une compétition (optionnel)</label>
@@ -370,9 +374,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261020b"></script>
-<script src="import.js?v=20261020b"></script>
-<script src="app.js?v=20261020b"></script>
+<script src="fit-parser.js?v=20261021a"></script>
+<script src="import.js?v=20261021a"></script>
+<script src="app.js?v=20261021a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -739,10 +743,30 @@ function openSessionModal(session = null) {
   if (document.getElementById('s_kcal')) document.getElementById('s_kcal').value = session?.kcal || '';
   if (document.getElementById('s_elevation')) document.getElementById('s_elevation').value = session?.elevation || '';
   setSensation(session?.sensation || null);
+  document.getElementById('s_pain').value = session?.pain ?? '';
+  painKeep = session?.pain ?? null;
+  updatePainField();
   populateCompSelect(session?.comp_id || null);
   toggleElevationField();
   updateCalc();
   document.getElementById('sessionModal').classList.add('open');
+}
+
+// Douleur : seulement avec l'option « Blessures et reprise » et une blessure à cette date.
+let painKeep = null;
+function updatePainField() {
+  const date = document.getElementById('s_date').value;
+  const injuries = date ? TS.healthPeriodsOn(date).filter(p => p.type === 'blessure') : [];
+  const show = injuries.length > 0 || (painKeep != null && TS.healthEnabled());
+  document.getElementById('painGroup').style.display = show ? '' : 'none';
+  const zones = [...new Set(injuries.map(p => p.zone).filter(Boolean))].join(', ').toLowerCase();
+  document.getElementById('painLabel').textContent = 'Douleur' + (zones ? ' · ' + zones : '') + ' (0 à 10)';
+}
+function painValue() {
+  if (document.getElementById('painGroup').style.display === 'none') return null;
+  const v = document.getElementById('s_pain').value;
+  if (v === '') return null;
+  return Math.max(0, Math.min(10, Math.round(Number(v))));
 }
 
 function toggleElevationField() {
@@ -791,6 +815,8 @@ function saveSessionForm() {
     elevation: parseFloat(document.getElementById('s_elevation')?.value)||null,
     comp_id:   document.getElementById('s_comp_id')?.value || null,
   };
+  const pain = painValue();
+  if (pain != null) session.pain = pain;
   if (!session.date || !session.sport) { TS.toast('Date et sport obligatoires', 'error'); return; }
   // Course à laquelle la séance était reliée avant cette modification (si on édite)
   const previous = editId ? TS.getSessions().find(s => s.id === editId) : null;

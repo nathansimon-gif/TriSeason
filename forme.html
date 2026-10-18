@@ -6,13 +6,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261020b"></script>
+  <script src="auth-guard.js?v=20261021a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261020b">
+  <link rel="stylesheet" href="style.css?v=20261021a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -56,6 +56,25 @@
     .ni-note { font-size:11px; color:var(--text-3); margin-top:10px; line-height:1.5; }
     .ni-legend { display:flex; gap:14px; font-size:11px; color:var(--text-2); margin-bottom:6px; flex-wrap:wrap; }
     .ni-legend span { display:inline-flex; align-items:center; }
+    .hp-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .hp-row:last-child { border-bottom:none; }
+    .hp-row__main { flex:1; min-width:180px; }
+    .hp-row__title { font-size:13px; font-weight:600; }
+    .hp-row__sub { font-size:12px; color:var(--text-2); margin-top:2px; }
+    .hp-status { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:var(--surface3); color:var(--text-2); white-space:nowrap; }
+    .hp-status--en_cours { background:var(--red-dim); color:var(--red); }
+    .hp-status--reprise { background:rgba(240,185,65,.14); color:var(--yellow); }
+    .hp-summary { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px 14px; margin:12px 0; font-size:13px; line-height:1.6; }
+    .hp-summary b { font-weight:600; }
+    .hp-milestones { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin-top:10px; }
+    .hp-milestone { font-size:12px; color:var(--text-2); }
+    .hp-note { font-size:11px; color:var(--text-3); line-height:1.55; margin-top:10px; }
+    .hp-consent { display:flex; gap:9px; align-items:flex-start; font-size:12px; color:var(--text-2); line-height:1.55; margin:12px 0; cursor:pointer; }
+    .hp-consent input { margin-top:2px; accent-color:var(--accent); width:15px; height:15px; flex-shrink:0; }
+    .hp-consent a, .hp-note a { color:var(--text); text-decoration:underline; text-underline-offset:2px; }
+    .hp-sports { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; }
+    .hp-sports label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+    .hp-sports input { accent-color:var(--accent); }
     .disclaimer-box {
       background: rgba(240,185,65,.08); border: 1px solid rgba(240,185,65,.25);
       border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
@@ -128,7 +147,18 @@
     <div style="position:relative;height:220px;overflow:hidden">
       <canvas id="chartPMC"></canvas>
     </div>
+    <div id="pmcBandsNote" style="display:none;margin-top:6px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(240,185,65,.25);vertical-align:-1px;margin-right:5px"></span>Fond jaune : blessure, maladie ou arrêt noté (Blessures, maladie et reprise)</div>
     <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
+  </div>
+
+  <!-- ── Blessures, maladie, reprise (option avec accord séparé) ── -->
+  <div class="card" style="margin-bottom:12px" id="healthCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Blessures, maladie et reprise</span>
+      <span class="tip-icon" data-tip="Option facultative. Note une blessure, une maladie, une grossesse ou un arrêt : tes défis s'adaptent, ta reprise est suivie semaine après semaine et, pour une blessure, la douleur notée sur tes séances est affichée à côté de ton volume.">?</span>
+      <button class="btn btn--sm" id="hpAddBtn" style="margin-left:auto;display:none" onclick="openHealthModal()">+ Ajouter</button>
+    </div>
+    <div id="healthBody"></div>
   </div>
 
   <!-- ── Nutrition × performance ── -->
@@ -177,6 +207,59 @@
 
 </div></div>
 
+<div class="modal-overlay" id="healthModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal__header">
+      <div class="modal__title" id="hpModalTitle">Nouvelle période</div>
+      <button class="modal__close" onclick="closeHealthModal()" aria-label="Fermer">×</button>
+    </div>
+    <div class="stack">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="hp_type">Type</label>
+          <select class="form-select" id="hp_type" onchange="updateHealthForm()"></select>
+        </div>
+        <div class="form-group" id="hpZoneGroup">
+          <label class="form-label" for="hp_zone">Zone du corps</label>
+          <select class="form-select" id="hp_zone"></select>
+        </div>
+      </div>
+      <div class="form-group" id="hpSportsGroup">
+        <label class="form-label">Sports touchés</label>
+        <div class="hp-sports">
+          <label><input type="checkbox" value="nat"> Natation</label>
+          <label><input type="checkbox" value="velo"> Vélo</label>
+          <label><input type="checkbox" value="run"> Course</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="hp_start">Début</label>
+          <input class="form-input" type="date" id="hp_start">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="hp_end" data-tip="Le jour où tu as recommencé le sport, même doucement. Laisse vide si tu n'as pas encore repris.">Reprise du sport le</label>
+          <input class="form-input" type="date" id="hp_end">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="hp_status">Où en es-tu ?</label>
+          <select class="form-select" id="hp_status"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="hp_notes">Notes (facultatif)</label>
+        <textarea class="form-textarea" id="hp_notes" rows="2" placeholder="ex. : conseils du kiné, examens…"></textarea>
+      </div>
+      <div id="hpPregnancyNote" class="hp-note" style="display:none;margin-top:0">Pour la reprise après une grossesse, demande l'avis d'un professionnel de santé (sage-femme, médecin, kiné). TriSeason ne te propose pas de programme.</div>
+      <div class="form-actions">
+        <button class="btn btn--danger" id="hpDeleteBtn" style="margin-right:auto;display:none" onclick="deleteHealthForm()">Supprimer</button>
+        <button class="btn btn--ghost" onclick="closeHealthModal()">Annuler</button>
+        <button class="btn btn--primary" onclick="saveHealthForm()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
   <a href="index.html"        class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>Dashboard</a>
@@ -186,7 +269,7 @@
   <a href="profile.html"      class="mobile-nav__item"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>Profil</a>
 </nav>
 
-<script src="app.js?v=20261020b"></script>
+<script src="app.js?v=20261021a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -205,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populatePredSource();
   renderPrediction();
   renderPMC();
+  renderHealth();
   renderNutritionImpact();
   renderObservations();
   TS.initTooltips();
@@ -214,6 +298,7 @@ window.addEventListener('triseason:update', () => {
   populatePredSource();
   renderPrediction();
   renderPMC();
+  renderHealth();
   renderNutritionImpact();
   renderObservations();
 });
@@ -368,7 +453,29 @@ function renderPMC() {
 
   // Chart — last 90 days max for readability
   const recent = series.slice(-90);
+  // Périodes de blessure / maladie / arrêt (option santé) : fond jaune pâle
+  const bands = [];
+  TS.getHealthPeriods().forEach(p => {
+    const idx = recent.map((s, i) => TS.healthPhase(p, s.day) ? i : -1).filter(i => i >= 0);
+    if (idx.length) bands.push([idx[0], idx[idx.length - 1]]);
+  });
+  document.getElementById('pmcBandsNote').style.display = bands.length ? '' : 'none';
   makeChart('chartPMC', {
+    plugins: [{
+      id: 'healthBands',
+      beforeDatasetsDraw(chart) {
+        if (!bands.length) return;
+        const { ctx, chartArea: a, scales: { x } } = chart;
+        const half = recent.length > 1 ? (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2 : 0;
+        ctx.save();
+        ctx.fillStyle = 'rgba(240,185,65,.10)';
+        bands.forEach(([i, j]) => {
+          const l = Math.max(a.left, x.getPixelForValue(i) - half), r = Math.min(a.right, x.getPixelForValue(j) + half);
+          ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
+        });
+        ctx.restore();
+      },
+    }],
     type: 'line',
     data: {
       labels: recent.map(s => new Date(s.day+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
@@ -387,6 +494,210 @@ function renderPMC() {
       }
     }
   });
+}
+
+// ── Blessures, maladie et reprise (option santé) ─────────────────────────────
+let hpEditId = null;
+function hpEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function hpDay(d) { return TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function hpDaysBetween(a, b) { return Math.round((TS.parseLocalDate(b) - TS.parseLocalDate(a)) / 86400000); }
+function hpTitle(p) { return TS.HEALTH_TYPES[p.type] + (p.type === 'blessure' && p.zone ? ' · ' + p.zone : ''); }
+function hpSub(p) {
+  const parts = ['depuis le ' + hpDay(p.start)];
+  if (p.status === 'guerie') parts[0] = 'du ' + hpDay(p.start) + ' au ' + hpDay(p.healed || p.end || p.start);
+  if (p.end && p.status !== 'guerie') parts.push('reprise le ' + hpDay(p.end));
+  if (p.sports && p.sports.length) parts.push(p.sports.map(sp => TS.SPORTS[sp].label.toLowerCase()).join(', '));
+  return parts.join(' · ');
+}
+function hpRow(p) {
+  return `<div class="hp-row">
+    <div class="hp-row__main"><div class="hp-row__title">${hpEsc(hpTitle(p))}</div><div class="hp-row__sub">${hpEsc(hpSub(p))}</div>
+      ${p.notes ? `<div class="hp-row__sub" style="color:var(--text-3)">${hpEsc(p.notes)}</div>` : ''}</div>
+    <span class="hp-status hp-status--${p.status}">${TS.HEALTH_STATUS[p.status]}</span>
+    <button class="btn btn--sm" onclick="openHealthModal('${p.id}')">Modifier</button>
+  </div>`;
+}
+
+function renderHealth() {
+  const body = document.getElementById('healthBody');
+  if (!body) return;
+  const on = TS.healthEnabled();
+  document.getElementById('hpAddBtn').style.display = on ? '' : 'none';
+  destroyHealthChart();
+  if (!on) {
+    body.innerHTML = `
+      <div style="font-size:13px;color:var(--text-2);line-height:1.6">Une blessure, une maladie, une grossesse ou une pause ?
+        Note-la ici : pendant l'arrêt, tes défis de la semaine s'adaptent et ta série est mise en pause ; à la reprise, tu vois
+        ta progression semaine après semaine (sans comparaison avec ton niveau d'avant) et, pour une blessure, la douleur
+        notée sur tes séances à côté de ton volume d'entraînement.</div>
+      <label class="hp-consent"><input type="checkbox" id="hpConsent" onchange="document.getElementById('hpEnableBtn').disabled=!this.checked">
+        <span>J'accepte que TriSeason enregistre ces informations de santé (type d'arrêt, zone blessée, dates, notes et douleur
+        notée sur mes séances) pour me les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
+        <a href="confidentialite.html#sante" target="_blank" rel="noopener">En savoir plus</a></span></label>
+      <button class="btn btn--primary" id="hpEnableBtn" disabled onclick="enableHealthOption()">Activer cette option</button>
+      <div class="hp-note">Facultatif. Sans cet accord, rien de tout ça n'est enregistré.</div>`;
+    return;
+  }
+
+  const periods = TS.getHealthPeriods();
+  const current = periods.filter(p => p.status !== 'guerie');
+  const past = periods.filter(p => p.status === 'guerie');
+  const today = TS.localDateStr();
+  let html = '';
+  if (!periods.length) {
+    html += `<div class="empty"><div class="empty__text">Rien de noté pour l'instant.</div>
+      <div class="empty__sub">« + Ajouter » pour une blessure, une maladie, une grossesse ou un arrêt, en cours ou passé.</div></div>`;
+  }
+  if (current.length) html += current.map(hpRow).join('');
+
+  const p = current[0];
+  if (p) html += hpSummaryHtml(p, today);
+  if (p) html += `<div style="position:relative;height:200px;margin-top:6px"><canvas id="chartHealth"></canvas></div>`;
+  if (current.some(x => x.type === 'grossesse' || x.type === 'post_partum')) {
+    html += `<div class="hp-note">Pour la reprise après une grossesse, demande l'avis d'un professionnel de santé (sage-femme, médecin, kiné).</div>`;
+  }
+  if (past.length) {
+    html += `<details style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;color:var(--text-2)">Antécédents (${past.length})</summary>
+      ${past.map(hpRow).join('')}</details>`;
+  }
+  html += `<div class="hp-note">Ces informations ne servent qu'à ton suivi, ne sont montrées à personne d'autre et ne remplacent pas l'avis
+    d'un professionnel de santé. <a href="#" onclick="disableHealthOption();return false">Désactiver l'option et tout effacer</a></div>`;
+  body.innerHTML = html;
+  if (p) renderHealthChart(p, today);
+}
+
+// Résumé factuel de la période en cours la plus récente.
+function hpSummaryHtml(p, today) {
+  const phase = TS.healthPhase(p, today);
+  if (phase !== 'reprise') {
+    const n = hpDaysBetween(p.start, today);
+    return `<div class="hp-summary">Arrêt depuis <b>${n} jour${n > 1 ? 's' : ''}</b>. Pendant ce temps, pas de défi
+      d'entraînement et ta série de défis est en pause.${p.type === 'blessure' ? ' Si tu fais quelques séances, note ta douleur : elle apparaîtra ci-dessous.' : ''}</div>`;
+  }
+  const since = p.end || p.start;
+  const days = hpDaysBetween(since, today);
+  const list = TS.getSessions({ from: since, to: today });
+  const hours = list.reduce((a, s) => a + (s.duration || 0), 0);
+  const wk = TS.getCurrentWeek();
+  const monday = TS.localDateStr(TS.getWeekMonday(wk));
+  const m = TS.getWeekMonday(wk);
+  const lastMonday = TS.localDateStr(new Date(m.getFullYear(), m.getMonth(), m.getDate() - 7));
+  const lastSunday = TS.localDateStr(new Date(m.getFullYear(), m.getMonth(), m.getDate() - 1));
+  const sumH = (from, to) => TS.getSessions({ from, to }).reduce((a, s) => a + (s.duration || 0), 0);
+  const thisW = sumH(monday, today);
+  // Semaine dernière : seulement si la reprise avait déjà commencé (depuis la reprise).
+  const prevW = since < monday ? sumH(since > lastMonday ? since : lastMonday, lastSunday) : null;
+  let week = `Cette semaine : <b>${TS.formatHours(thisW)}</b>`;
+  if (prevW) {
+    const pct = Math.round((thisW / prevW - 1) * 100);
+    week += ` · semaine dernière : ${TS.formatHours(prevW)} (${pct > 0 ? '+' : ''}${pct} %)`;
+  }
+  const sports = ['nat', 'velo', 'run'].filter(sp => list.some(s => s.sport === sp));
+  const miles = sports.map(sp => {
+    const ss = list.filter(s => s.sport === sp).sort((a, b) => a.date.localeCompare(b.date));
+    const longest = ss.reduce((m, s) => (s.distance || 0) > (m.distance || 0) ? s : m, ss[0]);
+    const pain = ss.filter(s => s.pain != null);
+    return `<div class="hp-milestone"><span class="sport-dot sport-dot--${sp}"></span><b style="color:var(--text)">${TS.SPORTS[sp].label}</b> :
+      ${ss.length} séance${ss.length > 1 ? 's' : ''}, 1re le ${hpDay(ss[0].date)}${longest && longest.distance ? `, plus longue ${String(Math.round(longest.distance * 10) / 10).replace('.', ',')} km` : ''}${pain.length ? `, dernière douleur ${pain[pain.length - 1].pain}/10` : ''}</div>`;
+  }).join('');
+  return `<div class="hp-summary">Reprise depuis <b>${days} jour${days > 1 ? 's' : ''}</b> (le ${hpDay(since)}) :
+    <b>${list.length} séance${list.length > 1 ? 's' : ''}</b>, ${TS.formatHours(hours)} au total.<br>${week}
+    ${miles ? `<div class="hp-milestones">${miles}</div>` : ''}</div>`;
+}
+
+// Volume par semaine (barres) et douleur moyenne notée (ligne), depuis 4 semaines avant le début.
+function renderHealthChart(p, today) {
+  const startWk = TS.getISOWeek(new Date(TS.parseLocalDate(p.start).getTime() - 28 * 86400000));
+  const weeks = [];
+  for (let d = TS.getWeekMonday(startWk); TS.localDateStr(d) <= today; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)) weeks.push(TS.getISOWeek(d));
+  const shown = weeks.slice(-26);
+  const hours = [], pain = [];
+  shown.forEach(wk => {
+    const from = TS.localDateStr(TS.getWeekMonday(wk));
+    const to = TS.localDateStr(new Date(TS.getWeekMonday(wk).getTime() + 6 * 86400000 + 3600000));
+    const ss = TS.getSessions({ from, to });
+    hours.push(Math.round(ss.reduce((a, s) => a + (s.duration || 0), 0) * 10) / 10);
+    const ps = ss.filter(s => s.pain != null);
+    pain.push(ps.length ? Math.round(ps.reduce((a, s) => a + s.pain, 0) / ps.length * 10) / 10 : null);
+  });
+  const hasPain = pain.some(v => v != null);
+  const datasets = [{ type: 'bar', label: 'Heures par semaine', data: hours, backgroundColor: 'rgba(163,171,185,.35)', yAxisID: 'y', borderRadius: 2 }];
+  if (hasPain) datasets.push({ type: 'line', label: 'Douleur moyenne (0 à 10)', data: pain, borderColor: '#ef5350', backgroundColor: '#ef5350', yAxisID: 'y2', spanGaps: true, pointRadius: 3, borderWidth: 2, tension: .2 });
+  makeChart('chartHealth', {
+    type: 'bar',
+    data: { labels: shown.map(wk => TS.getWeekMonday(wk).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })), datasets },
+    options: {
+      plugins: { legend: { labels: { color: '#a3abb9', font: { size: 11 }, boxWidth: 8 } },
+        tooltip: { callbacks: { label: it => it.dataset.yAxisID === 'y' ? 'Volume : ' + TS.formatHours(it.raw) : 'Douleur moyenne : ' + String(it.raw).replace('.', ',') + '/10' } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 9 }, maxRotation: 0 } },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 10 }, callback: v => TS.formatHours(v) } },
+        ...(hasPain ? { y2: { position: 'right', min: 0, max: 10, grid: { display: false }, ticks: { color: '#ef5350', font: { size: 10 }, stepSize: 2 } } } : {}),
+      },
+    },
+  });
+}
+function destroyHealthChart() { if (charts.chartHealth) { charts.chartHealth.destroy(); charts.chartHealth = null; } }
+
+function enableHealthOption() {
+  if (!document.getElementById('hpConsent').checked) return;
+  TS.enableHealth();
+  TS.toast('Option activée');
+}
+function disableHealthOption() {
+  if (!confirm('Désactiver l’option et effacer toutes les blessures, maladies, arrêts et douleurs notés, sur tous tes appareils ?')) return;
+  TS.disableHealth();
+  TS.toast('Option désactivée, informations effacées');
+}
+
+function updateHealthForm() {
+  const type = document.getElementById('hp_type').value;
+  const injury = type === 'blessure';
+  document.getElementById('hpZoneGroup').style.display = injury ? '' : 'none';
+  document.getElementById('hpSportsGroup').style.display = injury ? '' : 'none';
+  document.getElementById('hpPregnancyNote').style.display = type === 'grossesse' || type === 'post_partum' ? '' : 'none';
+}
+function openHealthModal(id) {
+  const p = id ? TS.getHealthPeriods().find(x => x.id === id) : null;
+  hpEditId = p ? p.id : null;
+  document.getElementById('hpModalTitle').textContent = p ? 'Modifier' : 'Nouvelle période';
+  document.getElementById('hp_type').innerHTML = Object.entries(TS.HEALTH_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  document.getElementById('hp_zone').innerHTML = TS.HEALTH_ZONES.map(z => `<option>${hpEsc(z)}</option>`).join('');
+  document.getElementById('hp_status').innerHTML = Object.entries(TS.HEALTH_STATUS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  document.getElementById('hp_type').value = p ? p.type : 'blessure';
+  document.getElementById('hp_zone').value = p && p.zone ? p.zone : 'Genou';
+  document.querySelectorAll('#hpSportsGroup input').forEach(c => { c.checked = !!(p && p.sports && p.sports.includes(c.value)); });
+  document.getElementById('hp_start').value = p ? p.start : TS.localDateStr();
+  document.getElementById('hp_end').value = p && p.end ? p.end : '';
+  document.getElementById('hp_status').value = p ? p.status : 'en_cours';
+  document.getElementById('hp_notes').value = p && p.notes ? p.notes : '';
+  document.getElementById('hpDeleteBtn').style.display = p ? '' : 'none';
+  updateHealthForm();
+  document.getElementById('healthModal').classList.add('open');
+}
+function closeHealthModal() { document.getElementById('healthModal').classList.remove('open'); hpEditId = null; }
+function saveHealthForm() {
+  const type = document.getElementById('hp_type').value;
+  const start = document.getElementById('hp_start').value;
+  const end = document.getElementById('hp_end').value || null;
+  let status = document.getElementById('hp_status').value;
+  if (!start) { TS.toast('Indique la date de début', 'error'); return; }
+  if (end && end < start) { TS.toast('La reprise ne peut pas être avant le début', 'error'); return; }
+  if (status === 'en_cours' && end && end <= TS.localDateStr()) status = 'reprise'; // déjà repris : en reprise
+  const p = { id: hpEditId, type, start, end, status, notes: document.getElementById('hp_notes').value.trim() };
+  if (type === 'blessure') {
+    p.zone = document.getElementById('hp_zone').value;
+    p.sports = [...document.querySelectorAll('#hpSportsGroup input:checked')].map(c => c.value);
+  }
+  TS.saveHealthPeriod(p);
+  closeHealthModal();
+  TS.toast('Enregistré');
+}
+function deleteHealthForm() {
+  if (!hpEditId || !confirm('Supprimer cette période ?')) return;
+  TS.deleteHealthPeriod(hpEditId);
+  closeHealthModal();
+  TS.toast('Supprimé');
 }
 
 // ── Observations descriptives ────────────────────────────────────────────────

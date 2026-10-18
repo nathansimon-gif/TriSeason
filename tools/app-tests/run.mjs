@@ -694,6 +694,96 @@ async function main() {
     assert(shown, 'fenêtre non affichée');
   });
 
+  // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
+  await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(700);
+    const before = await v.page.evaluate(() => ({ on: TS.healthEnabled(), btn: document.getElementById('hpEnableBtn').disabled,
+      add: getComputedStyle(document.getElementById('hpAddBtn')).display }));
+    let refused = false;
+    try { await v.page.evaluate(() => TS.saveHealthPeriod({ type: 'maladie', start: '2026-01-01', status: 'en_cours' })); } catch { refused = true; }
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance');
+    const painShown = await v.page.locator('#painGroup').isVisible();
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(500);
+    await v.page.check('#hpConsent');
+    await v.page.click('#hpEnableBtn'); await v.page.waitForTimeout(300);
+    const after = await v.page.evaluate(() => ({ on: TS.healthEnabled(), cloud: JSON.parse(localStorage.getItem('__fb')).docs.testeur.data.health,
+      add: getComputedStyle(document.getElementById('hpAddBtn')).display }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!before.on && before.btn && before.add === 'none', 'option active ou bouton cliquable sans accord');
+    assert(refused, 'une période peut être enregistrée sans accord');
+    assert(!painShown, 'case douleur affichée sans accord');
+    assert(after.on && after.cloud && after.cloud.consent && after.cloud.consent.version >= 1 && after.add !== 'none', 'accord non enregistré');
+  });
+
+  await test('Blessures : période, douleur sur la séance, défis adaptés, série en pause', async () => {
+    const data = sampleData();
+    data.health = { consent: { version: 1, at: 1 }, periods: [] };
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(700);
+    await v.page.click('#hpAddBtn');
+    await v.page.selectOption('#hp_type', 'blessure');
+    await v.page.selectOption('#hp_zone', 'Genou');
+    await v.page.check('#hpSportsGroup input[value="run"]');
+    await v.page.fill('#hp_start', day(-20));
+    await v.page.fill('#hp_end', day(-6));
+    await v.page.click('#healthModal .btn--primary'); await v.page.waitForTimeout(300);
+    const forme = await v.page.evaluate(() => ({ p: TS.getHealthPeriods()[0], text: document.getElementById('healthBody').textContent,
+      chart: !!document.getElementById('chartHealth'), bands: getComputedStyle(document.getElementById('pmcBandsNote')).display }));
+    // Douleur sur une séance pendant la blessure
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.fill('#s_date', day(-2)); await v.page.dispatchEvent('#s_date', 'change');
+    const label = await v.page.textContent('#painLabel');
+    await v.page.fill('#s_dur', '0:30:00'); await v.page.fill('#s_dist', '5'); await v.page.selectOption('#s_sport', 'run');
+    await v.page.fill('#s_pain', '4');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => {
+      const s = TS.getSessions().find(x => x.pain != null);
+      const wk = TS.getCurrentWeek();
+      return { pain: s && s.pain, phase: TS.healthWeekPhase(wk), ids: TS.weeklyChallenges(wk).map(c => c.id) };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(forme.p && forme.p.zone === 'Genou' && forme.p.status === 'reprise', 'période mal enregistrée : ' + JSON.stringify(forme.p));
+    assert(/Reprise depuis/.test(forme.text) && forme.chart, 'résumé de reprise ou graphique absent');
+    assert(forme.bands !== 'none', 'période non signalée sur le graphique de forme');
+    assert(/genou/.test(label), 'case douleur sans la zone : ' + label);
+    assert(r.pain === 4, 'douleur non enregistrée');
+    assert(r.phase === 'reprise' && r.ids.includes('regular') && !r.ids.includes('sport') && !r.ids.includes('sessions'), 'défis non adaptés : ' + JSON.stringify(r));
+  });
+
+  await test('Blessures : une semaine d’arrêt ratée ne casse pas la série de défis', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);
+    const r = await v.page.evaluate(() => {
+      const d = TS.getData();
+      const without = TS.challengeHistory(d);
+      d.health = { consent: { version: 1, at: 1 }, periods: [{ id: 'h1', type: 'maladie', start: TS.localDateStr(new Date(Date.now() - 21 * 864e5)), end: null, status: 'en_cours' }] };
+      const withP = TS.challengeHistory(d);
+      return { without: without.best, withP: withP.best, paused: withP.paused, n: withP.current.length };
+    });
+    await v.ctx.close();
+    assert(r.paused === 'arret' && r.n === 1, 'pas en pause pendant l’arrêt : ' + JSON.stringify(r));
+    assert(r.withP >= r.without, 'série plus courte avec un arrêt : ' + JSON.stringify(r));
+  });
+
+  await test('Blessures : retirer son accord efface tout (périodes et douleurs)', async () => {
+    const data = sampleData();
+    data.health = { consent: { version: 1, at: 1 }, periods: [{ id: 'h1', type: 'blessure', zone: 'Dos', start: day(-10), end: null, status: 'en_cours' }] };
+    data.sessions[0].pain = 3;
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    await v.page.click('text=Retirer mon accord et tout effacer'); await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => { const c = JSON.parse(localStorage.getItem('__fb')).docs.testeur.data;
+      return { on: TS.healthEnabled(), health: c.health, pain: c.sessions.some(s => 'pain' in s), n: c.sessions.length }; });
+    await v.ctx.close();
+    assert(!r.on && !r.health && !r.pain, 'informations santé encore présentes : ' + JSON.stringify(r));
+    assert(r.n === 40, 'séances perdues');
+  });
+
   await browser.close();
   server.close();
 

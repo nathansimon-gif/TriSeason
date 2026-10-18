@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261020b"></script>
+  <script src="auth-guard.js?v=20261021a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261020b">
+  <link rel="stylesheet" href="style.css?v=20261021a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -137,6 +137,12 @@
   <div class="section-card" id="stravaCard" hidden>
     <div class="section-card__title">Strava</div>
     <div id="stravaBody"></div>
+  </div>
+
+  <!-- ── Option santé : blessures et reprise ── -->
+  <div class="section-card" id="healthCard">
+    <div class="section-card__title">Blessures, maladie et reprise</div>
+    <div id="healthBody" class="strava-note"></div>
   </div>
 
   <!-- ── Compte ── -->
@@ -290,7 +296,7 @@
 </div>
 
 
-<script src="app.js?v=20261020b"></script>
+<script src="app.js?v=20261021a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -306,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFCZones();
   renderStrava();
   renderBadges();
+  renderHealthOption();
   handleStravaReturn();
   loadEditForm();
   TS.initTooltips();
@@ -373,7 +380,30 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); });
+
+// Option santé (accord séparé) : activée depuis Forme, désactivable ici.
+function renderHealthOption() {
+  const el = document.getElementById('healthBody');
+  const data = TS.getData();
+  if (!TS.healthEnabled(data)) {
+    el.innerHTML = `Option facultative, désactivée. Elle permet de noter une blessure, une maladie, une grossesse ou un arrêt
+      pour adapter tes défis et suivre ta reprise. Elle demande ton accord à part.
+      <div class="strava-actions"><a class="btn btn--sm" href="forme.html#healthCard">Découvrir dans Forme</a></div>`;
+    return;
+  }
+  const n = TS.getHealthPeriods(data).length;
+  const at = new Date(data.health.consent.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  el.innerHTML = `Activée le ${at} avec ton accord. ${n ? n + ' période' + (n > 1 ? 's notées' : ' notée') : 'Rien de noté pour l’instant'}.
+    Ces informations ne sont montrées à personne d'autre.
+    <div class="strava-actions"><a class="btn btn--sm" href="forme.html#healthCard">Gérer dans Forme</a>
+      <button class="btn btn--sm btn--danger" onclick="disableHealthOption()">Retirer mon accord et tout effacer</button></div>`;
+}
+function disableHealthOption() {
+  if (!confirm('Retirer ton accord ? Toutes les blessures, maladies, arrêts et douleurs notés seront effacés, sur tous tes appareils.')) return;
+  TS.disableHealth();
+  TS.toast('Accord retiré, informations effacées');
+}
 
 // Tous les badges : obtenus d'abord (du plus récent), puis les plus proches d'être obtenus.
 function renderBadges() {
