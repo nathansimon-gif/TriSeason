@@ -266,13 +266,17 @@ function syncFromCloud(uid) {
       // Un compte cloud existe déjà : ses données font foi sur cet appareil.
       const cloudData = doc.data().data;
       cloudLoaded = true;
-      localStorage.setItem(DB_KEY, JSON.stringify(cloudData));
-      window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
+      if (compactStoredSessions(cloudData)) saveData(cloudData); // allégée une fois, renvoyée au cloud
+      else {
+        localStorage.setItem(DB_KEY, JSON.stringify(cloudData));
+        window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
+      }
     } else {
       // Premier login : on envoie ce qu'il y avait déjà en local (saison déjà
       // saisie avant la mise en place des comptes) pour l'attacher au compte.
       cloudLoaded = true;
       const localData = getData();
+      if (compactStoredSessions(localData)) localStorage.setItem(DB_KEY, JSON.stringify(localData));
       pushToCloud(localData);
     }
     markActiveToday(uid);
@@ -430,7 +434,32 @@ function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+// ── Séances compactes : moins de place dans le document du compte (1 Mo max) ─
+// - aucun champ vide enregistré (null, '') ;
+// - durée arrondie à 6 décimales d'heure : reste exacte à la seconde (écart < 0,002 s) ;
+// - séance Strava : pas de « · Strava » dans les notes (strava_id le dit déjà),
+//   et pas de nom automatique (« Morning Run », « Course à pied le matin »…).
+const STRAVA_DEFAULT_NAME = /^(?:(?:morning|lunch|afternoon|evening|night) (?:run|ride|swim|walk|hike|activity|workout|trail run|virtual ride|virtual run|mountain bike ride|gravel ride|e-bike ride)|(?:course à pied|course|trail|sortie (?:à )?vélo|vélo|natation|activité|randonnée|marche) (?:(?:le|du|de|en) |dans l['’]|à l['’]heure du |l['’])?(?:matin|matinale|midi|soir|soirée|nuit|nocturne|après-midi|déjeuner))$/i;
+function compactSession(s) {
+  Object.keys(s).forEach(k => { if (s[k] == null || s[k] === '') delete s[k]; });
+  if (typeof s.duration === 'number') s.duration = Math.round(s.duration * 1e6) / 1e6;
+  if (s.strava_id && typeof s.notes === 'string') {
+    const name = s.notes.replace(/(^| · )Strava$/, '').trim();
+    if (!name || STRAVA_DEFAULT_NAME.test(name)) delete s.notes; else s.notes = name;
+  }
+  return s;
+}
+// Séances déjà enregistrées : allégées une fois, à l'ouverture de l'appli.
+const COMPACT_VERSION = 1;
+function compactStoredSessions(data) {
+  if ((data._compact || 0) >= COMPACT_VERSION) return false;
+  (data.sessions || []).forEach(compactSession);
+  data._compact = COMPACT_VERSION;
+  return true;
+}
+
 function saveSession(session) {
+  compactSession(session);
   const data = getData();
   if (!session.id) session.id = newId();
   const idx = data.sessions.findIndex(s => s.id === session.id);
@@ -444,6 +473,7 @@ function saveSession(session) {
 function saveSessions(list) {
   const data = getData();
   const saved = list.map(session => {
+    compactSession(session);
     if (!session.id) session.id = newId();
     const idx = data.sessions.findIndex(s => s.id === session.id);
     if (idx >= 0) data.sessions[idx] = session; else data.sessions.push(session);
@@ -1718,7 +1748,7 @@ function stravaToSession(a) {
   if (!sport || !a.start_date_local) return null;
   const r = (v) => (v == null || isNaN(v) ? null : Math.round(v));
   const sec = a.elapsed_time || a.moving_time || 0;
-  return {
+  return compactSession({
     date: String(a.start_date_local).slice(0, 10),
     sport,
     duration: sec ? Math.round(sec) / 3600 : null,
@@ -1729,9 +1759,9 @@ function stravaToSession(a) {
     power_max: a.device_watts ? r(a.max_watts) : null,
     np: a.device_watts ? r(a.weighted_average_watts) : null,
     kcal: r(a.calories) || null,
-    notes: (a.name ? a.name + ' · ' : '') + 'Strava',
+    notes: a.name || null,
     strava_id: a.id,
-  };
+  });
 }
 
 // Même jour, même sport, distance et durée proches : déjà importée (fichier .fit…)
@@ -1762,10 +1792,9 @@ function archiveToSession(a) {
     fc_avg: a.hrAvg ? Math.round(a.hrAvg) : null, fc_max: a.hrMax ? Math.round(a.hrMax) : null,
     power_avg: a.watts ? Math.round(a.watts) : null, power_max: a.wattsMax ? Math.round(a.wattsMax) : null,
     np: a.np ? Math.round(a.np) : null, kcal: a.kcal ? Math.round(a.kcal) : null,
-    notes: (a.name ? a.name.slice(0, 80) + ' · ' : '') + 'Strava', strava_id: a.id,
+    notes: a.name ? a.name.slice(0, 80) : null, strava_id: a.id,
   };
-  Object.keys(s).forEach(k => { if (s[k] == null) delete s[k]; }); // pas de champs vides : place gagnée
-  return s;
+  return compactSession(s);
 }
 
 function planStravaArchive(acts, { since = null } = {}) {
@@ -2032,7 +2061,7 @@ window.TS = {
   getData, saveData, loadData, newId, resetAllData, deleteAccount, clearLocalUserData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,
-  getSessions, saveSession, saveSessions, deleteSession,
+  getSessions, saveSession, saveSessions, deleteSession, compactSession,
   getCompetitions, saveCompetition, deleteCompetition,
   syncCompetition, refreshCompetitionRecords, linkSessionsToCompetition,
   checkCompetitionLegs, describeCompSync, describeCompRecords, compClosestFormat, COMP_FORMATS,

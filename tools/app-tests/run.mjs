@@ -440,7 +440,7 @@ async function main() {
     assert(r.d.sessions.length === 41, `${r.d.sessions.length} séances au lieu de 41 (40 + la course ; le vélo existait déjà, la marche est ignorée)`);
     assert(ride && ride.id === 's1', 'le vélo n’a pas été relié à la séance déjà importée');
     assert(run && run.date === day(-2), 'date de la course : ' + (run && run.date) + ' au lieu de ' + day(-2) + ' (heure locale 23:30)');
-    assert(run.duration === 3615 / 3600 && run.distance === 10.01 && run.elevation === 85 && run.fc_avg === 152, 'valeurs : ' + JSON.stringify(run));
+    assert(Math.round(run.duration * 3600) === 3615 && run.distance === 10.01 && run.elevation === 85 && run.fc_avg === 152, 'valeurs : ' + JSON.stringify(run));
     assert(fromStrava.length === 2 && !r.d.sessions.some(s => s.strava_id === 503), 'séances liées : ' + fromStrava.length);
     assert(r.d.strava.refresh_token === 'renouv-1' && r.d.strava.name === 'Léa Test', 'connexion non enregistrée');
     assert(!r.url.includes('code='), 'le code est resté dans l’adresse');
@@ -553,7 +553,7 @@ async function main() {
     const run = r.find(s => s.strava_id === 901);
     assert(summary.includes('1 séance à ajouter') && summary.includes('1 ignorée'), 'résumé : ' + summary.replace(/\s+/g, ' ').slice(0, 200));
     assert(r.length === 41 && r.find(s => s.id === 's1').strava_id === 902, `${r.length} séances, s1 reliée : ${r.find(s => s.id === 's1').strava_id}`);
-    assert(run && run.date === day(0) && run.sport === 'run' && run.duration === 3615 / 3600 && run.distance === 10.01 && run.fc_avg === 148 && run.elevation === 120,
+    assert(run && run.date === day(0) && run.sport === 'run' && Math.round(run.duration * 3600) === 3615 && run.distance === 10.01 && run.fc_avg === 148 && run.elevation === 120,
       'course : ' + JSON.stringify(run) + ' (date attendue ' + day(0) + ')');
   });
 
@@ -720,6 +720,37 @@ async function main() {
     assert(modal.open && modal.date === day(-2), 'la séance ne s’ouvre pas dans Séances');
     assert(future !== 'none', 'formulaire fermé pour un jour à venir');
     assert(bubbles === 0, 'bulle flottante encore présente sur les jours du calendrier');
+  });
+
+  await test('Séances allégées : noms Strava automatiques retirés, champs vides et durées raccourcis, rien d’utile perdu', async () => {
+    const data = sampleData();
+    const long = 4027 / 3600; // 1:07:07, écrit avec beaucoup de décimales
+    data.sessions.push(
+      { id: 'st1', date: day(-3), sport: 'run', duration: long, distance: 10.9, fc_avg: null, power_avg: null, np: null, notes: 'Morning Run · Strava', strava_id: 111 },
+      { id: 'st2', date: day(-4), sport: 'velo', duration: 2.5, distance: 70, notes: 'Sortie club avec Paul · Strava', strava_id: 222 },
+      { id: 'st3', date: day(-5), sport: 'nat', duration: 0.75, distance: 2, notes: 'Natation dans l\'après-midi · Strava', strava_id: 333 },
+      { id: 'f1', date: day(-6), sport: 'run', duration: 0.5, distance: 5, notes: 'Import FIT · 300 kcal', kcal: 300, comp_id: null });
+    const before = JSON.stringify(data).length;
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
+    const r = await v.page.evaluate(() => {
+      const c = JSON.parse(localStorage.getItem('__fb')).docs.testeur.data;
+      const by = id => c.sessions.find(s => s.id === id);
+      return { size: JSON.stringify(c).length, compact: c._compact, n: c.sessions.length, st1: by('st1'), st2: by('st2'), st3: by('st3'), f1: by('f1'),
+        nulls: c.sessions.some(s => Object.values(s).some(x => x === null || x === '')) };
+    });
+    // Une nouvelle séance saisie à la main est enregistrée sans champs vides
+    const saved = await v.page.evaluate(() => TS.saveSession({ date: '2026-08-01', sport: 'run', duration: 1 / 3, fc_avg: null, notes: '' }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.compact === 1 && r.n === 44, 'données non allégées ou séances perdues : ' + JSON.stringify({ c: r.compact, n: r.n }));
+    assert(!('notes' in r.st1) && !('notes' in r.st3), 'nom automatique Strava gardé');
+    assert(r.st2.notes === 'Sortie club avec Paul', 'nom écrit à la main modifié : ' + r.st2.notes);
+    assert(r.f1.notes === 'Import FIT · 300 kcal' && r.f1.kcal === 300, 'séance importée par fichier modifiée');
+    assert(Math.round(r.st1.duration * 3600) === 4027 && String(r.st1.duration).length <= 8, 'durée : ' + r.st1.duration);
+    assert(r.st1.strava_id === 111 && r.st1.distance === 10.9 && !r.nulls, 'champ utile perdu ou champ vide restant');
+    assert(r.size < before, 'pas de place gagnée');
+    assert(!('fc_avg' in saved) && !('notes' in saved) && Math.round(saved.duration * 3600) === 1200, 'nouvelle séance pas allégée : ' + JSON.stringify(saved));
   });
 
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)

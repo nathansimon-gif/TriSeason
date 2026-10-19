@@ -91,7 +91,13 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   l'appli, via `markActiveToday`) et `lastActive`. `pushToCloud` écrit avec
   `mergeFields: ['data', 'updatedAt']` pour ne pas les effacer : ne jamais
   revenir à un `set()` qui remplace tout le document.
-- Durées en **heures décimales**, à la seconde près (`Math.round(sec) / 3600`).
+- Durées en **heures décimales**, à la seconde près (`Math.round(sec) / 3600`),
+  enregistrées arrondies à 6 décimales (`compactSession`) : relire les secondes avec
+  `Math.round(h * 3600)`, jamais par comparaison exacte.
+- **Séances compactes** (`compactSession`, appliqué à chaque enregistrement et une
+  fois aux séances existantes, `data._compact`) : aucun champ vide, pas de
+  « · Strava » dans les notes (`strava_id` suffit), pas de nom automatique Strava
+  (« Morning Run », « Course à pied le matin »… : `STRAVA_DEFAULT_NAME`).
   Temps de course et records en texte `h:mm:ss`. **Affichage** : durées de
   séance, temps de course et records en `h:mm:ss` ; tous les totaux et moyennes
   d'heures au format `1h30` avec `TS.formatHours` (jamais « 7,5 h »).
