@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #35 (calendrier du Dashboard : le détail des séances du jour) puis recharger le site
+- [ ] 🧑 Fusionner la PR #36 (calendrier : plus de bulle flottante sur les jours) puis recharger le site
 - [ ] 🧑 Essayer l'option « Blessures, maladie et reprise » : Forme → carte « Blessures, maladie et reprise » → cocher l'accord → « + Ajouter »
 - [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
 - [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
@@ -109,6 +109,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 24/10/2026 | #36 | Calendrier du Dashboard : la bulle flottante qui cachait la fenêtre du jour est retirée (le détail est dans la fenêtre) |
 | 23/10/2026 | #35 | Calendrier du Dashboard : un appui sur un jour montre le détail des séances faites (durée h:mm:ss, distance, allure, D+, FC, puissance, RPE, ressenti, notes, séance prévue reliée), la nutrition du jour, et un bouton « Modifier » qui ouvre la séance ; la planification reste accessible par « + Planifier une séance ce jour-là » |
 | 22/10/2026 | #34 | Option **Blessures, maladie et reprise** (Forme) avec un accord à part : périodes (blessure avec zone et sports, maladie, grossesse, après l'accouchement, arrêt), reprise suivie semaine par semaine avec jalons par sport, douleur 0-10 sur les séances pendant une blessure (graphique douleur et volume), fond jaune sur le graphique de forme, défis adaptés et série en pause, retrait de l'accord = tout effacé (Profil). Politique de confidentialité (version 2), Aide et tests mis à jour |
 | 21/10/2026 | #33 | Feuille de route : « blessures, reprise, grossesse » et « cycle menstruel » ajoutés dans les prochaines tâches (4 et 5) pour la page Forme |

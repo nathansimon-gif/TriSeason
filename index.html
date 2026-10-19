@@ -326,7 +326,7 @@
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--run);display:inline-block"></span> Course</span>
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2);display:inline-block"></span> Plusieurs sports</span>
       <span class="cal-legend__dot"><span class="cal-plan" style="color:var(--text-2)"></span> Séance prévue</span>
-      <span style="margin-left:auto">Clique sur un jour pour planifier</span>
+      <span style="margin-left:auto">Appuie sur un jour pour voir le détail ou planifier</span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap">
       <span style="font-size:12px;font-weight:600;color:var(--text)">Séances prévues</span>
@@ -981,7 +981,7 @@ function renderActivityCalendar() {
     }).join('');
     const allDone = plans.length && plans.every(p => planSt[p.id].state === 'done');
     if (plans.length) tip = (tip ? tip + ' · ' : `${day} ${monthDate.toLocaleDateString('fr-FR',{month:'long'})} — `) + plans.length + ' prévue' + (plans.length > 1 ? 's' : '');
-    html += `<div class="cal-cell cal-cell--click${isToday ? ' cal-cell--today' : ''}" role="button" tabindex="0" onclick="openPlanDay('${dateStr}')" onkeydown="if(event.key==='Enter')openPlanDay('${dateStr}')"${tip ? ` data-tip="${tip.replace(/"/g,'&quot;')}"` : ''}>`
+    html += `<div class="cal-cell cal-cell--click${isToday ? ' cal-cell--today' : ''}" role="button" tabindex="0" onclick="openPlanDay('${dateStr}')" onkeydown="if(event.key==='Enter')openPlanDay('${dateStr}')"${tip ? ` aria-label="${tip.replace(/"/g,'&quot;')}"` : ''}>`
       + `<span class="cal-cell__num">${day}</span>${allDone ? '<span class="cal-check">✓</span>' : ''}${dot}${marks ? `<span class="cal-plans">${marks}</span>` : ''}</div>`;
   }
 
