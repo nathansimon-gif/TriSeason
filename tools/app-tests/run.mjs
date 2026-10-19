@@ -710,6 +710,7 @@ async function main() {
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
     await v.page.evaluate((d) => openPlanDay(d), day(3));
     const future = await v.page.evaluate(() => getComputedStyle(document.getElementById('planForm')).display);
+    const bubbles = await v.page.evaluate(() => document.querySelectorAll('#calGrid [data-tip], .cal-cell[data-tip]').length);
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     const hms = s2.sport === 'velo' ? '1:30:00' : '0:45:00';
@@ -718,6 +719,7 @@ async function main() {
     assert(r.form === 'none' && r.btn !== 'none', 'le formulaire de planification cache le détail');
     assert(modal.open && modal.date === day(-2), 'la séance ne s’ouvre pas dans Séances');
     assert(future !== 'none', 'formulaire fermé pour un jour à venir');
+    assert(bubbles === 0, 'bulle flottante encore présente sur les jours du calendrier');
   });
 
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
