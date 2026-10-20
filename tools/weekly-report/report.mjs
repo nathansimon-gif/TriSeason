@@ -119,6 +119,42 @@ export function computeReport({ weekStart, users, docs, metrics, prevMetrics, me
   };
 }
 
+// ── Feuille de route (FEUILLE-DE-ROUTE.md) : à faire et fait la semaine ──────
+// Pur et testable : md = contenu du fichier, weekStart / weekEnd = 'AAAA-MM-JJ'.
+const roadmapClean = t => t
+  .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\*|`|_/g, '')
+  .replace(/^\d+\.\s*/, '').replace(/\s+/g, ' ').trim();
+const roadmapShort = (t, n = 150) => (t.length > n ? t.slice(0, n).replace(/\s+\S*$/, '') + '…' : t);
+function roadmapItem(line) {
+  const m = line.match(/^- \[ \] ((?:🧑|🤖)+)\s*(.*)$/u);
+  if (!m) return null;
+  const who = m[1].includes('🧑') && m[1].includes('🤖') ? 'Toi + Claude' : m[1].includes('🧑') ? 'Toi' : 'Claude';
+  let text = m[2].trim();
+  const bold = text.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+  // « **Titre** : détail » → « Titre » suffit ; sinon le début de la phrase
+  if (bold) text = bold[1] + (bold[2] && !/^[:(]/.test(bold[2]) ? ' ' + bold[2] : '');
+  return { who, text: roadmapShort(roadmapClean(text)) };
+}
+function roadmapSection(md, title) {
+  const i = md.indexOf('\n## ' + title);
+  if (i < 0) return '';
+  const rest = md.slice(i + 4 + title.length);
+  const j = rest.indexOf('\n## ');
+  return j < 0 ? rest : rest.slice(0, j);
+}
+export function parseRoadmap(md, weekStart, weekEnd) {
+  const items = sec => sec.split('\n').map(roadmapItem).filter(Boolean); // seulement le 1er niveau (pas de retrait)
+  const toIso = d => { const [dd, mm, yy] = d.split('/'); return `${yy}-${mm}-${dd}`; };
+  const done = [];
+  roadmapSection(md, 'Fait').split('\n').forEach(l => {
+    const m = l.match(/^\| (\d\d\/\d\d\/\d{4}) \| (#\d+) \| (.+) \|$/);
+    if (m && toIso(m[1]) >= weekStart && toIso(m[1]) <= weekEnd) done.push({ date: toIso(m[1]), pr: m[2], text: roadmapShort(roadmapClean(m[3]), 120) });
+  });
+  const later = ['Dans 3 à 6 mois', 'Plus tard', 'Dans 1 an', 'Quand l’appli devient payante', "Quand l'appli devient payante"]
+    .map(t => { const k = md.split('\n## ').find(x => x.startsWith(t)); return k ? items(k).length : 0; }).reduce((a, b) => a + b, 0);
+  return { now: items(roadmapSection(md, 'Maintenant (en cours)')), soon: items(roadmapSection(md, 'Bientôt (dans le mois)')), later, done };
+}
+
 // ── Mise en forme Markdown (français) ───────────────────────────────────────
 const nf = n => (n === null || n === undefined ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtDay = d => new Date(d + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -188,6 +224,28 @@ export function toMarkdown(r) {
   L.push('## Santé technique');
   const pct = r.storage.biggestPct;
   L.push(`- Plus gros compte : ${nf(Math.round(r.storage.biggestBytes / 1024))} Ko, soit ${String(pct).replace('.', ',')} % de la limite de 1 Mo par utilisateur${pct >= 50 ? ' — à surveiller : prévoir le découpage du stockage' : ''}.`);
+  if (r.roadmap) {
+    const rm = r.roadmap;
+    L.push('');
+    L.push('## Feuille de route');
+    L.push(`**Fait la semaine dernière** (${fmtDay(r.weekStart)} → ${fmtDay(r.weekEnd)})`);
+    if (rm.done.length) rm.done.forEach(d => L.push(`- ${fmtDay(d.date)} · PR ${d.pr} — ${d.text}`));
+    else L.push('- Rien de fusionné cette semaine.');
+    L.push('');
+    L.push('**À faire maintenant**');
+    if (rm.now.length) rm.now.forEach(t => L.push(`- **${t.who}** — ${t.text}`));
+    else L.push('- Rien en cours.');
+    L.push('');
+    L.push('**Ensuite, dans le mois**');
+    if (rm.soon.length) rm.soon.slice(0, 10).forEach(t => L.push(`- **${t.who}** — ${t.text}`));
+    else L.push('- Rien de prévu.');
+    if (rm.soon.length > 10) L.push(`- … et ${rm.soon.length - 10} autre(s).`);
+    if (rm.later) L.push(`- Plus tard (3 mois et au-delà) : ${rm.later} idée(s) notée(s) dans la feuille de route.`);
+  } else if (r.roadmapError) {
+    L.push('');
+    L.push('## Feuille de route');
+    L.push('- Feuille de route illisible : ' + r.roadmapError);
+  }
   return L.join('\n');
 }
 
@@ -333,6 +391,10 @@ async function main() {
     catch (e) { tests = { error: 'résultat introuvable (' + e.message.slice(0, 80) + ')' }; }
   }
   const report = computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError, tests });
+  // Feuille de route du dépôt (branche à jour au moment du lancement)
+  try {
+    report.roadmap = parseRoadmap(readFileSync(new URL('../../FEUILLE-DE-ROUTE.md', import.meta.url), 'utf8'), weekStart, addDays(weekStart, 6));
+  } catch (e) { report.roadmapError = e.message.slice(0, 120); }
   const md = toMarkdown(report);
   console.log(md);
   if (process.argv.includes('--email')) {

@@ -68,3 +68,8 @@ npm test                        # tests du calcul, sans accès à Firebase
   `firestore.googleapis.com/document/read_count`, `write_count`, `delete_count`).
 - **Séances, repas, compétitions** : comptés par date dans les données de chaque
   utilisateur.
+- **Feuille de route** : lue dans `FEUILLE-DE-ROUTE.md` du dépôt (branche à jour
+  au lancement) : lignes du tableau « Fait » datées dans la semaine du rapport,
+  cases non cochées de premier niveau de « Maintenant » et « Bientôt », et nombre
+  d'idées pour plus tard. Les dates du tableau « Fait » doivent donc être les
+  vraies dates de fusion (jj/mm/aaaa).
