@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #37 (séances allégées : environ 16 % de place en moins) puis recharger le site. Chaque compte est allégé tout seul à sa prochaine ouverture de l'appli ; le rapport du lundi suivant montrera la nouvelle taille du plus gros compte
+- [ ] 🧑 Fusionner la PR #38 (feuille de route : musculation et choix des sports ajoutés) — pas besoin de recharger le site
 - [ ] 🧑 Essayer l'option « Blessures, maladie et reprise » : Forme → carte « Blessures, maladie et reprise » → cocher l'accord → « + Ajouter »
 - [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
 - [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
@@ -42,6 +42,18 @@ Les cases cochées passent dans « Fait » en bas de page.
   - calendrier du Dashboard : petit repère sur les jours de règles prévus, pour placer une compétition ou une grosse séance
 
 **Ensuite :**
+
+- [ ] 🧑🤖 **Choisir ses sports** (à discuter ensemble avant de commencer) : à la création du compte, une page s'ouvre pour cocher les sports qu'on veut suivre (course, vélo, natation, et musculation si on l'ajoute). L'appli n'affiche ensuite que ces sports : Dashboard, Sports, filtres, records, défis, graphiques. Pistes :
+  - choix modifiable à tout moment dans Profil ; les comptes existants gardent les 3 sports par défaut
+  - rien n'est supprimé : une séance d'un sport non coché (import Strava, montre) reste enregistrée, on demande simplement « Ajouter ce sport à tes sports ? »
+  - à décider : un seul sport choisi = l'appli parle de « course à pied » et plus de « triathlon » (textes, compétitions, formats FFTri cachés)
+- [ ] 🧑🤖 **Musculation comme sport** (à discuter ensemble avant de commencer) : nouveau type de séance avec des exercices. Pistes :
+  - une séance = une liste d'exercices (nom, séries, répétitions, charge en kg), avec une liste d'exercices courants (squat, développé couché, tractions, gainage…) et la possibilité d'en écrire d'autres
+  - durée + effort ressenti (RPE) pour compter la séance dans la charge d'entraînement et la forme, comme les autres sports
+  - records par exercice (charge max, répétitions max) et progression dans le temps
+  - séances « Musculation » reçues de Strava ou d'une montre reconnues automatiquement (sans le détail des exercices, que Strava ne fournit pas)
+  - à décider : couleur du sport (à vérifier avec les 3 couleurs actuelles, daltonisme compris), place dans les défis et les badges
+  - à faire après le rangement en tiroirs si possible : le détail des exercices prend plus de place qu'une séance de course
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
   1. 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets »), les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload ») et prévenir Claude
@@ -109,6 +121,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 26/10/2026 | #38 | Feuille de route : « Choisir ses sports » à l'inscription et « Musculation comme sport » ajoutés (à discuter ensemble avant de commencer) |
 | 25/10/2026 | #37 | Séances allégées (≈ 16 % de place en moins, plus gros compte ≈ 717 → 600 Ko) : plus de champs vides, durées à 6 décimales (toujours exactes à la seconde), plus de « · Strava » ni de nom automatique Strava (« Morning Run »…) dans les notes ; les noms écrits à la main sont gardés. Les séances déjà enregistrées sont allégées à la prochaine ouverture |
 | 24/10/2026 | #36 | Calendrier du Dashboard : la bulle flottante qui cachait la fenêtre du jour est retirée (le détail est dans la fenêtre) |
 | 23/10/2026 | #35 | Calendrier du Dashboard : un appui sur un jour montre le détail des séances faites (durée h:mm:ss, distance, allure, D+, FC, puissance, RPE, ressenti, notes, séance prévue reliée), la nutrition du jour, et un bouton « Modifier » qui ouvre la séance ; la planification reste accessible par « + Planifier une séance ce jour-là » |
