@@ -1,6 +1,6 @@
 // Tests du calcul du rapport, sans accès à Firebase : node test.mjs
 import assert from 'node:assert/strict';
-import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail } from './report.mjs';
+import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail, parseRoadmap } from './report.mjs';
 
 // Dates
 assert.equal(lastFullWeekMonday(new Date('2026-10-12T08:00:00Z')), '2026-10-05'); // lundi → lundi précédent
@@ -90,6 +90,47 @@ const koTests = { total: 20, failed: 1, results: [{ name: 'Semaines', ok: false,
 assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics, tests: okTests })), /Tout fonctionne.*20 tests/);
 assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics, tests: koTests })), /1 test en échec[\s\S]*Échec — Semaines : S41=0 km/);
 assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics })), /Tests non lancés/);
+
+// Section « Feuille de route » : fait la semaine, à faire maintenant, ensuite
+const roadmapMd = `# Feuille de route
+## Maintenant (en cours)
+
+- [ ] 🧑 Fusionner la PR #40 puis recharger le site
+- [x] 🤖 Déjà fait, ne pas montrer
+- [ ] 🤖 *Facultatif* : vérifier \`sw.js\`
+
+## Bientôt (dans le mois)
+
+**Prochaines tâches :**
+
+- [ ] 🤖🧑 **1. Ranger les données en tiroirs** (une PR à part). Détail très long
+  - [ ] 🧑 sous-tâche à ne pas montrer
+- [x] 🤖 **2. Fait déjà**
+
+## Dans 3 à 6 mois
+
+- [ ] 🤖 Idée lointaine
+
+## Fait
+
+| Date | PR | Quoi |
+|---|---|---|
+| 19/10/2026 | #39 | Hors semaine |
+| 18/10/2026 | #38 | **Calendrier** : détail du jour |
+| 12/10/2026 | #37 | Début de semaine |
+| 11/10/2026 | #36 | Semaine d'avant |
+`;
+const rm = parseRoadmap(roadmapMd, '2026-10-12', '2026-10-18');
+assert.deepEqual(rm.done.map(d => d.pr), ['#38', '#37']);
+assert.equal(rm.done[0].text, 'Calendrier : détail du jour');
+assert.deepEqual(rm.now, [{ who: 'Toi', text: 'Fusionner la PR #40 puis recharger le site' }, { who: 'Claude', text: 'Facultatif : vérifier sw.js' }]);
+assert.deepEqual(rm.soon, [{ who: 'Toi + Claude', text: 'Ranger les données en tiroirs' }]);
+assert.equal(rm.later, 1);
+const withRm = computeReport({ weekStart, users, docs, metrics, prevMetrics });
+withRm.roadmap = rm;
+const rmMd = toMarkdown(withRm);
+assert.match(rmMd, /## Feuille de route[\s\S]*Fait la semaine dernière[\s\S]*PR #38 — Calendrier[\s\S]*À faire maintenant[\s\S]*\*\*Toi\*\* — Fusionner[\s\S]*Ensuite, dans le mois[\s\S]*Ranger les données en tiroirs[\s\S]*Plus tard \(3 mois et au-delà\) : 1 idée/);
+assert.match(markdownToHtml(rmMd), /<b>À faire maintenant<\/b>/);
 
 console.log('Tous les tests passent.\n');
 console.log(md);
