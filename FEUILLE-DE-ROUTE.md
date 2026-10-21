@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #39 (le rapport du lundi reprend la feuille de route) — pas besoin de recharger le site
+- [ ] 🧑 Fusionner la PR #40 (hydratation : boutons +100, +250 et +500 ml) puis recharger le site
 - [ ] 🧑 Essayer l'option « Blessures, maladie et reprise » : Forme → carte « Blessures, maladie et reprise » → cocher l'accord → « + Ajouter »
 - [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
 - [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
@@ -121,6 +121,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 21/10/2026 | #40 | Hydratation : boutons +100, +250 et +500 ml sur le Dashboard et la page Nutrition (le +750 ml est retiré) ; ligne « ml / Ajouter / Réinitialiser » qui dépassait sur téléphone corrigée |
 | 21/10/2026 | #39 | Rapport du lundi : nouvelle partie « Feuille de route » (fait la semaine précédente, à faire maintenant avec qui s'en occupe, ensuite dans le mois, nombre d'idées pour plus tard) ; dates du tableau « Fait » corrigées avec les vraies dates de fusion |
 | 21/10/2026 | #38 | Feuille de route : « Choisir ses sports » à l'inscription et « Musculation comme sport » ajoutés (à discuter ensemble avant de commencer) |
 | 19/10/2026 | #37 | Séances allégées (≈ 16 % de place en moins, plus gros compte ≈ 717 → 600 Ko) : plus de champs vides, durées à 6 décimales (toujours exactes à la seconde), plus de « · Strava » ni de nom automatique Strava (« Morning Run »…) dans les notes ; les noms écrits à la main sont gardés. Les séances déjà enregistrées sont allégées à la prochaine ouverture |

@@ -753,6 +753,23 @@ async function main() {
     assert(!('fc_avg' in saved) && !('notes' in saved) && Math.round(saved.duration * 3600) === 1200, 'nouvelle séance pas allégée : ' + JSON.stringify(saved));
   });
 
+  await test('Hydratation : boutons +100, +250 et +500 ml (Dashboard et Nutrition)', async () => {
+    const v = await newUser();
+    const labels = {};
+    for (const p of ['index', 'nutrition']) {
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(600);
+      labels[p] = await v.page.evaluate((fn) => [...document.querySelectorAll(`button[onclick^="${fn}("]`)].map(b => b.textContent.trim()), p === 'index' ? 'quickHydro' : 'addHydro');
+    }
+    const before = await v.page.evaluate(() => (TS.getData().nutrition.hydration || {})[TS.localDateStr()] || 0);
+    await v.page.click('button[onclick="addHydro(100)"]'); await v.page.waitForTimeout(200);
+    const after = await v.page.evaluate(() => (TS.getData().nutrition.hydration || {})[TS.localDateStr()] || 0);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const want = '+100 ml,+250 ml,+500 ml';
+    assert(labels.index.join() === want && labels.nutrition.join() === want, 'boutons : ' + JSON.stringify(labels));
+    assert(after - before === 100, `+100 ml non ajouté (${before} → ${after})`);
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();
