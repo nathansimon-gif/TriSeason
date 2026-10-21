@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261027a"></script>
+  <script src="auth-guard.js?v=20261028a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261027a">
+  <link rel="stylesheet" href="style.css?v=20261028a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -57,6 +57,20 @@
     .strava-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
     .strava-powered { font-size: 11px; color: var(--text-3); margin-top: 12px; }
     .strava-powered b { color: #fc5200; font-weight: 600; }
+    .gear-item { padding:12px 0; border-bottom:1px solid var(--border); }
+    .gear-item:last-child { border-bottom:none; }
+    .gear-item__head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .gear-item__name { font-size:14px; font-weight:600; flex:1; min-width:0; }
+    .gear-item__sub { font-size:12px; color:var(--text-2); margin-top:2px; }
+    .gear-item__stats { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; color:var(--text-2); margin-top:8px; }
+    .gear-item__stats b { color:var(--text); font-weight:600; font-family:var(--mono); }
+    .gear-bar { height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; margin-top:10px; }
+    .gear-bar b { display:block; height:100%; background:var(--accent); border-radius:3px; }
+    .gear-bar--near b { background:var(--yellow); } .gear-bar--over b { background:var(--red); }
+    .gear-item__alert { font-size:12px; color:var(--text-2); margin-top:6px; line-height:1.5; }
+    .gear-state { font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; white-space:nowrap; background:var(--surface2); color:var(--text-2); border:1px solid var(--border); }
+    .gear-state--near { background:rgba(240,185,65,.14); color:var(--yellow); border-color:transparent; }
+    .gear-state--over { background:var(--red-dim); color:var(--red); border-color:transparent; }
     .zone-chip {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
@@ -139,6 +153,15 @@
     <div id="stravaBody"></div>
   </div>
 
+  <!-- ── Équipement ── -->
+  <div class="section-card" id="equipement">
+    <div class="section-card__title" style="justify-content:space-between">
+      <span>Équipement</span>
+      <button class="btn btn--sm" onclick="openGearModal()">+ Ajouter</button>
+    </div>
+    <div id="gearList"></div>
+  </div>
+
   <!-- ── Option santé : blessures et reprise ── -->
   <div class="section-card" id="healthCard">
     <div class="section-card__title">Blessures, maladie et reprise</div>
@@ -202,6 +225,58 @@
   </div>
 
 </div></div>
+
+<!-- Équipement : ajout / modification -->
+<div class="modal-overlay" id="gearModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal__header">
+      <div class="modal__title" id="gearModalTitle">Nouvel équipement</div>
+      <button class="modal__close" onclick="closeGearModal()" aria-label="Fermer">×</button>
+    </div>
+    <div class="stack">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="g_sport">Pour</label>
+          <select class="form-select" id="g_sport" onchange="gearSportChanged()">
+            <option value="run">Course : chaussures</option>
+            <option value="velo">Vélo</option>
+            <option value="nat">Natation : combinaison</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="g_name">Nom</label>
+          <input class="form-input" type="text" id="g_name" maxlength="60" placeholder="ex. Pegasus 41">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="g_start">Première utilisation</label>
+          <input class="form-input" type="date" id="g_start">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="g_alert">Alerte à (km)</label>
+          <input class="form-input" type="number" min="1" step="1" id="g_alert" placeholder="facultatif">
+        </div>
+        <div class="form-group" id="gRetiredGroup">
+          <label class="form-label" for="g_retired">Retiré le</label>
+          <input class="form-input" type="date" id="g_retired">
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.55" id="gearHint"></div>
+      <div style="font-size:11px;color:var(--text-3);line-height:1.5">Tes séances de ce sport sont comptées sur cet équipement à partir de sa première utilisation.
+        Si tu en ajoutes un nouveau, l'ancien s'arrête la veille et les séances suivantes vont sur le nouveau.</div>
+      <div class="form-group">
+        <label class="form-label" for="g_notes">Notes (facultatif)</label>
+        <input class="form-input" type="text" id="g_notes" maxlength="120" placeholder="ex. pointure 43, achetées chez…">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--danger" id="gDeleteBtn" style="margin-right:auto;display:none" onclick="deleteGearForm()">Supprimer</button>
+        <button class="btn btn--ghost" onclick="closeGearModal()">Annuler</button>
+        <button class="btn btn--primary" onclick="saveGearForm()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Edit profile modal -->
 <div class="modal-overlay" id="deleteAccountModal">
@@ -296,7 +371,7 @@
 </div>
 
 
-<script src="app.js?v=20261027a"></script>
+<script src="app.js?v=20261028a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -313,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStrava();
   renderBadges();
   renderHealthOption();
+  renderGear();
   handleStravaReturn();
   loadEditForm();
   TS.initTooltips();
@@ -380,7 +456,111 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderGear(); });
+
+// ── Équipement ──────────────────────────────────────────────────────────────
+let gearEditId = null;
+function gearEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function gearDay(d, year) { return TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', ...(year !== false ? { year: 'numeric' } : {}) }); }
+function gearKm(v) { return (Math.round(v * 10) / 10).toLocaleString('fr-FR'); }
+// « dans environ 3 semaines (vers le 12 nov.) »
+function gearEta(st) {
+  const w = st.etaWeeks;
+  const when = w < 2 ? `environ ${Math.max(1, Math.round(w * 7))} jour${Math.round(w * 7) > 1 ? 's' : ''}`
+    : w < 9 ? `environ ${Math.round(w)} semaines` : `environ ${Math.round(w / 4.35)} mois`;
+  const date = TS.parseLocalDate(st.etaDate).toLocaleDateString('fr-FR', w < 9 ? { day: 'numeric', month: 'long' } : { month: 'long', year: 'numeric' });
+  return `dans ${when} (vers ${w < 9 ? 'le ' : ''}${date})`;
+}
+function gearItemHtml(g, st) {
+  const kind = TS.GEAR_KINDS[g.sport];
+  const status = st.active ? `en service depuis le ${gearDay(g.start)}`
+    : st.from > TS.localDateStr() ? `à partir du ${gearDay(g.start)}`
+    : `du ${gearDay(g.start)} au ${gearDay(st.to)}${st.replaced ? ' (remplacé)' : ''}`;
+  const badge = st.state === 'over' ? '<span class="gear-state gear-state--over">Seuil atteint</span>'
+    : st.state === 'near' ? '<span class="gear-state gear-state--near">Seuil bientôt atteint</span>'
+    : !st.active ? '<span class="gear-state">Plus utilisé</span>' : '';
+  let alert = '';
+  if (st.alert) {
+    alert = `<div class="gear-bar gear-bar--${st.state}"><b style="width:${Math.min(100, st.pct)}%"></b></div>
+      <div class="gear-item__alert"><b style="color:var(--text)">${gearKm(st.km)} / ${gearKm(st.alert)} km</b> (${st.pct} %)`;
+    if (st.state === 'over') alert += ` · seuil dépassé de ${gearKm(st.km - st.alert)} km${g.sport === 'run' ? ' : pense à vérifier l’usure de tes chaussures' : ''}.`;
+    else if (st.etaWeeks != null) alert += ` · au rythme actuel (≈ ${gearKm(st.perWeek)} km par semaine), seuil atteint ${gearEta(st)}.`;
+    else if (st.active) alert += ' · pas encore assez de séances récentes pour prévoir quand le seuil sera atteint.';
+    alert += '</div>';
+  }
+  return `<div class="gear-item">
+    <div class="gear-item__head"><span class="sport-dot sport-dot--${g.sport}"></span>
+      <span class="gear-item__name">${gearEsc(g.name || kind)}</span>${badge}
+      <button class="btn btn--sm" onclick="openGearModal('${g.id}')">Modifier</button></div>
+    <div class="gear-item__sub">${kind} · ${status}${g.notes ? ' · ' + gearEsc(g.notes) : ''}</div>
+    <div class="gear-item__stats"><span><b>${gearKm(st.km)}</b> km</span><span><b>${st.sessions}</b> sortie${st.sessions > 1 ? 's' : ''}</span>
+      ${st.hours ? `<span><b>${TS.formatHours(st.hours)}</b></span>` : ''}${st.elevation ? `<span>D+ <b>${st.elevation.toLocaleString('fr-FR')}</b> m</span>` : ''}
+      ${st.last ? `<span>dernière le ${gearDay(st.last, false)}</span>` : ''}</div>
+    ${alert}
+  </div>`;
+}
+function renderGear() {
+  const el = document.getElementById('gearList');
+  if (!el) return;
+  const data = TS.getData();
+  const gear = TS.getGear(data);
+  if (!gear.length) {
+    el.innerHTML = `<div style="font-size:13px;color:var(--text-2);line-height:1.6">Ajoute tes chaussures, ton vélo ou ta combinaison avec leur date de première utilisation :
+      TriSeason compte les kilomètres et les sorties faites avec, t'alerte au seuil que tu choisis et prévoit quand tu l'atteindras.</div>`;
+    return;
+  }
+  const stats = TS.gearStats(data);
+  const cur = gear.filter(g => stats[g.id].active || stats[g.id].from > TS.localDateStr());
+  const old = gear.filter(g => !cur.includes(g));
+  el.innerHTML = cur.map(g => gearItemHtml(g, stats[g.id])).join('')
+    + (old.length ? `<details style="margin-top:8px"${cur.length ? '' : ' open'}><summary style="cursor:pointer;font-size:12px;color:var(--text-2)">Anciens équipements (${old.length})</summary>${old.map(g => gearItemHtml(g, stats[g.id])).join('')}</details>` : '');
+}
+function gearSportChanged() {
+  const sp = document.getElementById('g_sport').value;
+  document.getElementById('gearHint').textContent = TS.GEAR_HINTS[sp] || '';
+  const a = document.getElementById('g_alert');
+  if (!gearEditId && !a.dataset.touched) a.value = TS.GEAR_DEFAULT_ALERT[sp] || '';
+  document.getElementById('g_name').placeholder = sp === 'run' ? 'ex. Pegasus 41' : sp === 'velo' ? 'ex. Vélo de route' : 'ex. Combinaison Orca';
+}
+function openGearModal(id) {
+  const g = id ? TS.getGear().find(x => x.id === id) : null;
+  gearEditId = g ? g.id : null;
+  document.getElementById('gearModalTitle').textContent = g ? 'Modifier l’équipement' : 'Nouvel équipement';
+  document.getElementById('g_sport').value = g ? g.sport : 'run';
+  document.getElementById('g_name').value = g ? (g.name || '') : '';
+  document.getElementById('g_start').value = g ? g.start : TS.localDateStr();
+  const a = document.getElementById('g_alert'); delete a.dataset.touched;
+  a.value = g ? (g.alert_km || '') : '';
+  a.oninput = () => { a.dataset.touched = '1'; };
+  document.getElementById('g_retired').value = g && g.retired ? g.retired : '';
+  document.getElementById('gRetiredGroup').style.display = g ? '' : 'none';
+  document.getElementById('g_notes').value = g ? (g.notes || '') : '';
+  document.getElementById('gDeleteBtn').style.display = g ? '' : 'none';
+  gearSportChanged();
+  document.getElementById('gearModal').classList.add('open');
+}
+function closeGearModal() { document.getElementById('gearModal').classList.remove('open'); gearEditId = null; }
+function saveGearForm() {
+  const start = document.getElementById('g_start').value;
+  const retired = document.getElementById('g_retired').value || null;
+  const alert = parseFloat(document.getElementById('g_alert').value);
+  if (!start) { TS.toast('Indique la date de première utilisation', 'error'); return; }
+  if (retired && retired < start) { TS.toast('Le retrait ne peut pas être avant la première utilisation', 'error'); return; }
+  const sport = document.getElementById('g_sport').value;
+  const name = document.getElementById('g_name').value.trim();
+  const isNew = !gearEditId;
+  const before = isNew ? TS.getGear().find(x => x.sport === sport && TS.gearStats()[x.id].active && x.start < start) : null;
+  TS.saveGear({ id: gearEditId || undefined, sport, name: name || TS.GEAR_KINDS[sport], start, retired,
+    alert_km: alert > 0 ? Math.round(alert) : null, notes: document.getElementById('g_notes').value.trim() });
+  closeGearModal();
+  TS.toast(isNew ? (before ? `Ajouté : « ${before.name} » s'arrête la veille, les séances suivantes vont sur le nouveau.` : 'Équipement ajouté') : 'Équipement modifié');
+}
+function deleteGearForm() {
+  if (!gearEditId || !confirm('Supprimer cet équipement ? Tes séances ne sont pas touchées.')) return;
+  TS.deleteGear(gearEditId);
+  closeGearModal();
+  TS.toast('Équipement supprimé');
+}
 
 // Option santé (accord séparé) : activée depuis Forme, désactivable ici.
 function renderHealthOption() {

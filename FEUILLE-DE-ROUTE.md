@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #41 (tirer vers le bas pour actualiser, dans l'appli installée) puis recharger le site ; sur le téléphone, fermer l'appli puis la rouvrir, et essayer : en haut d'une page, tirer vers le bas puis relâcher
+- [ ] 🧑 Fusionner la PR #42 (suivi de l'équipement) puis recharger le site, et l'essayer : Profil → carte « Équipement » → « + Ajouter »
 - [ ] 🧑 Essayer l'option « Blessures, maladie et reprise » : Forme → carte « Blessures, maladie et reprise » → cocher l'accord → « + Ajouter »
 - [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
 - [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
@@ -67,6 +67,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Dans 3 à 6 mois
 
+- [ ] 🤖 **Équipement, la suite** (si utile après essai) : choisir l'équipement séance par séance (plusieurs paires en alternance, vélo de route / VTT) ; reprendre automatiquement les chaussures et vélos déclarés dans Strava (champ « gear » des activités) ; seuil en heures pour la combinaison
 - [ ] 🤖 **Comptes inactifs depuis 3 ans** : les lister dans le rapport du lundi (engagement de la politique de confidentialité ; suppression manuelle sur décision de Nathan). Premiers comptes concernés : pas avant 2029
 - [ ] 🤖 **Préparer l'offre gratuite / payante dans le code** (savoir quelles pages sont gratuites ou payantes, sans rien faire payer encore)
 - [ ] 🧑 Faire relire la page *Confidentialité et mentions légales* par une personne compétente
@@ -121,6 +122,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 21/10/2026 | #42 | **Suivi de l'équipement** (Profil → « Équipement ») : chaussures, vélo, combinaison avec date de première utilisation ; km, sorties, heures et D+ comptés à partir de cette date ; un nouvel équipement du même sport prend le relais (l'ancien s'arrête la veille) ; seuil d'alerte choisi (700 km proposé pour les chaussures) avec barre de progression et prévision de la date au rythme des 8 dernières semaines ; repères de durée de vie ; alerte sur le Dashboard à 90 % ; équipement affiché dans le détail du jour |
 | 21/10/2026 | #41 | Appli installée sur le téléphone : **tirer vers le bas pour actualiser** (en haut de la page) : nouvelles séances Strava si connecté, puis page rechargée avec les données à jour du compte ; message « Relâche pour actualiser » pendant le geste. Rien ne change dans un navigateur (le geste y existe déjà) |
 | 21/10/2026 | #40 | Hydratation : boutons +100, +250 et +500 ml sur le Dashboard et la page Nutrition (le +750 ml est retiré) ; ligne « ml / Ajouter / Réinitialiser » qui dépassait sur téléphone corrigée |
 | 21/10/2026 | #39 | Rapport du lundi : nouvelle partie « Feuille de route » (fait la semaine précédente, à faire maintenant avec qui s'en occupe, ensuite dans le mois, nombre d'idées pour plus tard) ; dates du tableau « Fait » corrigées avec les vraies dates de fusion |

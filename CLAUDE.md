@@ -50,6 +50,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la
   semaine et badges, calculés à partir des données, seuls les badges déjà
   annoncés sont gardés dans `data.achievements_seen`) ;
+  équipement (`data.gear`, `gearRanges` / `gearStats`) : une séance compte pour
+  l'équipement de son sport en service ce jour-là (de sa première utilisation à la
+  veille du suivant, ou à son retrait), rien n'est stocké sur les séances ;
   option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
   et `pain` (0-10) sur les séances, voir RGPD ci-dessous).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
