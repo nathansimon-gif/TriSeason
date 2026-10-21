@@ -2054,6 +2054,80 @@ function deleteGoal(sport, id) {
   saveData(data);
 }
 
+// ── Tirer vers le bas pour actualiser (appli installée sur le téléphone) ────
+// Dans un navigateur, le geste existe déjà ; dans l'appli installée sur l'écran
+// d'accueil, non. En haut de la page, tirer vers le bas puis relâcher : nouvelles
+// séances Strava (si connecté), puis la page est rechargée (données du compte relues).
+const PTR_MSG_KEY = 'triseason_ptr_msg';
+function isStandaloneApp() {
+  return navigator.standalone === true || !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+}
+function initPullToRefresh() {
+  if (window.__ptrInit || !('ontouchstart' in window) || !isStandaloneApp()) return;
+  window.__ptrInit = true;
+  const READY = 70, MAX = 110;
+  let y0 = null, x0 = 0, pull = 0, busy = false, el = null;
+  const box = () => {
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'ptr';
+      el.setAttribute('role', 'status');
+      el.innerHTML = '<span class="ptr__icon" aria-hidden="true"></span><span class="ptr__txt"></span>';
+      document.body.appendChild(el);
+    }
+    return el;
+  };
+  const show = (y, txt, spin) => {
+    const b = box();
+    b.style.setProperty('--ptr-y', y + 'px');
+    b.style.setProperty('--ptr-rot', Math.round(y * 4) + 'deg');
+    b.querySelector('.ptr__txt').textContent = txt;
+    b.classList.toggle('ptr--spin', !!spin);
+    b.classList.add('ptr--on');
+  };
+  const hide = () => { if (el) el.classList.remove('ptr--on', 'ptr--spin'); pull = 0; };
+  const blocked = () => window.scrollY > 0 || document.querySelector('.modal-overlay.open, #consentGate');
+  document.addEventListener('touchstart', e => {
+    y0 = null;
+    if (busy || e.touches.length !== 1 || blocked()) return;
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; pull = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    const dy = e.touches[0].clientY - y0, dx = Math.abs(e.touches[0].clientX - x0);
+    if (dy <= 0 || dx > dy || window.scrollY > 0) { hide(); if (dy < 0 || dx > dy) y0 = null; return; }
+    if (e.cancelable) e.preventDefault(); // pas de rebond de la page pendant le geste
+    pull = Math.min(MAX, dy * 0.5);
+    show(pull, pull >= READY ? 'Relâche pour actualiser' : 'Tire pour actualiser');
+  }, { passive: false });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null;
+    if (pull >= READY) refreshNow(); else hide();
+  };
+  document.addEventListener('touchend', end, { passive: true });
+  document.addEventListener('touchcancel', () => { y0 = null; hide(); }, { passive: true });
+  async function refreshNow() {
+    busy = true;
+    show(READY, 'Actualisation…', true);
+    let msg = '';
+    if (stravaAvailable() && getStrava()) {
+      try {
+        const r = await Promise.race([stravaSync({ force: true }), new Promise(res => setTimeout(() => res('timeout'), 10000))]);
+        msg = r === 'timeout' ? '' : stravaSyncMessage(r, true);
+      } catch (err) { msg = err.message; }
+    }
+    try { sessionStorage.setItem(PTR_MSG_KEY, msg || 'Page actualisée.'); } catch {}
+    location.reload();
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  initPullToRefresh();
+  let msg = null;
+  try { msg = sessionStorage.getItem(PTR_MSG_KEY); sessionStorage.removeItem(PTR_MSG_KEY); } catch {}
+  if (msg) toast(msg);
+});
+
 // Run migration on load
 migrateWeeksToSessions();
 

@@ -579,3 +579,21 @@ tbody tr:hover td { background: var(--surface2); }
 .badge-tile.locked .badge-tile__medal { color: var(--text-3) !important; border-style: dashed; }
 .badge-kind--nat { color: var(--nat); } .badge-kind--velo { color: var(--velo); } .badge-kind--run { color: var(--run); }
 .badge-kind--nutri, .badge-kind--all { color: var(--accent); }
+
+/* ── Tirer pour actualiser (appli installée) ─────────────────────────────── */
+.ptr {
+  position: fixed; left: 50%; top: calc(var(--nav-h) + var(--safe-top) + 4px); z-index: 98;
+  transform: translate(-50%, calc(var(--ptr-y, 0px) - 48px));
+  display: flex; align-items: center; gap: 8px; padding: 7px 14px;
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 99px;
+  font-size: 12px; color: var(--text-2); white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.ptr--on { opacity: 1; }
+.ptr__icon {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--border2); border-top-color: var(--accent);
+  transform: rotate(var(--ptr-rot, 0deg));
+}
+.ptr--spin .ptr__icon { animation: ptrSpin .7s linear infinite; }
+@keyframes ptrSpin { to { transform: rotate(360deg); } }
