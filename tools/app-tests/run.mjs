@@ -811,6 +811,42 @@ async function main() {
     assert(browserNoop, 'geste ajouté dans le navigateur');
   });
 
+  await test('Équipement : km comptés depuis la 1re utilisation, relais par le nouveau, seuil, prévision, alerte', async () => {
+    const data = sampleData();
+    // Course : séances les jours -3, -6, … -39, 9 km chacune
+    data.gear = [{ id: 'gA', sport: 'run', name: 'Vieille paire', start: day(-40), alert_km: 60 }];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    const one = await v.page.evaluate(() => TS.gearStats()['gA']);
+    // Nouvelle paire ajoutée par la fenêtre : l'ancienne s'arrête la veille
+    await v.page.click('#equipement button:has-text("+ Ajouter")');
+    await v.page.selectOption('#g_sport', 'run');
+    const defAlert = await v.page.inputValue('#g_alert');
+    const hint = await v.page.textContent('#gearHint');
+    await v.page.fill('#g_name', 'Nouvelle paire');
+    await v.page.fill('#g_start', day(-10));
+    await v.page.fill('#g_alert', '30');
+    await v.page.click('#gearModal .btn--primary'); await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => {
+      const g = TS.getGear(); const st = TS.gearStats();
+      const b = g.find(x => x.name === 'Nouvelle paire');
+      return { a: st['gA'], b: st[b.id], card: document.getElementById('gearList').innerText,
+        onDay: (TS.gearForSession({ sport: 'run', date: TS.localDateStr(new Date(Date.now() - 3 * 864e5)) }) || {}).name };
+    });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);
+    const dash = await v.page.evaluate(() => ({ shown: getComputedStyle(document.getElementById('gearAlertCard')).display !== 'none', txt: document.getElementById('gearAlertBody').innerText }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(one.km === 117 && one.sessions === 13 && one.state === 'over', 'avant : ' + JSON.stringify(one));
+    assert(defAlert === '700' && /500 à 800 km/.test(hint), 'seuil proposé ou repère : ' + defAlert + ' / ' + hint);
+    assert(r.a.km === 90 && r.a.sessions === 10 && !r.a.active && r.a.to === day(-11), 'ancienne paire : ' + JSON.stringify(r.a));
+    assert(r.b.km === 27 && r.b.sessions === 3 && r.b.active && r.b.state === 'near' && r.b.pct === 90, 'nouvelle paire : ' + JSON.stringify(r.b));
+    assert(r.b.perWeek > 0 && r.b.etaDate && r.b.etaDate >= day(0), 'prévision absente : ' + JSON.stringify(r.b));
+    assert(r.onDay === 'Nouvelle paire', 'séance récente pas sur la nouvelle paire');
+    assert(/27 \/ 30 km/.test(r.card) && /seuil atteint dans|seuil atteint/.test(r.card) && /Anciens équipements/.test(r.card), 'carte : ' + r.card.slice(0, 300));
+    assert(dash.shown && /Nouvelle paire/.test(dash.txt) && /bientôt/.test(dash.txt), 'alerte Dashboard : ' + JSON.stringify(dash));
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();

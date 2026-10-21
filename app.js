@@ -2054,6 +2054,92 @@ function deleteGoal(sport, id) {
   saveData(data);
 }
 
+// ── Équipement (chaussures, vélo, combinaison) ──────────────────────────────
+// data.gear = [{ id, sport, name, start 'YYYY-MM-DD', retired 'YYYY-MM-DD'|absent,
+//   alert_km (seuil choisi par l'utilisateur)|absent, notes }]
+// Une séance compte pour l'équipement de son sport en service ce jour-là : du jour
+// de première utilisation jusqu'à la veille du suivant du même sport (ou au jour
+// où il est retiré). Rien n'est stocké sur les séances : tout est recalculé.
+const GEAR_KINDS = { run: 'Chaussures', velo: 'Vélo', nat: 'Combinaison' };
+const GEAR_DEFAULT_ALERT = { run: 700, velo: 3000, nat: null };
+// Repères généraux (fabricants, magasins spécialisés), à adapter : pas une règle.
+const GEAR_HINTS = {
+  run: 'Repère : une paire de chaussures de course tient en général 500 à 800 km, plutôt 300 à 500 km pour les modèles légers à plaque carbone. Change-les plus tôt si l’amorti paraît tassé ou la semelle usée.',
+  velo: 'Repère d’entretien : une chaîne s’use en 3 000 à 5 000 km environ, les pneus route en 3 000 à 6 000 km selon le modèle. Mets le seuil qui te sert de rappel (révision, chaîne, pneus).',
+  nat: 'Repère : une combinaison néoprène dure en général 3 à 5 saisons selon l’entretien (rinçage à l’eau douce, séchage à l’ombre).',
+};
+function getGear(data = getData()) {
+  return (data.gear || []).slice().sort((a, b) => b.start.localeCompare(a.start));
+}
+function saveGear(g) {
+  const data = getData();
+  data.gear = data.gear || [];
+  if (!g.id) g.id = newId();
+  Object.keys(g).forEach(k => { if (g[k] == null || g[k] === '') delete g[k]; });
+  const i = data.gear.findIndex(x => x.id === g.id);
+  if (i >= 0) data.gear[i] = g; else data.gear.push(g);
+  saveData(data);
+  return g;
+}
+function deleteGear(id) {
+  const data = getData();
+  data.gear = (data.gear || []).filter(g => g.id !== id);
+  saveData(data);
+}
+// Période couverte par chaque équipement : { id: { from, to } } (to inclus).
+function gearRanges(data = getData()) {
+  const out = {};
+  ['run', 'velo', 'nat'].forEach(sp => {
+    const list = (data.gear || []).filter(g => g.sport === sp).sort((a, b) => a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
+    list.forEach((g, i) => {
+      let to = list[i + 1] ? addDaysStr(list[i + 1].start, -1) : '9999-12-31';
+      if (g.retired && g.retired < to) to = g.retired;
+      out[g.id] = { from: g.start, to };
+    });
+  });
+  return out;
+}
+function gearForSession(s, data = getData(), ranges = gearRanges(data)) {
+  return (data.gear || []).find(g => g.sport === s.sport && ranges[g.id] && s.date >= ranges[g.id].from && s.date <= ranges[g.id].to) || null;
+}
+// Chiffres de chaque équipement, seuil et prévision au rythme des 8 dernières semaines.
+function gearStats(data = getData(), today = localDateStr()) {
+  const ranges = gearRanges(data);
+  const out = {};
+  (data.gear || []).forEach(g => {
+    const r = ranges[g.id];
+    const list = (data.sessions || []).filter(s => s.sport === g.sport && s.date >= r.from && s.date <= r.to && s.date <= today);
+    const km = Math.round(list.reduce((a, s) => a + (s.distance || 0), 0) * 10) / 10;
+    const st = {
+      km, sessions: list.length,
+      hours: list.reduce((a, s) => a + (s.duration || 0), 0),
+      elevation: Math.round(list.reduce((a, s) => a + (s.elevation || 0), 0)),
+      first: list.length ? list.reduce((m, s) => s.date < m ? s.date : m, list[0].date) : null,
+      last: list.length ? list.reduce((m, s) => s.date > m ? s.date : m, list[0].date) : null,
+      from: r.from, to: r.to === '9999-12-31' ? null : r.to,
+      active: r.from <= today && r.to >= today,
+      replaced: r.to !== '9999-12-31' && !(g.retired && g.retired === r.to),
+      alert: g.alert_km || null, pct: null, state: 'ok', perWeek: null, etaWeeks: null, etaDate: null,
+    };
+    if (st.alert) {
+      st.pct = Math.round(km / st.alert * 100);
+      st.state = km >= st.alert ? 'over' : km >= st.alert * 0.9 ? 'near' : 'ok';
+    }
+    if (st.active) {
+      const since = addDaysStr(today, -55) > r.from ? addDaysStr(today, -55) : r.from;
+      const days = Math.max(1, Math.round((parseLocalDate(today) - parseLocalDate(since)) / 86400000) + 1);
+      const recentKm = list.filter(s => s.date >= since).reduce((a, s) => a + (s.distance || 0), 0);
+      if (days >= 7 && recentKm > 0) st.perWeek = Math.round(recentKm / days * 7 * 10) / 10;
+      if (st.alert && st.perWeek && km < st.alert) {
+        st.etaWeeks = Math.round((st.alert - km) / st.perWeek * 10) / 10;
+        st.etaDate = addDaysStr(today, Math.round(st.etaWeeks * 7));
+      }
+    }
+    out[g.id] = st;
+  });
+  return out;
+}
+
 // ── Tirer vers le bas pour actualiser (appli installée sur le téléphone) ────
 // Dans un navigateur, le geste existe déjà ; dans l'appli installée sur l'écran
 // d'accueil, non. En haut de la page, tirer vers le bas puis relâcher : nouvelles
@@ -2146,6 +2232,7 @@ window.TS = {
   getSeasonStats, getNutritionImpact, NUTRI_FACTORS, NUTRI_OUTCOMES, NUTRI_MIN_GROUP,
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
+  getGear, saveGear, deleteGear, gearRanges, gearForSession, gearStats, GEAR_KINDS, GEAR_DEFAULT_ALERT, GEAR_HINTS,
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
