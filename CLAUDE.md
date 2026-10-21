@@ -70,6 +70,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   n'est connecté.
 - `style.css` : design system (variables sur `:root`).
 - `sw.js` : service worker (réseau d'abord, cache en secours).
+- **Tirer pour actualiser** (`initPullToRefresh`, app.js) : seulement dans l'appli
+  installée (`navigator.standalone` ou `display-mode: standalone`) ; en haut de
+  page, hors fenêtre ouverte : synchro Strava forcée (10 s max) puis rechargement.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
   `competitions.html`, `nutrition.html`, `records.html`, `forme.html`,
   `profile.html`, `login.html`, et deux pages publiques sans connexion :

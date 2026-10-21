@@ -99,8 +99,8 @@ async function main() {
   const browser = await chromium.launch({ executablePath: findChromium() });
 
   // Ouvre un contexte « utilisateur connecté » avec des données de test.
-  async function newUser({ uid = 'testeur', data = sampleData(), consent = true, external } = {}) {
-    const ctx = await browser.newContext({ serviceWorkers: 'block', timezoneId: TZ, viewport: { width: 1280, height: 900 } });
+  async function newUser({ uid = 'testeur', data = sampleData(), consent = true, external, ctxOpts = {} } = {}) {
+    const ctx = await browser.newContext({ serviceWorkers: 'block', timezoneId: TZ, viewport: { width: 1280, height: 900 }, ...ctxOpts });
     let currentUid = uid;
     await ctx.route(/gstatic\.com/, r => r.request().url().includes('app-compat')
       ? r.fulfill({ body: firebaseStub(currentUid), contentType: 'application/javascript' })
@@ -768,6 +768,47 @@ async function main() {
     const want = '+100 ml,+250 ml,+500 ml';
     assert(labels.index.join() === want && labels.nutrition.join() === want, 'boutons : ' + JSON.stringify(labels));
     assert(after - before === 100, `+100 ml non ajouté (${before} → ${after})`);
+  });
+
+  await test('Appli installée : tirer vers le bas en haut de page actualise (pas ailleurs)', async () => {
+    const pullDown = (page, dist) => page.evaluate((dist) => {
+      const t = (y) => new Touch({ identifier: 1, target: document.body, clientX: 150, clientY: y });
+      document.dispatchEvent(new TouchEvent('touchstart', { touches: [t(100)], bubbles: true, cancelable: true }));
+      for (let y = 100; y <= 100 + dist; y += 20) document.dispatchEvent(new TouchEvent('touchmove', { touches: [t(y)], bubbles: true, cancelable: true }));
+      const txt = (document.querySelector('.ptr__txt') || {}).textContent || '';
+      window.__avant = 1;
+      document.dispatchEvent(new TouchEvent('touchend', { touches: [], bubbles: true, cancelable: true }));
+      return txt;
+    }, dist);
+    const mobile = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
+    // Appli installée (navigator.standalone, comme sur iPhone)
+    const v = await newUser({ ctxOpts: mobile });
+    await v.ctx.addInitScript(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);
+    const short = await pullDown(v.page, 60);            // trop court : rien
+    await v.page.waitForTimeout(300);
+    const stillThere = await v.page.evaluate(() => window.__avant === 1);
+    const ready = await pullDown(v.page, 200);           // assez long : actualise
+    await v.page.waitForLoadState('load'); await v.page.waitForTimeout(800);
+    const reloaded = await v.page.evaluate(() => window.__avant === undefined);
+    const toastTxt = await v.page.evaluate(() => [...document.querySelectorAll('.toast')].map(t => t.textContent).join(' '));
+    // Fenêtre ouverte : le geste ne fait rien
+    await v.page.evaluate(() => openPlanDay(TS.localDateStr()));
+    await pullDown(v.page, 200); await v.page.waitForTimeout(500);
+    const modalKept = await v.page.evaluate(() => window.__avant === 1);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // Dans le navigateur (pas installée) : le geste natif suffit, rien n'est ajouté
+    const w = await newUser({ ctxOpts: mobile });
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(700);
+    await pullDown(w.page, 200); await w.page.waitForTimeout(500);
+    const browserNoop = await w.page.evaluate(() => window.__avant === 1 && !document.querySelector('.ptr'));
+    await w.ctx.close();
+    assert(short === 'Tire pour actualiser' && stillThere, 'geste court : ' + short);
+    assert(ready === 'Relâche pour actualiser' && reloaded, 'pas actualisé : ' + ready);
+    assert(/actualisée|séance/i.test(toastTxt), 'pas de message après actualisation : ' + toastTxt);
+    assert(modalKept, 'actualisation pendant qu’une fenêtre est ouverte');
+    assert(browserNoop, 'geste ajouté dans le navigateur');
   });
 
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
