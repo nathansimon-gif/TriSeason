@@ -38,6 +38,11 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 **Ensuite :**
 
+- [ ] 🧑🤖 **Écrans de chargement** (à voir ensemble avant de commencer) : que l'appli montre clairement quand elle travaille, au lieu d'une page vide ou de chiffres qui changent d'un coup. Pistes :
+  - écran de démarrage de l'appli installée (logo TriSeason sur fond ardoise) pendant l'ouverture
+  - cartes « en cours de chargement » (formes grises qui se remplissent) pendant la lecture des données du compte, surtout sur un nouvel appareil (tous les tiroirs sont relus)
+  - petit indicateur « Synchronisation… » / « Enregistré » quand les données partent vers le cloud, et message clair hors connexion (« Pas de réseau : tes saisies seront envoyées au retour du réseau »)
+  - indicateur pendant les imports (fichiers .fit, archive Strava, historique Strava) et la recherche d'aliments
 - [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
 - [ ] 🧑🤖 **Choisir ses sports** (à discuter ensemble avant de commencer) : à la création du compte, une page s'ouvre pour cocher les sports qu'on veut suivre (course, vélo, natation, et musculation si on l'ajoute). L'appli n'affiche ensuite que ces sports : Dashboard, Sports, filtres, records, défis, graphiques. Pistes :
   - choix modifiable à tout moment dans Profil ; les comptes existants gardent les 3 sports par défaut
