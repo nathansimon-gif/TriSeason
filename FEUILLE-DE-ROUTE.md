@@ -9,18 +9,18 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🤖 **Rangement des données en tiroirs** : en cours de préparation par Claude (pull request à part). Avant de la fusionner, Nathan devra ajouter une ligne dans les règles Firebase (texte fourni avec la PR) et exporter ses données par prudence
-- [ ] 🧑 Fusionner la PR #43 (feuille de route : tâches de « Maintenant » cochées) — pas besoin de recharger le site
+- [ ] 🧑 **Avant de fusionner la PR #43 (rangement en tiroirs)**, dans cet ordre :
+  1. Profil → « Exporter mes données » (sauvegarde par prudence, à garder sur ton ordinateur)
+  2. Console Firebase → Firestore Database → onglet « Règles » → remplacer tout le texte par celui du fichier `firestore.rules` du dépôt → « Publier »
+  3. Fusionner la PR #43, recharger le site, ouvrir l'appli : tes données se rangent toutes seules (rien ne change à l'écran)
+  4. Lundi suivant, le rapport indique combien de comptes sont rangés en tiroirs
+- [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
 ## Bientôt (dans le mois)
 
 **Prochaines tâches, dans cet ordre :**
 
-- [ ] 🤖🧑 **1. Ranger les données en plusieurs tiroirs** (une pull request à part, rien d'autre dedans). Lève la limite de 1 Mo par compte (plus gros compte : 70 % le 19 octobre 2026, ≈ 59 % après l’allègement de la PR #37 ; Nathan dira quand s’y mettre), allège chaque enregistrement, et débloque l'historique Strava complet, les parcours et plus tard l'espace coach. Les pages ne changent pas, seul le rangement dans le cloud change :
-  - tiroir **principal** : profil, réglages, objectifs, compétitions, records, poids, Strava, badges
-  - **séances** : un tiroir par année · **nutrition** : un tiroir par mois · **parcours** (plus tard) : un par sortie, ouvert seulement quand on regarde la séance
-  - rangé par année / mois (et pas une séance par document) pour rester dans l'offre gratuite de Firebase : une dizaine de lectures par ouverture de l'appli au lieu d'une
-  - Étapes : (a) 🧑 ajouter dans les règles Firebase la ligne pour les sous-tiroirs (texte exact fourni par Claude) **avant** la fusion ; (b) 🧑 exporter ses données par prudence (Profil → Exporter) ; (c) 🤖 déménagement automatique à la première ouverture, vérifié avant de basculer ; (d) l'ancien grand tiroir est gardé en secours environ 30 jours, supprimé seulement avec l'accord de Nathan ; (e) 🤖 rapport du lundi et tests automatiques adaptés (déménagement, deux appareils, connexion lente)
+- [x] 🤖🧑 **1. Ranger les données en plusieurs tiroirs** : code fait (PR #43) ; reste les étapes de Nathan dans « Maintenant ». Séances par année, repas et ravitaillements par mois, le reste dans le document principal ; en général **une seule lecture** par ouverture (seuls les tiroirs modifiés sont relus) et un seul envoi par enregistrement ; tout l'historique Strava tient (testé avec 9 000 séances). Plus tard : **parcours** (un tiroir par sortie, ouvert seulement quand on regarde la séance)
 - [ ] 🤖🧑 **2. Tests automatiques sur GitHub avant chaque fusion** : à chaque pull request, GitHub lance les tests et affiche une coche verte (tout passe) ou une croix rouge (ne pas fusionner) à côté du bouton de fusion. Gratuit. Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
 - [ ] 🤖 **3. Partage en story** (Instagram, WhatsApp…) : bouton « Partager » qui crée une image verticale des résultats, fabriquée sur le téléphone, rien envoyé à un service extérieur. **Le contenu des stories sera précisé ensemble plus tard**, avant de commencer (pistes : une séance, une compétition, le bilan de la semaine, avec ce que Strava ne montre pas : glucides par heure, ressenti, repas notés 7/7). Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
 
@@ -118,7 +118,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
-| 23/10/2026 | #43 | Feuille de route : tâches de Nathan de « Maintenant » cochées (PR #42 fusionnée, option blessures essayée, nom de l'appli, planification testée, limite Strava passée à 10 comptes, serveur Cloudflare, import de 50 fichiers .fit testé) ; rangement en tiroirs lancé |
+| 23/10/2026 | #43 | **Rangement des données en tiroirs** (Firestore) : séances par année, repas et ravitaillements par mois, le reste dans le document principal avec un sommaire ; seuls les tiroirs modifiés sont relus ou réécrits ; déménagement automatique vérifié avec copie de secours ; repli sur l'ancien rangement si les règles Firebase ne sont pas à jour ; effacement et suppression du compte effacent aussi les tiroirs ; historique Strava complet (limite 3,5 Mo au lieu de 850 Ko) ; rapport du lundi adapté ; règles de référence `firestore.rules`. Feuille de route : tâches de Nathan de « Maintenant » cochées (option blessures essayée, nom, planification testée, limite Strava à 10 comptes, serveur Cloudflare, import de 50 fichiers .fit testé) |
 | 21/10/2026 | #42 | **Suivi de l'équipement** (Profil → « Équipement ») : chaussures, vélo, combinaison avec date de première utilisation ; km, sorties, heures et D+ comptés à partir de cette date ; un nouvel équipement du même sport prend le relais (l'ancien s'arrête la veille) ; seuil d'alerte choisi (700 km proposé pour les chaussures) avec barre de progression et prévision de la date au rythme des 8 dernières semaines ; repères de durée de vie ; alerte sur le Dashboard à 90 % ; équipement affiché dans le détail du jour |
 | 21/10/2026 | #41 | Appli installée sur le téléphone : **tirer vers le bas pour actualiser** (en haut de la page) : nouvelles séances Strava si connecté, puis page rechargée avec les données à jour du compte ; message « Relâche pour actualiser » pendant le geste. Rien ne change dans un navigateur (le geste y existe déjà) |
 | 21/10/2026 | #40 | Hydratation : boutons +100, +250 et +500 ml sur le Dashboard et la page Nutrition (le +750 ml est retiré) ; ligne « ml / Ajouter / Réinitialiser » qui dépassait sur téléphone corrigée |

@@ -84,10 +84,26 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 
 ### Données
 
-- Tout est dans **un seul objet** : `localStorage['triseason_data']`, copié
-  dans Firestore sous `users/{uid}` (champ `data`). La copie Firestore fait foi :
-  elle est relue à la connexion (`syncFromCloud`), puis chaque `saveData`
-  la renvoie (`pushToCloud`).
+- Dans l'appli, tout est dans **un seul objet** : `localStorage['triseason_data']`
+  (`getData` / `saveData`, les pages ne voient que lui). Dans Firestore, il est
+  **rangé en tiroirs** (`splitData` / `assembleData`) :
+  `users/{uid}` (champ `data` = tout sauf séances, repas et ravitaillements,
+  `layout: 2`, `drawers` = sommaire `{ clé: empreinte }`),
+  `users/{uid}/drawers/sessions-AAAA` (séances de l'année, ou `sessions-AAAA-MM`
+  si l'année dépasse ~900 Ko), `users/{uid}/drawers/nutrition-AAAA-MM` (repas et
+  ravitaillements du mois) ; chaque tiroir = `{ json, n, at }` (texte JSON, pour
+  une empreinte exacte). La copie Firestore fait foi : relue à la connexion
+  (`syncFromCloud` → `readDrawers`, seuls les tiroirs dont l'empreinte diffère de
+  la copie locale sont relus), puis chaque `saveData` la renvoie (`pushToCloud` →
+  `writeDrawers` : tiroirs modifiés + sommaire, en un seul lot).
+- **Déménagement** (`migrateToDrawers`, une fois par compte, à l'ouverture) :
+  copie de secours complète dans `users/{uid}/backup/v1` (gardée, supprimée
+  seulement sur décision de Nathan, et avec le compte), tiroirs écrits, relus et
+  comparés, puis seulement document principal allégé. Si les règles Firebase
+  refusent les sous-documents (`drawersBlocked`), l'ancien rangement (tout dans
+  `data`) continue de fonctionner. Si `data.sessions` existe dans le document
+  principal (appareil resté sur une ancienne version), il fait foi et il est
+  rangé à nouveau. Règles de référence : `firestore.rules` (à coller dans la console).
 - `pushToCloud` n'envoie rien tant que les données du compte n'ont pas été lues
   (`cloudLoaded`) : un navigateur vide ne doit jamais écraser le cloud.
   Un seul envoi à la fois : pendant un envoi, seule la dernière version attend
@@ -107,15 +123,13 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   Temps de course et records en texte `h:mm:ss`. **Affichage** : durées de
   séance, temps de course et records en `h:mm:ss` ; tous les totaux et moyennes
   d'heures au format `1h30` avec `TS.formatHours` (jamais « 7,5 h »).
-- Limite à garder en tête : un document Firestore fait **1 Mo maximum**. Avec
-  beaucoup d'historique (surtout la nutrition), il faudra un jour découper les
-  données (une collection par type), en particulier avant un usage commercial.
-- Règles de sécurité Firestore (console Firebase, pas dans le dépôt) : seul
-  le propriétaire peut lire/écrire `users/{userId}`. Elles ne couvrent **que ce
-  document**, pas d'éventuelles sous-collections : si on découpe les données en
-  `users/{uid}/sessions/...`, il faudra ajouter
-  `match /users/{userId}/{document=**}` avec la même condition. Un accès
-  nutritionniste demandera aussi de nouvelles règles.
+- Limites : un document Firestore fait **1 Mo maximum** (d'où les tiroirs) ;
+  la copie locale du navigateur ~5 Mo (`dataMaxBytes` : 3,5 Mo avec les tiroirs,
+  850 Ko si l'ancien rangement est encore utilisé). Un accès nutritionniste
+  demandera de nouvelles règles.
+- Règles de sécurité Firestore (console Firebase ; copie dans `firestore.rules`) :
+  seul le propriétaire peut lire/écrire `users/{userId}` **et ses sous-documents**
+  (`match /users/{userId}/{document=**}`).
 
 ## Règles à respecter
 

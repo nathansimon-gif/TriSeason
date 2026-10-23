@@ -1,6 +1,6 @@
 // Tests du calcul du rapport, sans accès à Firebase : node test.mjs
 import assert from 'node:assert/strict';
-import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail, parseRoadmap } from './report.mjs';
+import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail, parseRoadmap, assembleUserDoc } from './report.mjs';
 
 // Dates
 assert.equal(lastFullWeekMonday(new Date('2026-10-12T08:00:00Z')), '2026-10-05'); // lundi → lundi précédent
@@ -90,6 +90,25 @@ const koTests = { total: 20, failed: 1, results: [{ name: 'Semaines', ok: false,
 assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics, tests: okTests })), /Tout fonctionne.*20 tests/);
 assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics, tests: koTests })), /1 test en échec[\s\S]*Échec — Semaines : S41=0 km/);
 assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics, prevMetrics })), /Tests non lancés/);
+
+// Tiroirs : données remises ensemble, taille du plus gros document, comptes rangés
+const drawerUser = assembleUserDoc('d', { layout: 2, activeDays: ['2026-10-06'], data: { profile: {}, nutrition: { favorites: [] } }, drawers: { 'sessions-2026': 'x' } },
+  [{ id: 'sessions-2026', json: JSON.stringify({ sessions: [{ date: '2026-10-06', sport: 'run' }, { date: '2026-01-02', sport: 'velo' }] }), n: 2 },
+   { id: 'nutrition-2026-10', json: JSON.stringify({ meals: [{ date: '2026-10-07' }] }), n: 1 }], true);
+assert.equal(drawerUser.layout, 2);
+assert.equal(drawerUser.data.sessions.length, 2);
+assert.equal(drawerUser.data.nutrition.meals.length, 1);
+assert.deepEqual(drawerUser.data.nutrition.favorites, []);
+assert.ok(drawerUser.totalBytes > drawerUser.sizeBytes);
+const oldUser = assembleUserDoc('o', { layout: 2, data: { sessions: [{ date: '2026-10-06', sport: 'run' }] } }, [{ id: 'sessions-2026', json: '{"sessions":[]}' }]);
+assert.equal(oldUser.layout, 1); // un ancien appareil a tout réécrit dans le document principal
+assert.equal(oldUser.data.sessions.length, 1);
+const rD = computeReport({ weekStart, users, docs: [...docs, drawerUser], metrics, prevMetrics });
+assert.equal(rD.content.sessionsWeek, 4);
+assert.equal(rD.content.mealsWeek, 2);
+assert.equal(rD.storage.inDrawers, 1);
+assert.equal(rD.storage.backups, 1);
+assert.match(toMarkdown(rD), /Rangement en tiroirs : \*\*1\*\* compte\(s\) sur 4[\s\S]*Copies de secours de l’ancien rangement gardées : 1/);
 
 // Section « Feuille de route » : fait la semaine, à faire maintenant, ensuite
 const roadmapMd = `# Feuille de route

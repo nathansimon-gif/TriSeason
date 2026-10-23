@@ -1,0 +1,19 @@
+// Règles de sécurité Firestore de TriSeason — copie de référence.
+// Elles ne s'appliquent PAS depuis ce fichier : les coller dans la console Firebase
+// (Firestore Database → onglet « Règles » → remplacer tout → « Publier »).
+//
+// Chaque personne ne peut lire et écrire que son propre compte :
+//  - users/{uid}            : document principal (profil, réglages, sommaire des tiroirs…)
+//  - users/{uid}/drawers/…  : tiroirs (séances par année, repas par mois)
+//  - users/{uid}/backup/…   : copie de secours de l'ancien rangement
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

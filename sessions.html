@@ -6,7 +6,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261028a"></script>
+  <script src="auth-guard.js?v=20261029a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261028a">
+  <link rel="stylesheet" href="style.css?v=20261029a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -374,9 +374,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261028a"></script>
-<script src="import.js?v=20261028a"></script>
-<script src="app.js?v=20261028a"></script>
+<script src="fit-parser.js?v=20261029a"></script>
+<script src="import.js?v=20261029a"></script>
+<script src="app.js?v=20261029a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -983,7 +983,7 @@ function renderArchivePlan() {
     plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, musculation, autres sports).' : '',
     plan.before ? plan.before + ' plus ancienne' + (plan.before > 1 ? 's' : '') + ' que la période choisie.' : '',
     plan.dropped ? '<span style="color:var(--velo)">' + plan.dropped + ' séance' + (plan.dropped > 1 ? 's' : '') + ' plus ancienne' + (plan.dropped > 1 ? 's' : '')
-      + ' que le ' + TS.formatDate(plan.oldestKept) + ' ne rentre' + (plan.dropped > 1 ? 'nt' : '') + ' pas : la place par compte est limitée pour l’instant (un rangement des données est prévu).</span>' : '',
+      + ' que le ' + TS.formatDate(plan.oldestKept) + ' ne rentre' + (plan.dropped > 1 ? 'nt' : '') + ' pas : ' + (TS.cloudLayoutNow() === 2 ? 'la place est limitée sur cet appareil' : 'la place par compte est limitée pour l’instant') + '.</span>' : '',
   ].filter(Boolean);
   box.innerHTML = `<div style="margin-top:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--text-2);line-height:1.6">
       ${lines.map(l => '<div>' + l + '</div>').join('')}
