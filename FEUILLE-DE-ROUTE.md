@@ -9,13 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #42 (suivi de l'équipement) puis recharger le site, et l'essayer : Profil → carte « Équipement » → « + Ajouter »
-- [ ] 🧑 Essayer l'option « Blessures, maladie et reprise » : Forme → carte « Blessures, maladie et reprise » → cocher l'accord → « + Ajouter »
-- [ ] 🧑 Choisir le nouveau nom de l'appli (Claude change ensuite le nom visible partout ; le dépôt GitHub et les noms techniques restent)
-- [ ] 🧑 Tester la planification : Dashboard → clic sur un jour du calendrier → planifier une séance, puis la faire ce jour-là
-- [ ] 🧑 Passer la limite Strava de 1 à **10 comptes** : strava.com/settings/api, sur la page de l'appli TriSeason (gratuit, sans validation)
-- [ ] 🧑 *Facultatif* : recopier le nouveau `tools/server/worker.js` dans Cloudflare (Edit code → coller → Deploy). L'appli reconnaît déjà la limite avec l'ancienne version ; la nouvelle la signale plus proprement
-- [ ] 🧑 Tester l'import de **beaucoup de fichiers .fit** (50 d'un coup) : si ça ne plante plus, Claude peut rendre l'import automatique par paquets de 50
+- [ ] 🤖 **Rangement des données en tiroirs** : en cours de préparation par Claude (pull request à part). Avant de la fusionner, Nathan devra ajouter une ligne dans les règles Firebase (texte fourni avec la PR) et exporter ses données par prudence
+- [ ] 🧑 Fusionner la PR #43 (feuille de route : tâches de « Maintenant » cochées) — pas besoin de recharger le site
 
 ## Bientôt (dans le mois)
 
@@ -43,6 +38,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 **Ensuite :**
 
+- [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
 - [ ] 🧑🤖 **Choisir ses sports** (à discuter ensemble avant de commencer) : à la création du compte, une page s'ouvre pour cocher les sports qu'on veut suivre (course, vélo, natation, et musculation si on l'ajoute). L'appli n'affiche ensuite que ces sports : Dashboard, Sports, filtres, records, défis, graphiques. Pistes :
   - choix modifiable à tout moment dans Profil ; les comptes existants gardent les 3 sports par défaut
   - rien n'est supprimé : une séance d'un sport non coché (import Strava, montre) reste enregistrée, on demande simplement « Ajouter ce sport à tes sports ? »
@@ -122,6 +118,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 23/10/2026 | #43 | Feuille de route : tâches de Nathan de « Maintenant » cochées (PR #42 fusionnée, option blessures essayée, nom de l'appli, planification testée, limite Strava passée à 10 comptes, serveur Cloudflare, import de 50 fichiers .fit testé) ; rangement en tiroirs lancé |
 | 21/10/2026 | #42 | **Suivi de l'équipement** (Profil → « Équipement ») : chaussures, vélo, combinaison avec date de première utilisation ; km, sorties, heures et D+ comptés à partir de cette date ; un nouvel équipement du même sport prend le relais (l'ancien s'arrête la veille) ; seuil d'alerte choisi (700 km proposé pour les chaussures) avec barre de progression et prévision de la date au rythme des 8 dernières semaines ; repères de durée de vie ; alerte sur le Dashboard à 90 % ; équipement affiché dans le détail du jour |
 | 21/10/2026 | #41 | Appli installée sur le téléphone : **tirer vers le bas pour actualiser** (en haut de la page) : nouvelles séances Strava si connecté, puis page rechargée avec les données à jour du compte ; message « Relâche pour actualiser » pendant le geste. Rien ne change dans un navigateur (le geste y existe déjà) |
 | 21/10/2026 | #40 | Hydratation : boutons +100, +250 et +500 ml sur le Dashboard et la page Nutrition (le +750 ml est retiré) ; ligne « ml / Ajouter / Réinitialiser » qui dépassait sur téléphone corrigée |
