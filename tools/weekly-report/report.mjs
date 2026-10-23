@@ -77,7 +77,7 @@ export function computeReport({ weekStart, users, docs, metrics, prevMetrics, me
   let sessionsWeek = 0, sessionsTotal = 0, mealsWeek = 0, compsWeek = 0;
   const bySport = { nat: 0, velo: 0, run: 0 };
   let usersLoggingSessions = 0, usersLoggingMeals = 0;
-  let biggest = { uid: null, sizeBytes: 0 };
+  let biggest = { uid: null, sizeBytes: 0 }, biggestTotal = 0, inDrawers = 0, backups = 0;
   docs.forEach(doc => {
     const data = doc.data || {};
     const sessions = data.sessions || [];
@@ -92,6 +92,9 @@ export function computeReport({ weekStart, users, docs, metrics, prevMetrics, me
     if (sw.length) usersLoggingSessions += 1;
     if (mw) usersLoggingMeals += 1;
     if ((doc.sizeBytes || 0) > biggest.sizeBytes) biggest = { uid: doc.uid, sizeBytes: doc.sizeBytes };
+    biggestTotal = Math.max(biggestTotal, doc.totalBytes || doc.sizeBytes || 0);
+    if (doc.layout === 2) inDrawers += 1;
+    if (doc.hasBackup) backups += 1;
   });
 
   const sumWeek = (series) => series ? days.reduce((a, d) => a + (series[d] || 0), 0) : null;
@@ -115,7 +118,8 @@ export function computeReport({ weekStart, users, docs, metrics, prevMetrics, me
     },
     content: { sessionsWeek, sessionsTotal, bySport, mealsWeek, compsWeek, usersLoggingSessions, usersLoggingMeals },
     firestore, prevFirestore, metricsError, tests,
-    storage: { biggestBytes: biggest.sizeBytes, biggestPct: Math.round(biggest.sizeBytes / DOC_LIMIT_BYTES * 1000) / 10 },
+    storage: { biggestBytes: biggest.sizeBytes, biggestPct: Math.round(biggest.sizeBytes / DOC_LIMIT_BYTES * 1000) / 10,
+      biggestTotal, inDrawers, backups, accounts: docs.length },
   };
 }
 
@@ -223,7 +227,9 @@ export function toMarkdown(r) {
   L.push('');
   L.push('## Santé technique');
   const pct = r.storage.biggestPct;
-  L.push(`- Plus gros compte : ${nf(Math.round(r.storage.biggestBytes / 1024))} Ko, soit ${String(pct).replace('.', ',')} % de la limite de 1 Mo par utilisateur${pct >= 50 ? ' — à surveiller : prévoir le découpage du stockage' : ''}.`);
+  L.push(`- Plus gros document : ${nf(Math.round(r.storage.biggestBytes / 1024))} Ko, soit ${String(pct).replace('.', ',')} % de la limite de 1 Mo par document${pct >= 50 ? ' — à surveiller' : ''}.`);
+  if (r.storage.biggestTotal && r.storage.biggestTotal !== r.storage.biggestBytes) L.push(`- Plus gros compte au total (tous ses tiroirs) : ${nf(Math.round(r.storage.biggestTotal / 1024))} Ko.`);
+  if (r.storage.accounts) L.push(`- Rangement en tiroirs : **${nf(r.storage.inDrawers)}** compte(s) sur ${nf(r.storage.accounts)}${r.storage.inDrawers < r.storage.accounts ? ' (les autres passent en tiroirs à leur prochaine ouverture de l’appli)' : ''}. Copies de secours de l’ancien rangement gardées : ${nf(r.storage.backups)}.`);
   if (r.roadmap) {
     const rm = r.roadmap;
     L.push('');
@@ -322,12 +328,35 @@ async function fetchAuthUsers(auth) {
   return out;
 }
 
+// Document principal + tiroirs (users/{uid}/drawers) → données complètes et tailles.
+// Même règle que l'appli : données en tiroirs si layout 2 et pas de séances dans
+// le document principal (sinon un ancien appareil a tout réécrit dans le principal).
+export function assembleUserDoc(uid, v, drawers = [], hasBackup = false) {
+  const size = x => Buffer.byteLength(JSON.stringify(x));
+  const data = v.data || {};
+  const layout = v.layout === 2 && !Array.isArray(data.sessions) ? 2 : 1;
+  let full = data;
+  if (layout === 2) {
+    full = { ...data, sessions: [] };
+    const meals = [], fuel = [];
+    drawers.slice().sort((a, b) => a.id.localeCompare(b.id)).forEach(d => {
+      const g = JSON.parse(d.json || '{}');
+      full.sessions.push(...(g.sessions || [])); meals.push(...(g.meals || [])); fuel.push(...(g.fuel || []));
+    });
+    if (data.nutrition || meals.length || fuel.length) full.nutrition = { ...(data.nutrition || {}), meals, fuel };
+  }
+  const sizes = [size(v), ...drawers.map(d => size({ json: d.json, n: d.n, at: d.at }))];
+  return { uid, activeDays: v.activeDays || [], data: full, layout, hasBackup,
+    sizeBytes: Math.max(...sizes), totalBytes: sizes.reduce((a, b) => a + b, 0) };
+}
+
 async function fetchUserDocs(db) {
   const snap = await db.collection('users').get();
-  return snap.docs.map(d => {
+  return Promise.all(snap.docs.map(async d => {
     const v = d.data();
-    return { uid: d.id, activeDays: v.activeDays || [], data: v.data || {}, sizeBytes: Buffer.byteLength(JSON.stringify(v)) };
-  });
+    const [dr, bk] = await Promise.all([d.ref.collection('drawers').get(), d.ref.collection('backup').doc('v1').get()]);
+    return assembleUserDoc(d.id, v, dr.docs.map(x => ({ id: x.id, ...x.data() })), bk.exists);
+  }));
 }
 
 // Compteurs Firestore journaliers via l'API Cloud Monitoring.

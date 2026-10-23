@@ -73,3 +73,8 @@ npm test                        # tests du calcul, sans accès à Firebase
   cases non cochées de premier niveau de « Maintenant » et « Bientôt », et nombre
   d'idées pour plus tard. Les dates du tableau « Fait » doivent donc être les
   vraies dates de fusion (jj/mm/aaaa).
+- **Tiroirs** : depuis le rangement en tiroirs, les séances et les repas sont dans
+  `users/{uid}/drawers/…` : le script les relit et les remet ensemble (même règle
+  que l'appli). « Plus gros document » = le plus gros document Firestore (limite
+  1 Mo par document) ; le rapport indique aussi combien de comptes sont déjà rangés
+  et combien de copies de secours de l'ancien rangement existent.
