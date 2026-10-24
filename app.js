@@ -98,21 +98,235 @@ function pushToCloud(data) {
   if (!cloudSending) sendToCloud(ref);
 }
 let cloudSending = false, cloudPending = null;
-function sendToCloud(ref) {
-  const data = cloudPending;
-  cloudPending = null;
+async function sendToCloud(ref) {
   cloudSending = true;
-  // mergeFields : remplace entièrement data et updatedAt, sans toucher aux autres
-  // champs du document (ex. activeDays, utilisé pour le rapport d'activité).
-  ref.set({ data: data, updatedAt: Date.now() }, { mergeFields: ['data', 'updatedAt'] })
-    .catch(err => {
-      console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
-    })
-    .finally(() => {
-      cloudSending = false;
-      if (cloudPending) sendToCloud(ref);
-    });
+  try {
+    while (cloudPending || cloudMigrateWanted) {
+      if (cloudMigrateWanted) {
+        cloudMigrateWanted = false;
+        await migrateToDrawers(ref, cloudPending || getData());
+        if (!cloudPending) continue;
+      }
+      const data = cloudPending;
+      cloudPending = null;
+      try {
+        if (cloudLayout === 2) await writeDrawers(ref, data);
+        else await writeSingleDoc(ref, data);
+      } catch (err) {
+        console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
+      }
+    }
+  } finally { cloudSending = false; }
 }
+// Ancien rangement : tout dans users/{uid}.data. mergeFields : remplace data et
+// updatedAt sans toucher aux autres champs (activeDays, consent…).
+function writeSingleDoc(ref, data) {
+  return ref.set({ data: data, updatedAt: Date.now() }, { mergeFields: ['data', 'updatedAt'] });
+}
+
+// ── Rangement en tiroirs (Firestore) ────────────────────────────────────────
+// Un document Firestore fait 1 Mo au plus : les données sont réparties en
+//  - users/{uid}                     data = tout sauf séances, repas et ravitaillements,
+//                                    layout: 2, drawers: { clé: empreinte } (sommaire)
+//  - users/{uid}/drawers/{clé}       { json, n, at } : 'sessions-AAAA' (séances de l'année,
+//                                    ou 'sessions-AAAA-MM' si l'année dépasse ~900 Ko),
+//                                    'nutrition-AAAA-MM' (repas + ravitaillements du mois)
+//  - users/{uid}/backup/v1           copie complète de l'ancien rangement (secours,
+//                                    supprimée seulement sur décision de Nathan)
+// Le contenu d'un tiroir est un texte JSON : son empreinte est exacte d'un appareil
+// à l'autre. À l'ouverture, seuls les tiroirs dont l'empreinte a changé sont relus
+// (1 lecture en général) ; à l'enregistrement, seuls les tiroirs modifiés sont écrits.
+// Dans l'appli (localStorage, pages), rien ne change : un seul objet de données.
+let cloudLayout = 2;            // 1 = ancien rangement (un seul document), 2 = tiroirs
+let cloudIndex = {};            // sommaire des tiroirs tel qu'il est dans le cloud
+let cloudMigrateWanted = false; // déménagement à faire au prochain envoi
+let drawersBlocked = false;     // règles Firebase pas encore à jour : on reste sur l'ancien rangement
+const DRAWER_MAX_CHARS = 900000;
+
+// Empreinte d'un texte (deux hachages 32 bits + longueur) : sert seulement à
+// savoir si un tiroir a changé.
+function drawerHash(str) {
+  let a = 0x811c9dc5, b = 5381;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193) >>> 0;
+    b = (Math.imul(b, 33) + c) >>> 0;
+  }
+  return a.toString(36) + b.toString(36) + '-' + str.length.toString(36);
+}
+
+// Données de l'appli → { main, drawers: { clé: texte JSON } }
+function splitData(data) {
+  const main = { ...data };
+  delete main.sessions;
+  const groups = {};
+  const add = (key, field, item) => { const g = groups[key] = groups[key] || {}; (g[field] = g[field] || []).push(item); };
+  const ym = (d, n) => (typeof d === 'string' && /^\d{4}-\d{2}/.test(d) ? d.slice(0, n) : 'sans-date');
+  const byYear = {};
+  (data.sessions || []).forEach(x => { const y = ym(x.date, 4); (byYear[y] = byYear[y] || []).push(x); });
+  Object.keys(byYear).forEach(y => {
+    // Année trop lourde pour un seul document : un tiroir par mois
+    if (JSON.stringify({ sessions: byYear[y] }).length > DRAWER_MAX_CHARS) byYear[y].forEach(x => add('sessions-' + ym(x.date, 7), 'sessions', x));
+    else groups['sessions-' + y] = { sessions: byYear[y] };
+  });
+  if (data.nutrition) {
+    const n = { ...data.nutrition };
+    (n.meals || []).forEach(m => add('nutrition-' + ym(m.date, 7), 'meals', m));
+    (n.fuel || []).forEach(f => add('nutrition-' + ym(f.date, 7), 'fuel', f));
+    delete n.meals; delete n.fuel;
+    main.nutrition = n;
+  }
+  const drawers = {};
+  Object.keys(groups).sort().forEach(k => { drawers[k] = JSON.stringify(groups[k]); });
+  return { main, drawers };
+}
+
+// Tiroirs → données de l'appli
+function assembleData(main, drawers) {
+  const data = { ...main, sessions: [] };
+  const meals = [], fuel = [];
+  Object.keys(drawers).sort().forEach(k => {
+    const g = JSON.parse(drawers[k]);
+    if (g.sessions) data.sessions.push(...g.sessions);
+    if (g.meals) meals.push(...g.meals);
+    if (g.fuel) fuel.push(...g.fuel);
+  });
+  if (main.nutrition || meals.length || fuel.length) data.nutrition = { ...(main.nutrition || {}), meals, fuel };
+  return data;
+}
+
+function drawersCol(ref) { return ref.collection('drawers'); }
+function drawerDoc(key, json) { return { json, n: (json.match(/"date":/g) || []).length, at: Date.now() }; }
+function isPermissionError(err) { return err && (err.code === 'permission-denied' || /permission|insufficient/i.test(err.message || '')); }
+
+// Lecture : document principal déjà lu (v). Seuls les tiroirs dont l'empreinte
+// diffère de la copie locale sont relus. Tiroir manquant ou différent du sommaire
+// (enregistrement en cours sur un autre appareil) : document principal relu et
+// nouvel essai, puis erreur (rien n'est alors envoyé : le cloud n'est jamais écrasé).
+// Renvoie { data, index } ; index = null si les données ne sont pas en tiroirs.
+async function readDrawers(ref, v, local) {
+  const mine = {};
+  if (local) { const d = splitData(local).drawers; Object.keys(d).forEach(k => { mine[drawerHash(d[k])] = d[k]; }); }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!(v.layout === 2 && v.data && !Array.isArray(v.data.sessions))) return { data: v.data, index: null };
+    const index = v.drawers || {};
+    const out = {};
+    const need = Object.keys(index).filter(k => { if (mine[index[k]]) { out[k] = mine[index[k]]; return false; } return true; });
+    const got = await Promise.all(need.map(k => drawersCol(ref).doc(k).get()));
+    let ok = true, missing = false;
+    const actual = { ...index };
+    got.forEach((d, i) => {
+      const k = need[i], json = d.exists ? d.data().json : null;
+      if (typeof json !== 'string') { ok = false; missing = true; return; }
+      if (drawerHash(json) === index[k]) { out[k] = json; mine[index[k]] = json; return; }
+      ok = false;
+      // Dernier essai : contenu présent mais différent du sommaire (deux appareils au
+      // même moment) → on prend le tiroir tel qu'il est ; le sommaire sera réparé au
+      // prochain envoi. Un tiroir absent, lui, bloque (rien n'est écrasé).
+      if (attempt === 2) { out[k] = json; actual[k] = drawerHash(json); }
+    });
+    if (ok || (attempt === 2 && !missing)) return { data: assembleData(v.data, out), index: actual };
+    if (attempt === 2) break;
+    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+    v = (await ref.get()).data() || {};
+  }
+  throw new Error('tiroirs incomplets (enregistrement en cours sur un autre appareil ?)');
+}
+
+// Envoi : tiroirs modifiés, tiroirs vidés supprimés, puis sommaire dans le document
+// principal. Tout dans un seul lot (tout ou rien) quand c'est possible.
+async function writeDrawers(ref, data) {
+  const { main, drawers } = splitData(data);
+  const index = {};
+  Object.keys(drawers).forEach(k => { index[k] = drawerHash(drawers[k]); });
+  // Sommaire actuel du cloud (un autre appareil a pu enregistrer depuis) : les tiroirs
+  // et le sommaire envoyés restent ainsi toujours d'accord (le dernier envoi fait foi,
+  // comme avant les tiroirs).
+  let remote = cloudIndex;
+  try {
+    const cur = (await ref.get()).data();
+    if (cur && cur.layout === 2 && cur.data && !Array.isArray(cur.data.sessions)) remote = cur.drawers || {};
+  } catch (err) { if (!isPermissionError(err)) throw err; }
+  const ops = [];
+  Object.keys(drawers).forEach(k => { if (remote[k] !== index[k]) ops.push(['set', k]); });
+  Object.keys(remote).forEach(k => { if (!(k in drawers)) ops.push(['delete', k]); });
+  const mainDoc = [{ data: main, layout: 2, drawers: index, updatedAt: Date.now() }, { mergeFields: ['data', 'layout', 'drawers', 'updatedAt'] }];
+  const db = firebase.firestore();
+  try {
+    for (let i = 0; i < ops.length || i === 0; i += 400) {
+      const batch = db.batch();
+      ops.slice(i, i + 400).forEach(([op, k]) => op === 'set' ? batch.set(drawersCol(ref).doc(k), drawerDoc(k, drawers[k])) : batch.delete(drawersCol(ref).doc(k)));
+      if (i + 400 >= ops.length) batch.set(ref, ...mainDoc); // sommaire en dernier
+      await batch.commit();
+    }
+    cloudIndex = index;
+  } catch (err) {
+    if (!isPermissionError(err)) throw err;
+    // Règles Firebase pas encore à jour : retour à l'ancien rangement, rien n'est perdu.
+    drawersBlocked = true; cloudLayout = 1;
+    console.warn('[TriSeason] Tiroirs refusés par les règles Firebase : ancien rangement gardé.');
+    await writeSingleDoc(ref, data);
+  }
+}
+
+// Déménagement depuis l'ancien rangement, une seule fois par compte :
+// 1. copie de secours complète ; 2. tiroirs écrits sans toucher au document principal ;
+// 3. relecture et comparaison ; 4. seulement alors, document principal allégé.
+// En cas d'échec, l'ancien rangement reste en place et l'appli continue avec.
+async function migrateToDrawers(ref, data) {
+  if (drawersBlocked || cloudLayout === 2) return;
+  try {
+    const backup = ref.collection('backup').doc('v1');
+    const b = await backup.get();
+    if (!b.exists) await backup.set({ data, at: Date.now() });
+    const { drawers } = splitData(data);
+    const existing = await drawersCol(ref).get();
+    const keys = Object.keys(drawers);
+    const db = firebase.firestore();
+    const stale = existing.docs.map(d => d.id).filter(k => !(k in drawers));
+    const ops = keys.map(k => ['set', k]).concat(stale.map(k => ['delete', k]));
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = db.batch();
+      ops.slice(i, i + 400).forEach(([op, k]) => op === 'set' ? batch.set(drawersCol(ref).doc(k), drawerDoc(k, drawers[k])) : batch.delete(drawersCol(ref).doc(k)));
+      await batch.commit();
+    }
+    const check = await drawersCol(ref).get();
+    const back = {};
+    check.docs.forEach(d => { back[d.id] = d.data().json; });
+    const same = Object.keys(back).length === keys.length && keys.every(k => back[k] === drawers[k]);
+    if (!same) throw new Error('vérification des tiroirs : contenu différent, déménagement annulé');
+    cloudIndex = {};                      // les tiroirs sont là ; le sommaire part avec le document principal
+    keys.forEach(k => { cloudIndex[k] = drawerHash(drawers[k]); });
+    const { main } = splitData(data);
+    await ref.set({ data: main, layout: 2, drawers: { ...cloudIndex }, updatedAt: Date.now() },
+      { mergeFields: ['data', 'layout', 'drawers', 'updatedAt'] });
+    cloudLayout = 2;
+    console.info('[TriSeason] Données rangées en tiroirs.');
+  } catch (err) {
+    if (isPermissionError(err)) drawersBlocked = true;
+    console.warn('[TriSeason] Rangement en tiroirs reporté :', err.message);
+  }
+}
+
+// Effacement : tiroirs et copie de secours (avant le document principal).
+async function deleteCloudDrawers(ref, { backupToo = true } = {}) {
+  try {
+    const db = firebase.firestore();
+    const list = (await drawersCol(ref).get()).docs.map(d => drawersCol(ref).doc(d.id));
+    if (backupToo) list.push(ref.collection('backup').doc('v1'));
+    for (let i = 0; i < list.length; i += 400) {
+      const batch = db.batch();
+      list.slice(i, i + 400).forEach(r => batch.delete(r));
+      await batch.commit();
+    }
+  } catch (err) {
+    if (!isPermissionError(err)) throw err; // règles pas à jour : il n'y a pas de tiroirs
+  }
+}
+
+// Place disponible pour l'historique : un document (ancien rangement) ou la copie
+// locale du navigateur (tiroirs ; ~5 Mo de stockage local, on garde une marge).
+function dataMaxBytes() { return cloudLayout === 2 && !drawersBlocked ? 3500 * 1024 : DATA_MAX_BYTES; }
 
 // Note le jour où l'utilisateur ouvre l'appli (une écriture par jour et par
 // appareil au plus). Sert uniquement au rapport d'activité : utilisateurs
@@ -231,7 +445,9 @@ function resetAllData() {
   const fresh = structuredClone(DEFAULT_DATA);
   const st = getData().strava;  // la connexion Strava reste, sans réimporter l'ancien historique
   if (st) fresh.strava = { ...st, after: Math.floor(Date.now() / 1000) };
-  saveData(fresh);
+  saveData(fresh); // les tiroirs vidés sont supprimés à l'envoi
+  const user = window.TS_USER, ref = user && getUserDocRef(user.uid);
+  if (ref) ref.collection('backup').doc('v1').delete().catch(() => {}); // copie de secours aussi
 }
 
 // Supprime définitivement les données cloud puis le compte de connexion.
@@ -248,6 +464,7 @@ async function deleteAccount(password) {
   } else if (providers.includes('google.com')) {
     await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
   }
+  await deleteCloudDrawers(getUserDocRef(user.uid)); // tiroirs et copie de secours d'abord
   await getUserDocRef(user.uid).delete();
   await user.delete();
   clearLocalUserData();
@@ -260,21 +477,31 @@ function syncFromCloud(uid) {
   if (!ref) { cloudSyncing = false; return; }
   claimLocalData(uid);
 
-  ref.get().then(doc => {
+  ref.get().then(async doc => {
     checkConsent(uid, doc);
-    if (doc.exists && doc.data() && doc.data().data) {
+    const v = doc.exists ? doc.data() : null;
+    if (v && v.data) {
       // Un compte cloud existe déjà : ses données font foi sur cet appareil.
-      const cloudData = doc.data().data;
+      // Tiroirs, sauf si un appareil resté sur une ancienne version a réécrit
+      // toutes les données dans le document principal (elles font alors foi).
+      let localData = null;
+      try { localData = localStorage.getItem(DB_KEY) ? getData() : null; } catch {}
+      const read = await readDrawers(ref, v, localData);
+      const cloudData = read.data, inDrawers = !!read.index;
+      cloudLayout = inDrawers ? 2 : 1;
+      cloudIndex = inDrawers ? { ...read.index } : {};
       cloudLoaded = true;
       if (compactStoredSessions(cloudData)) saveData(cloudData); // allégée une fois, renvoyée au cloud
       else {
         localStorage.setItem(DB_KEY, JSON.stringify(cloudData));
         window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
       }
+      if (!inDrawers) { cloudMigrateWanted = true; pushToCloudSoon(ref); }
     } else {
       // Premier login : on envoie ce qu'il y avait déjà en local (saison déjà
       // saisie avant la mise en place des comptes) pour l'attacher au compte.
       cloudLoaded = true;
+      cloudLayout = 2; cloudIndex = {};
       const localData = getData();
       if (compactStoredSessions(localData)) localStorage.setItem(DB_KEY, JSON.stringify(localData));
       pushToCloud(localData);
@@ -288,6 +515,8 @@ function syncFromCloud(uid) {
     cloudSyncing = false;
   });
 }
+// Lance le déménagement (file d'envoi : jamais en même temps qu'un enregistrement).
+function pushToCloudSoon(ref) { if (!cloudSending) sendToCloud(ref); }
 
 // Déclenché par auth-guard.js une fois la connexion confirmée. On gère aussi
 // le cas où cet événement serait déjà passé avant que ce script ne s'exécute.
@@ -1817,7 +2046,7 @@ function planStravaArchive(acts, { since = null } = {}) {
   const kept = [];
   for (const s of plan.add) {
     const size = new TextEncoder().encode(JSON.stringify({ ...s, id: 'x'.repeat(16) })).length + 1; // id réel : 14 caractères
-    if (total + size > DATA_MAX_BYTES) { plan.dropped = plan.add.length - kept.length; break; }
+    if (total + size > dataMaxBytes()) { plan.dropped = plan.add.length - kept.length; break; }
     total += size; kept.push(s);
   }
   plan.add = kept;
@@ -2239,6 +2468,7 @@ window.TS = {
   formatHours, FUEL_PRESETS, fuelCarbs, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
-  planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES,
+  planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
+  splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
   SPORTS, COMP_TYPES,
 };

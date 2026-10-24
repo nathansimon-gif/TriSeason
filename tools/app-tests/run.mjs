@@ -53,15 +53,52 @@ const firebaseStub = (uid) => `
     createUserWithEmailAndPassword(){return Promise.resolve()}, signInWithEmailAndPassword(){return Promise.resolve()}, signInWithPopup(){return Promise.resolve()} };
   window.firebase={apps:[],initializeApp(){this.apps.push(1)},
     auth:Object.assign(()=>authObj,{EmailAuthProvider:{credential:()=>({})},GoogleAuthProvider:function(){}}),
-    firestore:Object.assign(()=>({collection:()=>({doc:(id)=>({
-      get(){const d=load().docs[id];return Promise.resolve({exists:!!d,data:()=>JSON.parse(JSON.stringify(d||{}))})},
-      set(v,opt){const st=load(); let d=st.docs[id]||{};
-        if(opt&&opt.mergeFields) opt.mergeFields.forEach(k=>d[k]=v[k]);
-        else if(opt&&opt.merge){for(const k in v){ if(v[k]&&v[k].__union){const a=d[k]||[];v[k].__union.forEach(x=>{if(!a.includes(x))a.push(x)});d[k]=a;} else d[k]=v[k];}}
-        else d=v; st.docs[id]=d; save(st); return Promise.resolve();},
-      delete(){const st=load(); delete st.docs[id]; save(st); return Promise.resolve();}
-    })})}),{FieldValue:{arrayUnion:(...v)=>({__union:v})}})};
+    firestore:Object.assign(()=>({collection:()=>mkCol(''),batch(){const ops=[];return{
+      set(r,v,o){ops.push(['s',r,v,o]);return this}, delete(r){ops.push(['d',r]);return this},
+      commit(){ if(ops.some(o=>o[1]._deny())) return denied(); const st=load();
+        ops.forEach(o=>o[0]==='s'?o[1]._applySet(st,o[2],o[3]):o[1]._applyDel(st)); st.commits=(st.commits||0)+1; save(st); return Promise.resolve();}};}}),
+      {FieldValue:{arrayUnion:(...v)=>({__union:v})}})};
+  // Documents : 'uid' (users/uid) dans st.docs ; sous-documents 'uid/drawers/clé' dans st.sub.
+  // localStorage.__fbDenySub = '1' simule des règles Firebase sans la ligne des sous-tiroirs.
+  function denied(){return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'}));}
+  function clone(x){return JSON.parse(JSON.stringify(x));}
+  function mkCol(cpath){return{doc:(id)=>mkDoc(cpath?cpath+'/'+id:id),
+    get(){ if(localStorage.getItem('__fbDenySub')==='1'&&cpath) return denied();
+      const st=load(),pre=cpath+'/'; const docs=Object.keys(st.sub||{}).filter(k=>k.startsWith(pre)&&!k.slice(pre.length).includes('/'))
+        .map(k=>({id:k.slice(pre.length),exists:true,data:()=>clone(st.sub[k])})); st.reads=(st.reads||0)+Math.max(1,docs.length); save(st);
+      return Promise.resolve({docs,empty:!docs.length,size:docs.length});}};}
+  function mkDoc(path){const top=!path.includes('/');
+    const deny=()=>!top&&localStorage.getItem('__fbDenySub')==='1';
+    const getRaw=st=>top?st.docs[path]:(st.sub||{})[path];
+    const putRaw=(st,d)=>{if(top)st.docs[path]=d;else(st.sub=st.sub||{})[path]=d;};
+    const applySet=(st,v,opt)=>{let d=getRaw(st)||{};
+      if(opt&&opt.mergeFields) opt.mergeFields.forEach(k=>d[k]=v[k]);
+      else if(opt&&opt.merge){for(const k in v){ if(v[k]&&v[k].__union){const a=d[k]||[];v[k].__union.forEach(x=>{if(!a.includes(x))a.push(x)});d[k]=a;} else d[k]=v[k];}}
+      else d=clone(v); putRaw(st,d); st.writes=(st.writes||0)+1;};
+    const applyDel=st=>{if(top)delete st.docs[path];else if(st.sub)delete st.sub[path]; st.writes=(st.writes||0)+1;};
+    const ref={id:path.split('/').pop(),_deny:deny,_applySet:applySet,_applyDel:applyDel,
+      get(){if(deny())return denied();const st=load();st.reads=(st.reads||0)+1;save(st);const d=getRaw(st);return Promise.resolve({id:ref.id,exists:!!d,data:()=>clone(d||{})});},
+      set(v,opt){if(deny())return denied();const st=load();applySet(st,v,opt);save(st);return Promise.resolve();},
+      delete(){if(deny())return denied();const st=load();applyDel(st);save(st);return Promise.resolve();},
+      collection(name){return mkCol(path+'/'+name);}};
+    return ref;}
 })();`;
+
+// Données d'un compte telles qu'enregistrées dans le faux cloud, tiroirs remis
+// ensemble (calcul indépendant du code de l'appli) : window.__cloud('testeur').
+const CLOUD_HELPER = `window.__cloud = function (uid) {
+  const st = JSON.parse(localStorage.getItem('__fb') || '{"docs":{}}');
+  const doc = st.docs[uid];
+  if (!doc || !doc.data) return doc ? doc.data : undefined;
+  if (doc.layout !== 2 || Array.isArray(doc.data.sessions)) return doc.data;
+  const pre = uid + '/drawers/', d = Object.assign({}, doc.data, { sessions: [] }), meals = [], fuel = [];
+  Object.keys(st.sub || {}).filter(k => k.startsWith(pre)).sort().forEach(k => {
+    const g = JSON.parse(st.sub[k].json);
+    (g.sessions || []).forEach(x => d.sessions.push(x)); (g.meals || []).forEach(x => meals.push(x)); (g.fuel || []).forEach(x => fuel.push(x));
+  });
+  if (doc.data.nutrition || meals.length || fuel.length) d.nutrition = Object.assign({}, doc.data.nutrition, { meals, fuel });
+  return d;
+};`;
 
 // ── Données de test ──────────────────────────────────────────────────────────
 function day(offset) {
@@ -113,6 +150,7 @@ async function main() {
       if (u) localStorage.setItem('triseason_owner', u);
       localStorage.setItem('__fb', JSON.stringify({ docs: u ? { [u]: { data: d, ...(c ? { consent: { healthData: true, version: 1, at: 1 } } : {}) } } : {} }));
     }, [data, uid, consent]);
+    await ctx.addInitScript(CLOUD_HELPER);
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -557,35 +595,56 @@ async function main() {
       'course : ' + JSON.stringify(run) + ' (date attendue ' + day(0) + ')');
   });
 
-  await test('Archive Strava : limite de 1 Mo par compte respectée', async () => {
+  const bigArchive = () => {
+    const acts = [];
+    for (let i = 0; i < 9000; i++) acts.push({ id: 10000 + i, start: new Date(Date.UTC(2014, 0, 1) + i * 36e5 * 10), name: 'Sortie numéro ' + i,
+      sport: ['run', 'velo', 'nat'][i % 3], elapsed: 3600, distance_m: 10000, elevation: 50, hrAvg: 140, hrMax: 170, kcal: 500 });
+    const plan = TS.planStravaArchive(acts);
+    TS.applyStravaArchive(plan);
+    return { dropped: plan.dropped, added: plan.add.length, bytes: TS.dataBytes(TS.getData()), max: TS.dataMaxBytes(),
+      newest: plan.add[0].date, oldest: plan.oldestKept, layout: TS.cloudLayoutNow() };
+  };
+  await test('Tiroirs : tout l’historique Strava tient (9 000 séances), aucun document au-delà de 1 Mo', async () => {
     const v = await newUser();
-    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
-    const r = await v.page.evaluate(() => {
-      const acts = [];
-      for (let i = 0; i < 9000; i++) acts.push({ id: 10000 + i, start: new Date(Date.UTC(2014, 0, 1) + i * 36e5 * 10), name: 'Sortie numéro ' + i,
-        sport: ['run', 'velo', 'nat'][i % 3], elapsed: 3600, distance_m: 10000, elevation: 50, hrAvg: 140, hrMax: 170, kcal: 500 });
-      const plan = TS.planStravaArchive(acts);
-      TS.applyStravaArchive(plan);
-      return { dropped: plan.dropped, added: plan.add.length, bytes: TS.dataBytes(TS.getData()), max: TS.DATA_MAX_BYTES,
-        newest: plan.add[0].date, oldest: plan.oldestKept };
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(1000);
+    const r = await v.page.evaluate(bigArchive);
+    await v.page.waitForTimeout(1500);
+    const c = await v.page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('__fb'));
+      const sizes = [JSON.stringify(st.docs.testeur).length, ...Object.keys(st.sub || {}).map(k => JSON.stringify(st.sub[k]).length)];
+      return { n: window.__cloud('testeur').sessions.length, biggest: Math.max(...sizes), drawers: Object.keys(st.sub || {}).filter(k => k.includes('/drawers/')).length };
     });
+    assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
-    assert(r.dropped > 0 && r.bytes <= r.max && r.newest > r.oldest, JSON.stringify(r));
+    assert(r.layout === 2 && r.dropped === 0 && r.added === 9000, JSON.stringify(r));
+    assert(c.n === 9040 && c.biggest < 900 * 1024, 'cloud : ' + JSON.stringify(c));
+    return `${r.added} ajoutées, ${Math.round(r.bytes / 1024)} Ko en tout, plus gros document ${Math.round(c.biggest / 1024)} Ko, ${c.drawers} tiroirs`;
+  });
+
+  await test('Règles Firebase pas à jour : ancien rangement gardé, limite de 1 Mo respectée, rien de perdu', async () => {
+    const v = await newUser();
+    await v.ctx.addInitScript(() => localStorage.setItem('__fbDenySub', '1'));
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(1000);
+    const r = await v.page.evaluate(bigArchive);
+    await v.page.waitForTimeout(800);
+    const c = await v.page.evaluate(() => { const st = JSON.parse(localStorage.getItem('__fb'));
+      return { layout: st.docs.testeur.layout, n: st.docs.testeur.data.sessions.length, local: TS.getData().sessions.length, sub: Object.keys(st.sub || {}).length }; });
+    await v.ctx.close();
+    assert(r.layout === 1 && r.dropped > 0 && r.bytes <= r.max && r.newest > r.oldest, JSON.stringify(r));
+    assert(c.layout !== 2 && c.sub === 0 && c.n === c.local, 'cloud : ' + JSON.stringify(c));
     return `${r.added} ajoutées, ${r.dropped} trop anciennes, ${Math.round(r.bytes / 1024)} Ko`;
   });
 
   await test('Import groupé : un seul envoi au cloud à la fois', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    await v.page.waitForTimeout(600); // déménagement en tiroirs terminé
     const n = await v.page.evaluate(async () => {
-      let sets = 0;
-      const fs = firebase.firestore;
-      firebase.firestore = () => { const db = fs(); return { collection: (c) => ({ doc: (id) => { const d = db.collection(c).doc(id);
-        return { ...d, set: (...a) => { sets++; return new Promise(r => setTimeout(r, 50)).then(() => d.set(...a)); } }; } }) }; };
-      firebase.firestore.FieldValue = fs.FieldValue;
+      const st = () => JSON.parse(localStorage.getItem('__fb'));
+      const before = st().commits || 0;
       for (let i = 0; i < 40; i++) TS.saveSession({ date: '2026-08-01', sport: 'run', duration: 0.5, distance: 5 });
       await new Promise(r => setTimeout(r, 400));
-      return { sets, cloud: JSON.parse(localStorage.getItem('__fb')).docs.testeur.data.sessions.length };
+      return { sets: (st().commits || 0) - before, cloud: window.__cloud('testeur').sessions.length };
     });
     await v.ctx.close();
     assert(n.sets <= 3 && n.cloud === 80, `${n.sets} envois, ${n.cloud} séances dans le cloud (80 attendues)`);
@@ -681,7 +740,7 @@ async function main() {
     const v = await newUser();
     v.setUid('autre');
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
-    const r = await v.page.evaluate(() => ({ n: TS.getData().sessions.length, cloud: (JSON.parse(localStorage.getItem('__fb')).docs.autre || {}).data }));
+    const r = await v.page.evaluate(() => ({ n: TS.getData().sessions.length, cloud: window.__cloud('autre') }));
     await v.ctx.close();
     assert(r.n === 0, `${r.n} séances de l’ancien compte visibles`);
     assert(!r.cloud || !(r.cloud.sessions || []).length, 'données de l’ancien compte envoyées dans le nouveau compte');
@@ -734,7 +793,7 @@ async function main() {
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
     const r = await v.page.evaluate(() => {
-      const c = JSON.parse(localStorage.getItem('__fb')).docs.testeur.data;
+      const c = window.__cloud('testeur');
       const by = id => c.sessions.find(s => s.id === id);
       return { size: JSON.stringify(c).length, compact: c._compact, n: c.sessions.length, st1: by('st1'), st2: by('st2'), st3: by('st3'), f1: by('f1'),
         nulls: c.sessions.some(s => Object.values(s).some(x => x === null || x === '')) };
@@ -847,6 +906,142 @@ async function main() {
     assert(dash.shown && /Nouvelle paire/.test(dash.txt) && /bientôt/.test(dash.txt), 'alerte Dashboard : ' + JSON.stringify(dash));
   });
 
+  // ── Rangement en tiroirs ──────────────────────────────────────────────────
+  const fbState = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('__fb')));
+  // Nouvel appareil (ou autre navigateur) : même cloud, copie locale vide ou donnée
+  async function otherDevice(fb, { keepLocal = null } = {}) {
+    const w = await newUser({ data: {} });
+    await w.ctx.addInitScript(([fb, local]) => {
+      if (sessionStorage.getItem('__dev2')) return;
+      sessionStorage.setItem('__dev2', '1');
+      localStorage.setItem('__fb', JSON.stringify(fb));
+      if (local) localStorage.setItem('triseason_data', JSON.stringify(local)); else localStorage.removeItem('triseason_data');
+    }, [fb, keepLocal]);
+    return w;
+  }
+  const sortedIds = (list) => list.map(x => x.id).sort().join(',');
+
+  await test('Tiroirs : déménagement vérifié, copie de secours, rien de perdu', async () => {
+    const data = sampleData();
+    data.sessions.push({ id: 'old', date: '2019-05-04', sport: 'run', duration: 1, distance: 12 });
+    data.nutrition.fuel = [{ id: 'f1', date: day(-2), type: 'gel', qty: 2 }];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1200);
+    const st = await fbState(v.page);
+    const r = await v.page.evaluate(() => ({ local: TS.getData(), cloud: window.__cloud('testeur') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const main = st.docs.testeur, keys = Object.keys(st.sub || {});
+    assert(main.layout === 2 && !('sessions' in main.data) && !('meals' in main.data.nutrition) && !('fuel' in main.data.nutrition), 'document principal pas allégé');
+    assert(keys.includes('testeur/drawers/sessions-2019') && keys.some(k => /drawers\/sessions-2026$/.test(k)) && keys.some(k => /drawers\/nutrition-\d{4}-\d{2}$/.test(k)), 'tiroirs : ' + keys.join(', '));
+    assert(Object.keys(main.drawers).length === keys.filter(k => k.includes('/drawers/')).length, 'sommaire incomplet');
+    const bk = st.sub['testeur/backup/v1'];
+    assert(bk && bk.data.sessions.length === 41 && bk.data.nutrition.meals.length === 30, 'copie de secours absente ou incomplète');
+    assert(sortedIds(r.cloud.sessions) === sortedIds(data.sessions) && r.cloud.nutrition.meals.length === 30 && r.cloud.nutrition.fuel.length === 1, 'cloud différent des données');
+    assert(sortedIds(r.local.sessions) === sortedIds(data.sessions) && r.local.nutrition.meals.length === 30 && r.local.records && r.local.profile.name === 'Test', 'copie locale abîmée');
+  });
+
+  await test('Tiroirs : nouvel appareil (tout relu), puis seulement le nécessaire (lectures et écritures)', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1200);
+    const fb = await fbState(v.page);
+    await v.ctx.close();
+    const nDrawers = Object.keys(fb.docs.testeur.drawers).length;
+    // Nouvel appareil : copie locale vide → tout est relu
+    const w = await otherDevice(fb);
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(1000);
+    const a = await w.page.evaluate(() => ({ n: TS.getData().sessions.length, meals: TS.getData().nutrition.meals.length, reads: JSON.parse(localStorage.getItem('__fb')).reads }));
+    // Page suivante, rien n'a changé : seul le document principal est lu
+    const r0 = await w.page.evaluate(() => JSON.parse(localStorage.getItem('__fb')).reads || 0);
+    await w.page.goto(`${BASE}/sessions.html`); await w.page.waitForTimeout(800);
+    const r1 = await w.page.evaluate(() => JSON.parse(localStorage.getItem('__fb')).reads || 0);
+    // Une séance ajoutée : un seul tiroir réécrit (+ le sommaire), en un seul envoi
+    const before = await fbState(w.page);
+    await w.page.evaluate(() => TS.saveSession({ date: TS.localDateStr(), sport: 'run', duration: 0.5, distance: 5 }));
+    await w.page.waitForTimeout(400);
+    const after = await fbState(w.page);
+    const changed = Object.keys(after.sub).filter(k => JSON.stringify(after.sub[k]) !== JSON.stringify(before.sub[k]));
+    assert(!w.errors.length, w.errors[0]);
+    await w.ctx.close();
+    assert(a.n === 40 && a.meals === 30 && a.reads >= 1 + nDrawers, 'nouvel appareil : ' + JSON.stringify(a) + ' tiroirs ' + nDrawers);
+    assert(r1 - r0 === 1, `page suivante : ${r1 - r0} lectures (1 attendue)`);
+    assert(changed.length === 1 && /sessions-\d{4}$/.test(changed[0]) && after.commits - before.commits === 1, 'écritures : ' + changed.join(', ') + ' / ' + (after.commits - before.commits) + ' envois');
+  });
+
+  await test('Tiroirs : un appareil resté sur l’ancienne version réécrit tout → ses données font foi, rangées à nouveau', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1200);
+    const fb = await fbState(v.page);
+    await v.ctx.close();
+    // Ancienne version : tout le contenu dans le document principal (sans toucher layout)
+    const full = sampleData(); full.sessions = full.sessions.slice(0, 10); full._compact = 1;
+    fb.docs.testeur.data = full;
+    const w = await otherDevice(fb);
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(1200);
+    const r = await w.page.evaluate(() => ({ local: TS.getData().sessions.length, cloud: window.__cloud('testeur').sessions.length, layout: JSON.parse(localStorage.getItem('__fb')).docs.testeur.layout,
+      inMain: Array.isArray(JSON.parse(localStorage.getItem('__fb')).docs.testeur.data.sessions) }));
+    await w.ctx.close();
+    assert(r.local === 10 && r.cloud === 10 && r.layout === 2 && !r.inMain, JSON.stringify(r));
+  });
+
+  await test('Tiroirs : deux appareils enregistrent l’un après l’autre → le cloud reste lisible et cohérent', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1200);
+    const fb = await fbState(v.page);
+    const local = await v.page.evaluate(() => TS.getData());
+    // Appareil B chargé en même temps que A, avec la même copie
+    const b = await otherDevice(fb, { keepLocal: local });
+    await b.page.goto(`${BASE}/index.html`); await b.page.waitForTimeout(1000);
+    // A ajoute une séance, puis B (qui ne l'a pas vue) ajoute un repas
+    await v.page.evaluate(() => TS.saveSession({ id: 'deA', date: TS.localDateStr(), sport: 'run', duration: 0.5, distance: 5 }));
+    await v.page.waitForTimeout(300);
+    const fbA = await fbState(v.page);
+    await b.page.evaluate((fbA) => localStorage.setItem('__fb', JSON.stringify(fbA)), fbA); // même serveur
+    await b.page.evaluate(() => { const d = TS.getData(); d.nutrition.meals.push({ id: 'deB', date: TS.localDateStr(), type: 'déjeuner', glucides: 80 }); TS.saveData(d); });
+    await b.page.waitForTimeout(400);
+    const fbB = await fbState(b.page);
+    await v.ctx.close(); await b.ctx.close();
+    // Cohérence : chaque tiroir correspond à son empreinte dans le sommaire
+    const c = await otherDevice(fbB);
+    await c.page.goto(`${BASE}/index.html`); await c.page.waitForTimeout(1500);
+    const r = await c.page.evaluate(() => ({ meals: TS.getData().nutrition.meals.some(m => m.id === 'deB'), n: TS.getData().sessions.length,
+      ok: (() => { const st = JSON.parse(localStorage.getItem('__fb')); const idx = st.docs.testeur.drawers;
+        return Object.keys(idx).every(k => st.sub['testeur/drawers/' + k] && TS.drawerHash(st.sub['testeur/drawers/' + k].json) === idx[k]); })() }));
+    assert(!c.errors.length, c.errors[0]);
+    await c.ctx.close();
+    assert(r.ok && r.meals && r.n >= 40, 'cloud incohérent ou illisible : ' + JSON.stringify(r));
+  });
+
+  await test('Tiroirs : tiroir manquant → rien n’est écrasé, la copie locale reste', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1200);
+    const fb = await fbState(v.page);
+    const local = await v.page.evaluate(() => TS.getData());
+    await v.ctx.close();
+    const key = Object.keys(fb.sub).find(k => /sessions-\d{4}$/.test(k));
+    delete fb.sub[key];
+    const w = await otherDevice(fb, { keepLocal: { ...local, sessions: local.sessions.slice(0, 5) } }); // copie locale différente : il faut relire
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(3500);
+    await w.page.evaluate(() => TS.saveSession({ date: TS.localDateStr(), sport: 'run', duration: 0.5, distance: 5 }));
+    await w.page.waitForTimeout(300);
+    const after = await fbState(w.page);
+    await w.ctx.close();
+    assert(JSON.stringify(after.docs.testeur.data) === JSON.stringify(fb.docs.testeur.data) && Object.keys(after.sub).length === Object.keys(fb.sub).length, 'cloud modifié alors que la lecture a échoué');
+  });
+
+  await test('Tiroirs : « Effacer mes données » vide les tiroirs, « Supprimer mon compte » efface tout', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(1200);
+    await v.page.evaluate(() => TS.resetAllData()); await v.page.waitForTimeout(600);
+    const reset = await fbState(v.page);
+    await v.page.evaluate(() => TS.saveSession({ date: TS.localDateStr(), sport: 'run', duration: 0.5, distance: 5 })); await v.page.waitForTimeout(400);
+    await v.page.evaluate(() => TS.deleteAccount('mdp')); await v.page.waitForTimeout(400);
+    const gone = await fbState(v.page);
+    await v.ctx.close();
+    assert(!Object.keys(reset.sub || {}).length && reset.docs.testeur.layout === 2, 'après effacement : ' + Object.keys(reset.sub || {}).join(', '));
+    assert(!gone.docs.testeur && !Object.keys(gone.sub || {}).length, 'après suppression : ' + Object.keys(gone.sub || {}).join(', '));
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();
@@ -861,7 +1056,7 @@ async function main() {
     await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(500);
     await v.page.check('#hpConsent');
     await v.page.click('#hpEnableBtn'); await v.page.waitForTimeout(300);
-    const after = await v.page.evaluate(() => ({ on: TS.healthEnabled(), cloud: JSON.parse(localStorage.getItem('__fb')).docs.testeur.data.health,
+    const after = await v.page.evaluate(() => ({ on: TS.healthEnabled(), cloud: window.__cloud('testeur').health,
       add: getComputedStyle(document.getElementById('hpAddBtn')).display }));
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
@@ -930,7 +1125,7 @@ async function main() {
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
     await v.page.click('text=Retirer mon accord et tout effacer'); await v.page.waitForTimeout(300);
-    const r = await v.page.evaluate(() => { const c = JSON.parse(localStorage.getItem('__fb')).docs.testeur.data;
+    const r = await v.page.evaluate(() => { const c = window.__cloud('testeur');
       return { on: TS.healthEnabled(), health: c.health, pain: c.sessions.some(s => 'pain' in s), n: c.sessions.length }; });
     await v.ctx.close();
     assert(!r.on && !r.health && !r.pain, 'informations santé encore présentes : ' + JSON.stringify(r));
