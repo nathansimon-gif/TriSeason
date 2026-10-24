@@ -1042,6 +1042,30 @@ async function main() {
     assert(!gone.docs.testeur && !Object.keys(gone.sub || {}).length, 'après suppression : ' + Object.keys(gone.sub || {}).join(', '));
   });
 
+  await test('Apparence : mode clair choisi dans Profil, gardé sur toutes les pages, graphiques convertis ; sombre inchangé', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    const dark = await v.page.evaluate(() => ({ t: document.documentElement.dataset.theme, bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() }));
+    await Promise.all([v.page.waitForNavigation(), v.page.click('[data-theme-pick="light"]')]);
+    await v.page.waitForTimeout(500);
+    const prof = await v.page.evaluate(() => ({ t: document.documentElement.dataset.theme, checked: document.querySelector('[data-theme-pick="light"]').getAttribute('aria-checked') }));
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(900);
+    const forme = await v.page.evaluate(() => {
+      const ch = Chart.getChart(document.getElementById('chartPMC'));
+      return { t: document.documentElement.dataset.theme, bg: getComputedStyle(document.body).backgroundColor,
+        tick: ch && ch.options.scales.x.ticks.color, run: ch && ch.data.datasets[1].borderColor,
+        meta: document.querySelector('meta[name="theme-color"]').content };
+    });
+    await v.page.goto(`${BASE}/login.html`); await v.page.waitForTimeout(400);
+    const login = await v.page.evaluate(() => document.documentElement.dataset.theme);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(dark.t === 'dark' && dark.bg === '#0d1016', 'sombre par défaut : ' + JSON.stringify(dark));
+    assert(prof.t === 'light' && prof.checked === 'true', 'Profil : ' + JSON.stringify(prof));
+    assert(forme.t === 'light' && forme.bg === 'rgb(238, 241, 245)' && forme.tick === '#6b7486' && forme.run === '#cb2f63' && forme.meta === '#eef1f5', 'Forme : ' + JSON.stringify(forme));
+    assert(login === 'light', 'connexion pas en clair');
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();

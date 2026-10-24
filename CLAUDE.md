@@ -71,7 +71,14 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   la recherche Open Food Facts. N'enregistre rien. Mise en place : son README.
 - `auth-guard.js` : connexion Firebase, redirige vers `login.html` si personne
   n'est connecté.
-- `style.css` : design system (variables sur `:root`).
+- `style.css` : design system (variables sur `:root`, et `:root[data-theme="light"]`
+  pour le thème clair).
+- `theme.js` : chargé **en premier** dans le `<head>` de chaque page. Thème clair /
+  sombre / « comme le téléphone » (Profil → Apparence, préférence de l'appareil :
+  `localStorage.triseason_theme`, sombre par défaut). En clair, il convertit aussi
+  les couleurs écrites en dur (styles en ligne générés, couleurs des graphiques
+  Chart.js) vers la palette claire (`MAP`) : en ajoutant une couleur en dur, l'ajouter
+  à `MAP` ou, mieux, utiliser une variable CSS.
 - `sw.js` : service worker (réseau d'abord, cache en secours).
 - **Tirer pour actualiser** (`initPullToRefresh`, app.js) : seulement dans l'appli
   installée (`navigator.standalone` ou `display-mode: standalone`) ; en haut de
@@ -137,7 +144,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
    utiliser `toISOString()` pour produire une date (passage en UTC, donc un jour
    de décalage en France). Utiliser `TS.localDateStr(date)` et
    `TS.parseLocalDate('YYYY-MM-DD')`.
-2. **Version des fichiers** : chaque page charge `app.js`, `import.js`,
+2. **Version des fichiers** : chaque page charge `theme.js`, `app.js`, `import.js`,
    `auth-guard.js`, `fit-parser.js` et `style.css` avec `?v=…`. **À chaque
    modification d'un de ces fichiers, changer ce numéro dans toutes les pages**,
    sinon un navigateur peut mélanger une page récente et un ancien `app.js`
@@ -153,7 +160,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
    de halos ni d'emojis décoratifs. Utiliser les variables de `style.css` (`--nat`, `--velo`,
    `--run`, `--text-2`…) et le repère `.sport-dot` plutôt que des emojis de sport.
    Les 3 couleurs de sport ont été validées (daltonisme compris) sur le fond
-   sombre : ne pas les modifier sans revérifier qu'elles restent distinguables.
+   sombre, et leurs versions claires (`#2273c9`, `#bd5f00`, `#cb2f63`, contraste
+   ≥ 4,4 sur blanc) sur le fond clair : ne pas les modifier sans revérifier qu'elles
+   restent distinguables. Thème clair : accent texte `#5a8c00`, boutons principaux
+   citron vert plus vif `#93c932` avec encre sombre.
 5. **Records automatiques** : créés depuis les compétitions (`compRefreshRecordsInData`),
    marqués `auto` + `comp_id`. Ne jamais toucher aux records saisis à la main.
 

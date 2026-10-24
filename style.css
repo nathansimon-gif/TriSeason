@@ -65,6 +65,46 @@
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
+/* ── Thème clair (Profil → Apparence ; theme.js pose data-theme sur <html>) ──
+   Mêmes rôles que le thème sombre. Couleurs de sport assombries pour le fond
+   blanc : contraste ≥ 4,4 et toujours distinctes avec les trois formes de
+   daltonisme (vérifié comme pour le sombre). Accent citron vert assombri pour
+   rester lisible en texte. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:        #eef1f5;
+  --bg2:       #f7f9fb;
+  --surface:   #ffffff;
+  --surface2:  #f2f5f8;
+  --surface3:  #e5e9ef;
+  --border:    #dde2e9;
+  --border2:   #c6cdd8;
+  --text:      #141a23;
+  --text-2:    #4a5466;
+  --text-3:    #6b7486;
+  --nat:       #2273c9;
+  --nat-dim:   rgba(34,115,201,0.12);
+  --velo:      #bd5f00;
+  --velo-dim:  rgba(189,95,0,0.12);
+  --run:       #cb2f63;
+  --run-dim:   rgba(203,47,99,0.12);
+  --accent:    #5a8c00;
+  --accent2:   #4f7d00;
+  --accent-dim:rgba(90,140,0,0.13);
+  --accent-ink:#0d1016;
+  --green:     #1a8a5f;
+  --green-dim: rgba(26,138,95,0.12);
+  --red:       #c9302c;
+  --red-dim:   rgba(201,48,44,0.10);
+  --yellow:    #9a6500;
+  --purple:    #7a5fc0;
+}
+:root[data-theme="light"] input::-webkit-calendar-picker-indicator { filter: none; opacity: .7; }
+:root[data-theme="light"] .modal-overlay { background: rgba(20,26,35,.45); }
+/* Boutons principaux : citron vert plus vif que le texte d'accent (encre sombre, contraste 9,6) */
+:root[data-theme="light"] .btn--primary { background: #93c932; border-color: #7cb221; color: #0d1016; }
+:root[data-theme="light"] .btn--primary:hover { background: #86bd28; }
+
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
