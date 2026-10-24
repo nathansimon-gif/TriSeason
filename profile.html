@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script src="theme.js?v=20261030a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261029a"></script>
+  <script src="auth-guard.js?v=20261030a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261029a">
+  <link rel="stylesheet" href="style.css?v=20261030a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -71,6 +72,8 @@
     .gear-state { font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; white-space:nowrap; background:var(--surface2); color:var(--text-2); border:1px solid var(--border); }
     .gear-state--near { background:rgba(240,185,65,.14); color:var(--yellow); border-color:transparent; }
     .gear-state--over { background:var(--red-dim); color:var(--red); border-color:transparent; }
+    .theme-pick { display:flex; gap:6px; flex-wrap:wrap; }
+    .theme-pick .btn[aria-checked="true"] { background:var(--accent-dim); color:var(--text); border-color:var(--accent); }
     .zone-chip {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
@@ -166,6 +169,17 @@
   <div class="section-card" id="healthCard">
     <div class="section-card__title">Blessures, maladie et reprise</div>
     <div id="healthBody" class="strava-note"></div>
+  </div>
+
+  <!-- ── Apparence (préférence de cet appareil) ── -->
+  <div class="section-card" id="apparence">
+    <div class="section-card__title">Apparence</div>
+    <div class="theme-pick" role="radiogroup" aria-label="Apparence de l'appli">
+      <button type="button" class="btn btn--sm" data-theme-pick="dark" role="radio">Sombre</button>
+      <button type="button" class="btn btn--sm" data-theme-pick="light" role="radio">Clair</button>
+      <button type="button" class="btn btn--sm" data-theme-pick="auto" role="radio">Comme le téléphone</button>
+    </div>
+    <div class="strava-note" style="margin-top:8px">Réglage de cet appareil : sur un autre téléphone ou ordinateur, choisis-le aussi.</div>
   </div>
 
   <!-- ── Compte ── -->
@@ -371,7 +385,7 @@
 </div>
 
 
-<script src="app.js?v=20261029a"></script>
+<script src="app.js?v=20261030a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -389,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBadges();
   renderHealthOption();
   renderGear();
+  renderThemePick();
   handleStravaReturn();
   loadEditForm();
   TS.initTooltips();
@@ -457,6 +472,16 @@ async function stravaDisconnectAsk() {
 }
 
 window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderGear(); });
+
+// ── Apparence ───────────────────────────────────────────────────────────────
+function renderThemePick() {
+  const cur = window.TS_THEME ? TS_THEME.get() : 'dark';
+  document.querySelectorAll('[data-theme-pick]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.themePick === cur)));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-theme-pick]');
+  if (b && window.TS_THEME && b.dataset.themePick !== TS_THEME.get()) TS_THEME.set(b.dataset.themePick);
+});
 
 // ── Équipement ──────────────────────────────────────────────────────────────
 let gearEditId = null;
