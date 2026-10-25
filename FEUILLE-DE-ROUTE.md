@@ -9,7 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #46 (effort RPE dans « Noter ressenti et effort ») puis recharger le site
+- [ ] 🧑 Fusionner la PR #47 (graphiques dans le rapport du lundi) — pas besoin de recharger le site
+- [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
 ## Bientôt (dans le mois)
@@ -119,6 +120,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 25/10/2026 | #47 | Rapport du lundi : **graphiques d'évolution sur 8 semaines** (comptes, utilisateurs actifs, séances, repas ; lectures / écritures Firebase quand Google les fournit), en barres lisibles dans la conversation et dans l'e-mail |
 | 25/10/2026 | #46 | Séances : la fenêtre « Noter ressenti et effort » demande aussi l'**effort (RPE 1 à 10)** de chaque séance, à côté du ressenti (RPE déjà noté affiché) ; plus besoin de modifier la séance ensuite |
 | 25/10/2026 | #45 | Strava : les **kcal** sont reprises automatiquement (lues dans le détail de chaque activité, car la liste Strava ne les donne pas ; à défaut, travail en kJ du capteur de puissance) ; séances Strava des 30 derniers jours sans kcal complétées, 15 au plus par synchro ; une kcal saisie à la main n'est jamais remplacée |
 | 24/10/2026 | #44 | **Mode clair** (Profil → « Apparence » : Sombre, Clair ou Comme le téléphone ; réglage de l'appareil) : palette claire complète, couleurs de sport assombries pour le fond blanc et revérifiées (contraste, daltonisme), boutons citron vert, graphiques et couleurs générées convertis automatiquement ; page de connexion comprise |

@@ -78,3 +78,8 @@ npm test                        # tests du calcul, sans accès à Firebase
   que l'appli). « Plus gros document » = le plus gros document Firestore (limite
   1 Mo par document) ; le rapport indique aussi combien de comptes sont déjà rangés
   et combien de copies de secours de l'ancien rangement existent.
+- **Évolution sur 8 semaines** (graphiques en barres de texte, lisibles dans la
+  conversation et dans l'e-mail, sans image) : comptes au total, utilisateurs
+  actifs, séances saisies, repas notés, et lectures / écritures Firestore quand
+  Google les fournit. Tout est recalculé à partir des données (`computeTrends`),
+  rien n'est stocké.
