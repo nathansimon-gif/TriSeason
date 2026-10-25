@@ -1,6 +1,6 @@
 // Tests du calcul du rapport, sans accès à Firebase : node test.mjs
 import assert from 'node:assert/strict';
-import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail, parseRoadmap, assembleUserDoc } from './report.mjs';
+import { loadServiceAccount, computeReport, toMarkdown, lastFullWeekMonday, parisMidnight, addDays, parisDay, markdownToHtml, sendReportEmail, parseRoadmap, assembleUserDoc, computeTrends, textBar } from './report.mjs';
 
 // Dates
 assert.equal(lastFullWeekMonday(new Date('2026-10-12T08:00:00Z')), '2026-10-05'); // lundi → lundi précédent
@@ -109,6 +109,27 @@ assert.equal(rD.content.mealsWeek, 2);
 assert.equal(rD.storage.inDrawers, 1);
 assert.equal(rD.storage.backups, 1);
 assert.match(toMarkdown(rD), /Rangement en tiroirs : \*\*1\*\* compte\(s\) sur 4[\s\S]*Copies de secours de l’ancien rangement gardées : 1/);
+
+// Évolution sur 8 semaines : comptes cumulés, actifs, séances, repas ; barres de texte
+const tr = computeTrends({ weekStart, users, docs });
+assert.equal(tr.length, 8);
+assert.equal(tr[7].start, weekStart);
+assert.equal(tr[7].sessions, 3);
+assert.equal(tr[7].active, 2);
+assert.ok(tr[0].accounts <= tr[7].accounts);
+assert.equal(tr[7].reads, null);
+assert.equal(textBar(8, 8), '████████████████');
+assert.equal(textBar(0, 8), '');
+assert.equal(textBar(1, 64, 16), '▎'); // 2 huitièmes
+const withTr = computeReport({ weekStart, users, docs, metrics, prevMetrics });
+withTr.trends = tr;
+const trMd = toMarkdown(withTr);
+assert.match(trMd, /## Évolution sur 8 semaines[\s\S]*\*\*Utilisateurs actifs par semaine\*\*[\s\S]*\| 5 oct\. \| █+ \| 2 \|/);
+assert.match(trMd, /pas de graphique tant que Google/);
+assert.match(markdownToHtml(trMd), /text-align:left;color:#5a8c00[^>]*>█+/);
+const trM = computeTrends({ weekStart, users, docs, metrics: { reads: { '2026-10-06': 120 }, writes: { '2026-10-06': 30 } } });
+assert.equal(trM[7].reads, 120);
+assert.equal(trM[6].reads, 0);
 
 // Section « Feuille de route » : fait la semaine, à faire maintenant, ensuite
 const roadmapMd = `# Feuille de route

@@ -159,6 +159,41 @@ export function parseRoadmap(md, weekStart, weekEnd) {
   return { now: items(roadmapSection(md, 'Maintenant (en cours)')), soon: items(roadmapSection(md, 'Bientôt (dans le mois)')), later, done };
 }
 
+// ── Évolution sur plusieurs semaines (graphiques du rapport) ────────────────
+// Recalculée à chaque rapport à partir des données (rien n'est stocké) :
+// comptes (date de création), actifs (activeDays, depuis le 13/10/2026),
+// séances et repas (date de chaque élément), lectures / écritures Firestore si
+// Google les fournit (facturation activée).
+export function computeTrends({ weekStart, users, docs, metrics = null, weeks = 8 }) {
+  const authDay = t => (t ? parisDay(new Date(t)) : null);
+  const created = users.map(u => authDay(u.creationTime)).filter(Boolean);
+  const out = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = addDays(weekStart, -7 * i), end = addDays(start, 6);
+    const inW = d => d && d >= start && d <= end;
+    let active = 0, sessions = 0, meals = 0;
+    docs.forEach(doc => {
+      if ((doc.activeDays || []).some(inW)) active += 1;
+      const data = doc.data || {};
+      sessions += (data.sessions || []).filter(x => inW(x.date)).length;
+      meals += ((data.nutrition && data.nutrition.meals) || []).filter(x => inW(x.date)).length;
+    });
+    const sum = series => series ? Array.from({ length: 7 }, (_, k) => series[addDays(start, k)] || 0).reduce((a, b) => a + b, 0) : null;
+    out.push({ start, end, accounts: created.filter(d => d <= end).length, newUsers: created.filter(inW).length,
+      active, sessions, meals, reads: metrics ? sum(metrics.reads) : null, writes: metrics ? sum(metrics.writes) : null });
+  }
+  return out;
+}
+
+// Barre de texte proportionnelle (blocs Unicode, au huitième près) : s'affiche
+// telle quelle dans la conversation et dans l'e-mail, sans image.
+const BAR_PARTS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'];
+export function textBar(value, max, width = 16) {
+  if (!max || !value) return '';
+  const eighths = Math.max(1, Math.round(value / max * width * 8));
+  return '█'.repeat(Math.floor(eighths / 8)) + BAR_PARTS[eighths % 8];
+}
+
 // ── Mise en forme Markdown (français) ───────────────────────────────────────
 const nf = n => (n === null || n === undefined ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtDay = d => new Date(d + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -230,6 +265,31 @@ export function toMarkdown(r) {
   L.push(`- Plus gros document : ${nf(Math.round(r.storage.biggestBytes / 1024))} Ko, soit ${String(pct).replace('.', ',')} % de la limite de 1 Mo par document${pct >= 50 ? ' — à surveiller' : ''}.`);
   if (r.storage.biggestTotal && r.storage.biggestTotal !== r.storage.biggestBytes) L.push(`- Plus gros compte au total (tous ses tiroirs) : ${nf(Math.round(r.storage.biggestTotal / 1024))} Ko.`);
   if (r.storage.accounts) L.push(`- Rangement en tiroirs : **${nf(r.storage.inDrawers)}** compte(s) sur ${nf(r.storage.accounts)}${r.storage.inDrawers < r.storage.accounts ? ' (les autres passent en tiroirs à leur prochaine ouverture de l’appli)' : ''}. Copies de secours de l’ancien rangement gardées : ${nf(r.storage.backups)}.`);
+  if (r.trends && r.trends.length) {
+    const t = r.trends, wk = x => fmtDay(x.start).replace(/^\S+ /, '');
+    const chart = (title, key, note) => {
+      const max = Math.max(...t.map(x => x[key] || 0));
+      L.push('');
+      L.push(`**${title}**${note ? ' — ' + note : ''}`);
+      L.push('');
+      L.push('| Semaine du | | Nombre |');
+      L.push('|---|---|---:|');
+      t.forEach(x => L.push(`| ${wk(x)} | ${textBar(x[key], max) || '·'} | ${nf(x[key])} |`));
+    };
+    L.push('');
+    L.push(`## Évolution sur ${t.length} semaines`);
+    chart('Comptes au total', 'accounts', `dont ${nf(t.reduce((a, x) => a + x.newUsers, 0))} nouveaux sur la période`);
+    chart('Utilisateurs actifs par semaine', 'active', 'suivi depuis le 13 octobre 2026');
+    chart('Séances saisies par semaine', 'sessions');
+    chart('Repas notés par semaine', 'meals');
+    if (t.some(x => x.reads != null)) {
+      chart('Lectures Firestore par semaine', 'reads', 'quota gratuit : 50 000 par jour');
+      chart('Écritures Firestore par semaine', 'writes', 'quota gratuit : 20 000 par jour');
+    } else {
+      L.push('');
+      L.push('- Lectures et écritures Firestore : pas de graphique tant que Google ne fournit pas ces chiffres (facturation à activer sur le projet).');
+    }
+  }
   if (r.roadmap) {
     const rm = r.roadmap;
     L.push('');
@@ -267,7 +327,10 @@ export function markdownToHtml(md) {
     if (list) { out.push('</ul>'); list = false; }
     if (table) {
       const [head, , ...rows] = table;
-      const cells = (r, tag) => r.split('|').slice(1, -1).map((c, i) => `<${tag} style="padding:4px 10px;border-bottom:1px solid #ddd;text-align:${i === 0 ? 'left' : 'right'}">${inline(c.trim())}</${tag}>`).join('');
+      const isBar = c => /^[█▏▎▍▌▋▊▉·]/.test(c.trim());
+      const cells = (r, tag) => r.split('|').slice(1, -1).map((c, i) => isBar(c)
+        ? `<${tag} style="padding:4px 6px;border-bottom:1px solid #ddd;text-align:left;color:#5a8c00;letter-spacing:-1px;white-space:nowrap;font-family:monospace">${inline(c.trim())}</${tag}>`
+        : `<${tag} style="padding:4px 10px;border-bottom:1px solid #ddd;text-align:${i === 0 ? 'left' : 'right'}">${inline(c.trim())}</${tag}>`).join('');
       out.push('<table style="border-collapse:collapse;font-size:14px;margin:8px 0">'
         + `<tr>${cells(head, 'th')}</tr>` + rows.map(r => `<tr>${cells(r, 'td')}</tr>`).join('') + '</table>');
       table = null;
@@ -420,6 +483,12 @@ async function main() {
     catch (e) { tests = { error: 'résultat introuvable (' + e.message.slice(0, 80) + ')' }; }
   }
   const report = computeReport({ weekStart, users, docs, metrics, prevMetrics, metricsError, tests });
+  // Évolution sur 8 semaines (lectures / écritures seulement si Google les fournit)
+  let histMetrics = null;
+  if (metrics) {
+    try { histMetrics = await fetchFirestoreMetrics(credential, sa.project_id, addDays(weekStart, -49), addDays(weekStart, 7)); } catch {}
+  }
+  report.trends = computeTrends({ weekStart, users, docs, metrics: histMetrics });
   // Feuille de route du dépôt (branche à jour au moment du lancement)
   try {
     report.roadmap = parseRoadmap(readFileSync(new URL('../../FEUILLE-DE-ROUTE.md', import.meta.url), 'utf8'), weekStart, addDays(weekStart, 6));

@@ -216,7 +216,8 @@ dans les variables d'environnement `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_K
 clé Resend en secret réseau injecté par le proxy), lancé chaque lundi matin par
 une tâche planifiée Claude qui affiche le rapport dans la conversation du
 propriétaire et l'envoie par e-mail. Il reprend aussi la feuille de route (fait
-la semaine, à faire maintenant, ensuite) : dans le tableau « Fait », mettre la
+la semaine, à faire maintenant, ensuite) et des graphiques d'évolution sur 8
+semaines (`computeTrends`) : dans le tableau « Fait », mettre la
 **vraie date de fusion**. Jamais visible dans l'appli. Voir son README. Tests : `npm test` dans ce
 dossier.
 
