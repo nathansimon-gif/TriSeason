@@ -461,6 +461,13 @@ async function main() {
       ];
       r.fulfill({ body: JSON.stringify(acts), contentType: 'application/json', headers: cors });
     });
+    // Détail d'une activité : seule source des calories chez Strava
+    await v.ctx.route(/strava\.com\/api\/v3\/activities\/\d+/, r => {
+      const id = Number(r.request().url().match(/activities\/(\d+)/)[1]);
+      calls.push('détail ' + id);
+      const detail = { 501: { id: 501, calories: 0, kilojoules: 1103.6 }, 502: { id: 502, calories: 812.4 } }[id] || { id, calories: 0 };
+      r.fulfill({ body: JSON.stringify(detail), contentType: 'application/json', headers: cors });
+    });
     return { ...v, calls };
   }
 
@@ -479,6 +486,7 @@ async function main() {
     assert(ride && ride.id === 's1', 'le vélo n’a pas été relié à la séance déjà importée');
     assert(run && run.date === day(-2), 'date de la course : ' + (run && run.date) + ' au lieu de ' + day(-2) + ' (heure locale 23:30)');
     assert(Math.round(run.duration * 3600) === 3615 && run.distance === 10.01 && run.elevation === 85 && run.fc_avg === 152, 'valeurs : ' + JSON.stringify(run));
+    assert(run.kcal === 812 && ride.kcal === 1104, `kcal non reprises de Strava : course ${run.kcal}, vélo ${ride.kcal}`);
     assert(fromStrava.length === 2 && !r.d.sessions.some(s => s.strava_id === 503), 'séances liées : ' + fromStrava.length);
     assert(r.d.strava.refresh_token === 'renouv-1' && r.d.strava.name === 'Léa Test', 'connexion non enregistrée');
     assert(!r.url.includes('code='), 'le code est resté dans l’adresse');
