@@ -33,6 +33,12 @@
     .feeling-row__btns { display:flex; gap:4px; }
     .feeling-row__btns .sensation-btn { font-size:20px; padding:4px 7px; }
     .feeling-row.done { opacity:.6; }
+    .feeling-row__line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%; }
+    .feeling-row__label { font-size:11px; color:var(--text-2); width:64px; flex-shrink:0; }
+    .rpe-btns { display:flex; gap:3px; flex-wrap:wrap; }
+    .rpe-btn { min-width:28px; height:28px; padding:0 4px; border-radius:var(--r-sm); border:1px solid var(--border2); background:var(--surface2); color:var(--text-2); font:600 12px var(--mono); cursor:pointer; }
+    .rpe-btn:hover { color:var(--text); border-color:var(--text-3); }
+    .rpe-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--text); }
     .sensation-chip {
       font-size:16px; display:inline-flex; align-items:center; gap:4px;
       padding:2px 6px; border-radius:20px; background:var(--surface2);
@@ -1247,22 +1253,30 @@ function askFeeling(ids) {
     const detail = [s.distance ? s.distance + ' km' : '', s.duration ? formatHMS(s.duration) : ''].filter(Boolean).join(' · ');
     return `<div class="feeling-row" id="feel-${s.id}">
       <div class="feeling-row__info"><span class="sport-dot sport-dot--${s.sport}"></span>${sp.label || s.sport} — ${day}<small>${detail}</small></div>
-      <div class="feeling-row__btns">${FEELINGS.map(([v, e, t]) =>
-        `<button type="button" class="sensation-btn" title="${t}" onclick="saveFeeling('${s.id}', ${v}, this)">${e}</button>`).join('')}</div>
+      <div class="feeling-row__line"><span class="feeling-row__label">Ressenti</span>
+        <div class="feeling-row__btns">${FEELINGS.map(([v, e, t]) =>
+          `<button type="button" class="sensation-btn" title="${t}" onclick="saveFeeling('${s.id}', 'sensation', ${v}, this)">${e}</button>`).join('')}</div></div>
+      <div class="feeling-row__line"><span class="feeling-row__label" title="Effort perçu : 1 = très facile, 10 = effort maximal">Effort (RPE)</span>
+        <div class="rpe-btns">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v =>
+          `<button type="button" class="rpe-btn${s.rpe === v ? ' active' : ''}" title="${RPE_HINTS[v]}" onclick="saveFeeling('${s.id}', 'rpe', ${v}, this)">${v}</button>`).join('')}</div></div>
     </div>`;
   }).join('');
   document.getElementById('feelingModal').classList.add('open');
 }
 
-function saveFeeling(id, val, btn) {
+const RPE_HINTS = { 1: 'Très facile', 2: 'Facile', 3: 'Facile', 4: 'Modéré', 5: 'Modéré', 6: 'Soutenu', 7: 'Difficile', 8: 'Très difficile', 9: 'Presque au max', 10: 'Effort maximal' };
+
+// Ressenti et effort (RPE) notés au même endroit, enregistrés à chaque clic.
+// La séance est « faite » quand les deux sont renseignés (RPE déjà là compris).
+function saveFeeling(id, field, val, btn) {
   const session = TS.getSessions().find(s => s.id === id);
   if (!session) return;
-  session.sensation = val;
+  session[field] = val;
   TS.saveSession(session);
   const row = document.getElementById('feel-' + id);
-  row.classList.add('done');
-  row.querySelectorAll('.sensation-btn').forEach(b => b.classList.toggle('active', b === btn));
-  if (!document.querySelector('#feelingRows .feeling-row:not(.done)')) setTimeout(closeFeelingModal, 400);
+  row.querySelectorAll(field === 'rpe' ? '.rpe-btn' : '.sensation-btn').forEach(b => b.classList.toggle('active', b === btn));
+  row.classList.toggle('done', !!(session.sensation && session.rpe));
+  if (!document.querySelector('#feelingRows .feeling-row:not(.done)')) setTimeout(closeFeelingModal, 500);
 }
 
 function closeFeelingModal() {
@@ -1276,7 +1290,7 @@ function renderFeelingNudge() {
   const n = sessionsNeedingFeeling().length;
   el.innerHTML = n ? `<div class="feeling-nudge">
       <span style="flex:1">${n} séance${n > 1 ? 's' : ''} récente${n > 1 ? 's' : ''} sans ressenti.</span>
-      <button class="btn btn--primary btn--sm" onclick="askFeeling()">Noter mon ressenti</button>
+      <button class="btn btn--primary btn--sm" onclick="askFeeling()">Noter ressenti et effort</button>
     </div>` : '';
 }
 
@@ -1404,7 +1418,7 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
       <div class="modal__title">Comment t'es-tu senti ?</div>
       <button class="modal__close" onclick="closeFeelingModal()" aria-label="Fermer">×</button>
     </div>
-    <div style="font-size:12px;color:var(--text-2);margin-bottom:6px">Un clic par séance. Le ressenti sert à comparer tes séances avec ta nutrition (page Forme).</div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:6px">Pour chaque séance : ton ressenti, et l'effort de 1 (très facile) à 10 (maximal). Le ressenti sert à comparer tes séances avec ta nutrition, l'effort à calculer ta charge d'entraînement (page Forme).</div>
     <div id="feelingRows"></div>
     <div class="form-actions">
       <button class="btn btn--ghost" onclick="closeFeelingModal()">Plus tard</button>
