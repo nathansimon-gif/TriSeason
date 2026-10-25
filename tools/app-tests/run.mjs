@@ -1074,6 +1074,30 @@ async function main() {
     assert(login === 'light', 'connexion pas en clair');
   });
 
+  await test('Ressenti à noter : ressenti et effort (RPE) dans la même fenêtre', async () => {
+    const data = sampleData();
+    data.sessions.push({ id: 'nf1', date: day(-1), sport: 'run', duration: 0.5, distance: 5 },
+                       { id: 'nf2', date: day(-2), sport: 'velo', duration: 1, distance: 30, rpe: 6 });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
+    await v.page.click('text=Noter ressenti et effort');
+    const rows = await v.page.locator('#feelingRows .feeling-row').count();
+    const preset = await v.page.evaluate(() => document.querySelector('#feel-nf2 .rpe-btn.active')?.textContent);
+    await v.page.click('#feel-nf1 .sensation-btn[title="Bon"]');
+    const halfDone = await v.page.evaluate(() => document.getElementById('feel-nf1').classList.contains('done'));
+    await v.page.click('#feel-nf1 .rpe-btn:text-is("7")');
+    await v.page.click('#feel-nf2 .sensation-btn[title="Excellent"]');
+    await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => ({ s1: TS.getSessions().find(s => s.id === 'nf1'), s2: TS.getSessions().find(s => s.id === 'nf2'),
+      open: document.getElementById('feelingModal').classList.contains('open') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(rows === 2 && preset === '6', `lignes ${rows}, RPE déjà noté affiché : ${preset}`);
+    assert(!halfDone, 'séance marquée faite sans effort');
+    assert(r.s1.sensation === 4 && r.s1.rpe === 7 && r.s2.sensation === 5 && r.s2.rpe === 6, 'enregistré : ' + JSON.stringify([r.s1, r.s2]));
+    assert(!r.open, 'la fenêtre ne s’est pas fermée une fois tout noté');
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();
