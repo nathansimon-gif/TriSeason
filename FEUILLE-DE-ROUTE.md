@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #44 (mode clair) puis recharger le site, et l'essayer : Profil → « Apparence » → Clair
+- [ ] 🧑 Fusionner la PR #45 (kcal des séances Strava) puis recharger le site : les kcal des séances Strava des 30 derniers jours se remplissent à la prochaine ouverture
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
 ## Bientôt (dans le mois)
@@ -119,6 +119,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 25/10/2026 | #45 | Strava : les **kcal** sont reprises automatiquement (lues dans le détail de chaque activité, car la liste Strava ne les donne pas ; à défaut, travail en kJ du capteur de puissance) ; séances Strava des 30 derniers jours sans kcal complétées, 15 au plus par synchro ; une kcal saisie à la main n'est jamais remplacée |
 | 24/10/2026 | #44 | **Mode clair** (Profil → « Apparence » : Sombre, Clair ou Comme le téléphone ; réglage de l'appareil) : palette claire complète, couleurs de sport assombries pour le fond blanc et revérifiées (contraste, daltonisme), boutons citron vert, graphiques et couleurs générées convertis automatiquement ; page de connexion comprise |
 | 23/10/2026 | #43 | **Rangement des données en tiroirs** (Firestore) : séances par année, repas et ravitaillements par mois, le reste dans le document principal avec un sommaire ; seuls les tiroirs modifiés sont relus ou réécrits ; déménagement automatique vérifié avec copie de secours ; repli sur l'ancien rangement si les règles Firebase ne sont pas à jour ; effacement et suppression du compte effacent aussi les tiroirs ; historique Strava complet (limite 3,5 Mo au lieu de 850 Ko) ; rapport du lundi adapté ; règles de référence `firestore.rules`. Feuille de route : tâches de Nathan de « Maintenant » cochées (option blessures essayée, nom, planification testée, limite Strava à 10 comptes, serveur Cloudflare, import de 50 fichiers .fit testé) |
 | 21/10/2026 | #42 | **Suivi de l'équipement** (Profil → « Équipement ») : chaussures, vélo, combinaison avec date de première utilisation ; km, sorties, heures et D+ comptés à partir de cette date ; un nouvel équipement du même sport prend le relais (l'ancien s'arrête la veille) ; seuil d'alerte choisi (700 km proposé pour les chaussures) avec barre de progression et prévision de la date au rythme des 8 dernières semaines ; repères de durée de vie ; alerte sur le Dashboard à 90 % ; équipement affiché dans le détail du jour |

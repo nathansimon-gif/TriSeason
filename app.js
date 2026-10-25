@@ -1987,7 +1987,9 @@ function stravaToSession(a) {
     power_avg: a.device_watts ? r(a.average_watts) : null,
     power_max: a.device_watts ? r(a.max_watts) : null,
     np: a.device_watts ? r(a.weighted_average_watts) : null,
-    kcal: r(a.calories) || null,
+    // La liste Strava ne donne pas les calories (seulement le détail d'une activité) ;
+    // pour le vélo avec capteur de puissance, le travail en kJ ≈ les kcal dépensées.
+    kcal: r(a.calories) || r(a.kilojoules) || null,
     notes: a.name || null,
     strava_id: a.id,
   });
@@ -2140,10 +2142,36 @@ async function stravaSyncRun({ force = false, full = false } = {}) {
     else { s.id = newId(); data.sessions.push(s); added++; }
     known.add(a.id);
   });
+  await stravaFillCalories(token, data);
   data.strava.after = newest;
   data.strava.last_sync = Date.now();
   saveData(data);
   return { added, linked, ignored };
+}
+
+// Calories : la liste des activités Strava ne les contient pas, il faut lire le
+// détail de chaque activité (1 requête chacune). Séances Strava des 30 derniers
+// jours sans kcal, 15 au plus par synchro (limite Strava : 100 requêtes / 15 min
+// pour l'appli entière). Une activité sans calories chez Strava (ni fréquence
+// cardiaque, ni puissance, ni poids) n'est demandée qu'une fois par appareil.
+const STRAVA_KCAL_KEY = 'triseason_strava_kcal_checked';
+async function stravaFillCalories(token, data) {
+  let checked = [];
+  try { checked = JSON.parse(localStorage.getItem(STRAVA_KCAL_KEY) || '[]'); } catch {}
+  const since = addDaysStr(localDateStr(), -30);
+  const todo = data.sessions.filter(s => s.strava_id && !s.kcal && s.date >= since && !checked.includes(s.strava_id))
+    .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15);
+  for (const s of todo) {
+    let res;
+    try { res = await fetch(STRAVA_API + '/activities/' + s.strava_id, { headers: { Authorization: 'Bearer ' + token } }); }
+    catch { break; } // pas de réseau : on réessaiera à la prochaine synchro
+    if (res.status === 429) break;
+    if (!res.ok) { if (res.status === 404) checked.push(s.strava_id); continue; }
+    const a = await res.json();
+    const kcal = Math.round(a.calories || 0) || Math.round(a.kilojoules || 0);
+    if (kcal > 0) s.kcal = kcal; else checked.push(s.strava_id);
+  }
+  try { localStorage.setItem(STRAVA_KCAL_KEY, JSON.stringify(checked.slice(-500))); } catch {}
 }
 
 function stravaSyncMessage(r, always) {

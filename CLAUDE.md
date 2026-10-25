@@ -65,7 +65,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   nouvelles activités chez Strava et crée les séances (`strava_id` sur la
   séance, doublons avec un import .fit reliés). Réglages publics
   `STRAVA_CLIENT_ID` et `TS_SERVER_URL` en haut du bloc Strava : vides = carte
-  Strava cachée. Jetons dans `data.strava` (retirés de l'export).
+  Strava cachée. Jetons dans `data.strava` (retirés de l'export). Les **kcal**
+  ne sont pas dans la liste des activités : `stravaFillCalories` lit le détail
+  (`/activities/{id}`) des séances Strava des 30 derniers jours sans kcal, 15 au
+  plus par synchro (limite Strava 100 requêtes / 15 min pour toute l'appli).
 - `tools/server/` : petit serveur Cloudflare Workers (gratuit) qui garde la clé
   secrète Strava (échange et renouvellement des jetons, déconnexion) et relaie
   la recherche Open Food Facts. N'enregistre rien. Mise en place : son README.
