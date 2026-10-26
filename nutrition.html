@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261031a"></script>
+  <script src="theme.js?v=20261101a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261031a"></script>
+  <script src="auth-guard.js?v=20261101a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261031a">
+  <link rel="stylesheet" href="style.css?v=20261101a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -262,8 +262,15 @@
       <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartHydro"></canvas></div>
     </div>
     <div class="card">
-      <div class="card__title">Nombre de repas / jour — 7 jours</div>
+      <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <span>7 derniers jours</span>
+        <select class="form-select" id="mealsChartMode" style="width:auto;font-size:12px;padding:4px 8px" onchange="setMealsChartMode(this.value)" aria-label="Que voir sur le graphique">
+          <option value="kcal">Kcal mangées et besoin</option>
+          <option value="meals">Nombre de repas</option>
+        </select>
+      </div>
       <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartMeals"></canvas></div>
+      <div id="mealsChartNote" style="font-size:11px;color:var(--text-3);margin-top:6px"></div>
     </div>
   </div>
 
@@ -458,7 +465,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261031a"></script>
+<script src="app.js?v=20261101a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -806,6 +813,8 @@ function renderCharts() {
   const labels  = days.map(d => { const[,m,day]=d.split('-'); return `${+day}/${+m}`; });
   const hydroData = days.map(d => getDayHydro(d));
   const mealData  = days.map(d => getDayMeals(d).length);
+  const mode = mealsChartMode();
+  document.getElementById('mealsChartMode').value = mode;
 
   makeChart('chartHydro', {
     type:'bar',
@@ -822,6 +831,33 @@ function renderCharts() {
     }
   });
 
+  const note = document.getElementById('mealsChartNote');
+  if (mode === 'kcal') {
+    const eaten = days.map(d => Math.round(dayKcalEaten(d)) || null);
+    const need  = days.map(d => dayKcalNeed(d));
+    const hasNeed = need.some(v => v);
+    note.textContent = hasNeed ? 'Barres : kcal de tes repas. Trait : ton besoin du jour (même calcul que « Besoins énergétiques » ci-dessous). Estimation indicative.'
+      : 'Barres : kcal de tes repas. Complète ton profil (âge, poids, taille) pour voir aussi ton besoin du jour.';
+    makeChart('chartMeals', {
+      type:'bar',
+      data:{ labels, datasets:[
+        { type:'bar', label:'Kcal mangées', data:eaten, backgroundColor:'rgba(185,236,74,.6)', borderRadius:4, order:2 },
+        ...(hasNeed ? [{ type:'line', label:'Besoin du jour', data:need, borderColor:'#a3abb9', backgroundColor:'#a3abb9', borderDash:[5,4], borderWidth:2, pointRadius:3, tension:0, order:1 }] : []),
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        locale:'fr-FR',
+        plugins:{ legend:{ display:hasNeed, labels:{ color:'#a3abb9', font:{size:10}, boxWidth:8, sort:(a, b) => a.datasetIndex - b.datasetIndex } },
+          tooltip:{ callbacks:{ label: c => c.dataset.label + ' : ' + (c.raw == null ? '—' : Math.round(c.raw).toLocaleString('fr-FR') + ' kcal') } } },
+        scales:{
+          x:{ grid:{display:false}, ticks:{color:'#6b7383',font:{size:10}} },
+          y:{ beginAtZero:true, grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383',font:{size:10}} }
+        }
+      }
+    });
+    return;
+  }
+  note.textContent = '';
   makeChart('chartMeals', {
     type:'bar',
     data:{ labels, datasets:[
@@ -836,6 +872,27 @@ function renderCharts() {
       }
     }
   });
+}
+
+// Graphique « 7 derniers jours » : kcal et besoin (par défaut) ou nombre de repas.
+// Choix gardé sur l'appareil.
+const MEALS_CHART_KEY = 'triseason_nutri_chart';
+function mealsChartMode() { try { return localStorage.getItem(MEALS_CHART_KEY) === 'meals' ? 'meals' : 'kcal'; } catch { return 'kcal'; } }
+function setMealsChartMode(v) { try { localStorage.setItem(MEALS_CHART_KEY, v); } catch {} renderCharts(); }
+// Kcal des repas d'un jour (même calcul que la carte « Besoins énergétiques »).
+function dayKcalEaten(day) {
+  return (getNutrition().meals || []).filter(m => m.date === day)
+    .reduce((a, m) => a + (m.kcal || (m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9), 0);
+}
+// Besoin d'un jour : objectif manuel de ce jour, sinon calcul automatique ; null sans profil complet.
+function dayKcalNeed(day) {
+  const goal = (getNutrition().kcalGoals || {})[day];
+  if (goal != null && !isNaN(goal)) return goal;
+  const p = TS.getProfile(), w = TS.getLatestWeight(), h = p.height, age = p.age;
+  if (!w || !h || !age) return null;
+  const bmr = Math.round(10 * w + 6.25 * h - 5 * age + 5);
+  const burned = TS.getSessions().filter(s => s.date === day && s.kcal).reduce((a, s) => a + s.kcal, 0);
+  return energyNeeds(bmr, burned, getEnergySettings()).total;
 }
 
 // ── Hydration ─────────────────────────────────────────────────────────────────
