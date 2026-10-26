@@ -38,9 +38,15 @@
     '#a48be0': '#7a5fc0', '#7d8aa0': '#5b6576', '#a3abb9': '#4a5466', '#6b7383': '#6b7486',
     '#242b36': '#dde2e9', '#151a22': '#ffffff', '#b9ec4a': '#5a8c00', '#cdf56e': '#4f7d00',
   };
-  var RE = /#[0-9a-fA-F]{6}|rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0?\.0\d\s*\)/g;
+  var RE = /#[0-9a-fA-F]{6}|rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0?\.0\d\s*\)|rgba\(\s*185\s*,\s*236\s*,\s*74\s*,\s*0?\.\d+\s*\)/g;
   function swap(str) {
-    return str.replace(RE, function (m) { return m.charAt(0) === '#' ? (MAP[m.toLowerCase()] || m) : 'rgba(20,30,45,.09)'; });
+    return str.replace(RE, function (m) {
+      if (m.charAt(0) === '#') return MAP[m.toLowerCase()] || m;
+      if (m.indexOf('185') < 0) return 'rgba(20,30,45,.09)';
+      // citron vert un peu plus soutenu sur fond clair, même transparence (×1,3)
+      var alpha = parseFloat(m.replace(/.*,\s*([\d.]+)\s*\)$/, '$1'));
+      return 'rgba(147,201,50,' + Math.min(1, Math.round(alpha * 130) / 100) + ')';
+    });
   }
 
   // Styles en ligne (cartes, zones, niveaux…) ajoutés au fil de l'affichage

@@ -1098,6 +1098,28 @@ async function main() {
     assert(!r.open, 'la fenêtre ne s’est pas fermée une fois tout noté');
   });
 
+  await test('Nutrition : graphique 7 jours, kcal consommées et besoin du jour (par défaut) ou nombre de repas', async () => {
+    const data = sampleData();
+    data.profile = { ...data.profile, age: 30, height: 175 };
+    data.nutrition.kcalGoals = { [day(-1)]: 3100 };
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(800);
+    const kcal = await v.page.evaluate(() => { const c = Chart.getChart(document.getElementById('chartMeals'));
+      return { mode: document.getElementById('mealsChartMode').value, labels: c.data.datasets.map(d => d.label), eaten: c.data.datasets[0].data, need: c.data.datasets[1] && c.data.datasets[1].data }; });
+    await v.page.selectOption('#mealsChartMode', 'meals'); await v.page.waitForTimeout(300);
+    const meals = await v.page.evaluate(() => Chart.getChart(document.getElementById('chartMeals')).data.datasets.map(d => d.label + ':' + d.data.join(',')));
+    await v.page.reload(); await v.page.waitForTimeout(800);
+    const kept = await v.page.evaluate(() => document.getElementById('mealsChartMode').value);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // Repas de test : glucides 150-310 g, protéines 40, lipides 20 → kcal = g×4 + 160 + 180
+    assert(kcal.mode === 'kcal' && kcal.labels.join() === 'Kcal consommées,Besoin du jour', 'graphique kcal : ' + JSON.stringify(kcal));
+    assert(kcal.eaten[5] > 0 && kcal.eaten.length === 7, 'kcal consommées : ' + kcal.eaten);
+    assert(kcal.need[5] === 3100 && kcal.need[6] > 1500, 'besoin du jour : ' + kcal.need);
+    assert(/^Repas:/.test(meals[0]) && meals.length === 1, 'graphique repas : ' + meals);
+    assert(kept === 'meals', 'choix non gardé');
+  });
+
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)
   await test('Blessures : rien sans l’accord à part, case à cocher obligatoire', async () => {
     const v = await newUser();
