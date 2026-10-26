@@ -1098,7 +1098,7 @@ async function main() {
     assert(!r.open, 'la fenêtre ne s’est pas fermée une fois tout noté');
   });
 
-  await test('Nutrition : graphique 7 jours, kcal mangées et besoin du jour (par défaut) ou nombre de repas', async () => {
+  await test('Nutrition : graphique 7 jours, kcal consommées et besoin du jour (par défaut) ou nombre de repas', async () => {
     const data = sampleData();
     data.profile = { ...data.profile, age: 30, height: 175 };
     data.nutrition.kcalGoals = { [day(-1)]: 3100 };
@@ -1113,8 +1113,8 @@ async function main() {
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     // Repas de test : glucides 150-310 g, protéines 40, lipides 20 → kcal = g×4 + 160 + 180
-    assert(kcal.mode === 'kcal' && kcal.labels.join() === 'Kcal mangées,Besoin du jour', 'graphique kcal : ' + JSON.stringify(kcal));
-    assert(kcal.eaten[5] > 0 && kcal.eaten.length === 7, 'kcal mangées : ' + kcal.eaten);
+    assert(kcal.mode === 'kcal' && kcal.labels.join() === 'Kcal consommées,Besoin du jour', 'graphique kcal : ' + JSON.stringify(kcal));
+    assert(kcal.eaten[5] > 0 && kcal.eaten.length === 7, 'kcal consommées : ' + kcal.eaten);
     assert(kcal.need[5] === 3100 && kcal.need[6] > 1500, 'besoin du jour : ' + kcal.need);
     assert(/^Repas:/.test(meals[0]) && meals.length === 1, 'graphique repas : ' + meals);
     assert(kept === 'meals', 'choix non gardé');

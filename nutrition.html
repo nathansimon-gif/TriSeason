@@ -265,7 +265,7 @@
       <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <span>7 derniers jours</span>
         <select class="form-select" id="mealsChartMode" style="width:auto;font-size:12px;padding:4px 8px" onchange="setMealsChartMode(this.value)" aria-label="Que voir sur le graphique">
-          <option value="kcal">Kcal mangées et besoin</option>
+          <option value="kcal">Kcal consommées et besoins</option>
           <option value="meals">Nombre de repas</option>
         </select>
       </div>
@@ -836,12 +836,12 @@ function renderCharts() {
     const eaten = days.map(d => Math.round(dayKcalEaten(d)) || null);
     const need  = days.map(d => dayKcalNeed(d));
     const hasNeed = need.some(v => v);
-    note.textContent = hasNeed ? 'Barres : kcal de tes repas. Trait : ton besoin du jour (même calcul que « Besoins énergétiques » ci-dessous). Estimation indicative.'
+    note.textContent = hasNeed ? 'Barres : kcal consommées (tes repas). Trait : ton besoin du jour (même calcul que « Besoins énergétiques » ci-dessous). Estimation indicative.'
       : 'Barres : kcal de tes repas. Complète ton profil (âge, poids, taille) pour voir aussi ton besoin du jour.';
     makeChart('chartMeals', {
       type:'bar',
       data:{ labels, datasets:[
-        { type:'bar', label:'Kcal mangées', data:eaten, backgroundColor:'rgba(185,236,74,.6)', borderRadius:4, order:2 },
+        { type:'bar', label:'Kcal consommées', data:eaten, backgroundColor:'rgba(185,236,74,.6)', borderRadius:4, order:2 },
         ...(hasNeed ? [{ type:'line', label:'Besoin du jour', data:need, borderColor:'#a3abb9', backgroundColor:'#a3abb9', borderDash:[5,4], borderWidth:2, pointRadius:3, tension:0, order:1 }] : []),
       ]},
       options:{
