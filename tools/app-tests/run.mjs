@@ -1409,6 +1409,72 @@ async function main() {
     assert(none.tab === 'none' && none.view === 'none' && none.forme === 'none' && none.rec === 'none', 'musculation visible sans séance : ' + JSON.stringify(none));
   });
 
+  await test('Musculation : page Sports (volume par séance, mois, effort, meilleures semaines, objectifs en kg), moyennes, défi bonus, badges', async () => {
+    const data = sampleData();
+    for (let i = 0; i < 10; i++) data.sessions.push({ id: 'mx' + i, date: day(-2 - i * 4), sport: 'muscu', duration: 1, rpe: 6 + (i % 4),
+      exercises: [{ name: 'Squat', group: 'Jambes', sets: 4, reps: 8, kg: 60 + i }, { name: 'Pompes', group: 'Pectoraux', sets: 3, reps: 20 }] });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/sport.html?sport=muscu`); await v.page.waitForTimeout(900);
+    const page = await v.page.evaluate(() => ({
+      volOpts: [...document.querySelectorAll('#muscuVolExo option')].map(o => o.textContent),
+      allBars: Chart.getChart('chartMuscuVol').data.datasets[0].data.length,
+      monthly: !!Chart.getChart('chartMuscuMonthly'), effort: document.getElementById('muscuEffort').textContent,
+      best: document.querySelectorAll('#muscuBestWeeks .stat-row').length,
+      goalTypes: [...document.querySelectorAll('#goalType option')].map(o => o.value),
+      goalsIn: document.getElementById('goalsCard').parentNode.id }));
+    await v.page.selectOption('#muscuVolExo', 'Pompes'); await v.page.waitForTimeout(100);
+    const pompes = await v.page.evaluate(() => ({ label: Chart.getChart('chartMuscuVol').data.datasets[0].label, data: Chart.getChart('chartMuscuVol').data.datasets[0].data }));
+    await v.page.selectOption('#goalType', 'kg_month'); await v.page.fill('#goalTarget', '20000');
+    await v.page.click('#goalsCard .btn--primary'); await v.page.waitForTimeout(200);
+    const goal = await v.page.textContent('#goalsContent');
+    await v.page.click('#tab-run'); await v.page.waitForTimeout(200);
+    const runGoal = await v.page.evaluate(() => ({ types: [...document.querySelectorAll('#goalType option')].map(o => o.value), in: document.getElementById('goalsCard').parentNode.id }));
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const avgs = await v.page.textContent('#sportAvgs');
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
+    const ch = await v.page.evaluate(() => ({ list: TS.challengeHistory().current, html: document.getElementById('challengeList').innerHTML,
+      badges: TS.getAchievements().filter(b => b.kind === 'muscu').map(b => b.id + ':' + b.earned) }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const w = await newUser();
+    await w.page.goto(`${BASE}/sessions.html`); await w.page.waitForTimeout(500);
+    const none = await w.page.evaluate(() => ({ avgs: document.getElementById('sportAvgs').textContent, ch: TS.weeklyChallenges(TS.getCurrentWeek()).map(c => c.id),
+      badges: TS.getAchievements().filter(b => b.kind === 'muscu').length }));
+    await w.ctx.close();
+    assert(page.volOpts[0] === 'Toutes les séances' && page.volOpts.includes('Squat') && page.allBars === 10 && page.monthly, 'volume par séance : ' + JSON.stringify(page));
+    assert(/Difficile/.test(page.effort) && /Effort moyen/.test(page.effort) && page.best >= 3, 'effort / meilleures semaines : ' + JSON.stringify(page));
+    assert(page.goalTypes.includes('kg_week') && !page.goalTypes.includes('dist_week') && page.goalsIn === 'muscuGoalsSlot', 'objectifs musculation : ' + JSON.stringify(page));
+    assert(/Répétitions au total/.test(pompes.label) && pompes.data.every(x => x === 60), 'volume Pompes : ' + JSON.stringify(pompes));
+    assert(/Kg soulevés \/ mois/.test(goal) && /20\s000 kg/.test(goal), 'objectif en kg : ' + goal);
+    assert(runGoal.types.includes('dist_week') && runGoal.in === 'enduGoalsSlot', 'objectifs course : ' + JSON.stringify(runGoal));
+    assert(/Musculation/.test(avgs) && /Kg soulevés \/ séance/.test(avgs) && /Exercices \/ séance/.test(avgs), 'moyennes : ' + avgs.replace(/\s+/g, ' '));
+    const bonus = ch.list.find(c => c.bonus);
+    assert(bonus && bonus.kind === 'muscu' && bonus.target > 0 && bonus.label && /Bonus/.test(ch.html), 'défi bonus : ' + JSON.stringify(ch.list));
+    assert(ch.badges.includes('muscu10:true') && ch.badges.some(b => b.startsWith('muscu_full')), 'badges : ' + ch.badges.join());
+    assert(!/Musculation/.test(none.avgs) && !none.ch.some(id => id.startsWith('muscu')) && !none.badges, 'musculation visible sans séance : ' + JSON.stringify(none));
+  });
+
+  await test('Hydratation : objectif 1,5 L par défaut, modifiable, utilisé par le défi et le graphique', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(700);
+    const before = await v.page.evaluate(() => ({ text: document.getElementById('hydroGoalLine').textContent, goal: TS.hydroGoal(),
+      line: Chart.getChart('chartHydro').data.datasets[1].data[0] }));
+    await v.page.click('#hydroGoalLine .link-btn');
+    await v.page.fill('#hydroGoalInput', '2,2'.replace(',', '.'));
+    await v.page.click('#hydroGoalLine .btn--primary'); await v.page.waitForTimeout(300);
+    const after = await v.page.evaluate(() => ({ text: document.getElementById('hydroGoalLine').textContent, goal: TS.hydroGoal(),
+      cloud: window.__cloud('testeur').profile.hydro_goal, ch: TS.weeklyChallenges(TS.getCurrentWeek()).find(c => c.id === 'hydro') }));
+    await v.page.click('#hydroGoalLine .link-btn');
+    await v.page.click('text=Par défaut (1,5 L)'); await v.page.waitForTimeout(200);
+    const reset = await v.page.evaluate(() => TS.hydroGoal());
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/1,5 L/.test(before.text) && before.goal === 1500 && before.line === 1500, 'défaut : ' + JSON.stringify(before));
+    assert(/2,2 L/.test(after.text) && after.goal === 2200 && after.cloud === 2200, 'modifié : ' + JSON.stringify(after));
+    assert(after.ch && /2,2 L/.test(after.ch.label), 'défi hydratation : ' + JSON.stringify(after.ch));
+    assert(reset === 1500, 'retour au défaut : ' + reset);
+  });
+
   await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {
     const data = sampleData(); delete data.news_seen;
     const v = await newUser({ data });

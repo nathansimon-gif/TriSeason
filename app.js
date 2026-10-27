@@ -578,6 +578,9 @@ document.addEventListener('triseason:auth-ready', e => {
 });
 if (window.TS_USER) syncFromCloud(window.TS_USER.uid);
 
+// Graphiques : nombres au format français (« 5 000 », « 1,5 ») sur toutes les pages
+if (window.Chart) Chart.defaults.locale = 'fr-FR';
+
 function saveData(data) {
   // Déconnexion en cours : une minuterie en retard ne doit pas réécrire les données effacées
   if (window.TS_LOGGED_OUT) return;
@@ -1697,7 +1700,20 @@ function healthWeekPhase(weekKey, data = getData()) {
 // Tout est calculé à partir des données (rien n'est stocké, sauf la liste des
 // badges déjà annoncés : data.achievements_seen). Visible seulement par
 // l'utilisateur lui-même (règle Strava : pas de partage des séances Strava).
-const HYDRO_TARGET_ML = 2500;   // même objectif que la page Nutrition
+// Objectif d'eau par jour : 1,5 L par défaut, modifiable (Nutrition → Hydratation),
+// enregistré dans data.profile.hydro_goal (ml). Utilisé par la Nutrition, les défis et les badges.
+const HYDRO_GOAL_DEFAULT = 1500;
+function hydroGoal(data = getData()) {
+  const g = +((data.profile || {}).hydro_goal);
+  return g >= 250 && g <= 10000 ? g : HYDRO_GOAL_DEFAULT;
+}
+function setHydroGoal(ml) {
+  const data = getData();
+  data.profile = data.profile || {};
+  if (ml == null) delete data.profile.hydro_goal; else data.profile.hydro_goal = Math.round(ml);
+  saveData(data);
+}
+const formatLiters = ml => (Math.round(ml / 100) / 10).toLocaleString('fr-FR') + ' L';
 const SPORT_WORDS = { nat: 'natation', velo: 'vélo', run: 'course à pied' };
 
 function addDaysStr(day, n) { const d = parseLocalDate(day); d.setDate(d.getDate() + n); return localDateStr(d); }
@@ -1751,21 +1767,63 @@ function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) 
     list.push({ id: 'sessions', kind: practiced[0] || 'all', label: `${target} séances dans la semaine`, target, value: inWeek.length });
   }
 
+  const muscu = health ? null : muscuChallenge(weekKey, data, idx, prev, recent);
+  if (muscu) list.push(muscu);
+
   const mealAvg = avg(wk => weekDays(wk).filter(d => idx.mealDays.has(d)).length);
   if (mealAvg < 5) {
     const target = Math.min(7, Math.max(3, Math.ceil(mealAvg) + 2));
     list.push({ id: 'meals', kind: 'nutri', label: `Repas notés ${target} jours`, target, value: days.filter(d => idx.mealDays.has(d)).length });
   } else {
-    const hAvg = avg(wk => weekDays(wk).filter(d => (idx.hydro[d] || 0) >= HYDRO_TARGET_ML).length);
+    const goal = hydroGoal(data);
+    const hAvg = avg(wk => weekDays(wk).filter(d => (idx.hydro[d] || 0) >= goal).length);
     const target = Math.min(7, Math.max(3, Math.ceil(hAvg) + 1));
-    list.push({ id: 'hydro', kind: 'nutri', label: `2,5 L d’eau ${target} jours`, target, value: days.filter(d => (idx.hydro[d] || 0) >= HYDRO_TARGET_ML).length });
+    list.push({ id: 'hydro', kind: 'nutri', label: `${formatLiters(goal)} d’eau ${target} jours`, target, value: days.filter(d => (idx.hydro[d] || 0) >= goal).length });
   }
   list.forEach(c => { c.done = c.value >= c.target; });
   list.health = health;
   return list;
 }
 
-// Semaines d'affilée avec les deux défis réussis (la semaine en cours compte si elle est déjà réussie).
+// Défi bonus de musculation (si l'utilisateur en a fait ces 8 dernières semaines).
+// En plus des deux défis : il ne compte pas pour la série, pour ne pas la rendre
+// plus difficile à ceux qui font de la musculation. Un seul par semaine, choisi en
+// alternance parmi ceux qui ont du sens d'après les 4 semaines précédentes.
+function muscuChallenge(weekKey, data, idx, prev, recent) {
+  if (!recent.some(s => s.sport === 'muscu')) return null;
+  const mu = wk => (idx.byWeek[wk] || []).filter(s => s.sport === 'muscu');
+  const avg = fn => prev.reduce((a, wk) => a + fn(mu(wk)), 0) / prev.length;
+  const groupsOf = list => new Set([].concat(...list.map(s => (s.exercises || []).map(e => e.group || MUSCU_GROUP_OF[e.name]).filter(Boolean)))).size;
+  const inWeek = mu(weekKey);
+  const options = [];
+  { const a = avg(l => l.length);
+    const target = Math.min(3, Math.max(1, Math.round(a) + 1));
+    options.push({ id: 'muscu_sessions', label: `${target} séance${target > 1 ? 's' : ''} de musculation`, target, value: inWeek.length }); }
+  const kgAvg = avg(l => l.reduce((a, s) => a + muscuVolume(s), 0));
+  if (kgAvg >= 500) {
+    const target = Math.ceil(kgAvg * 1.1 / 100) * 100;
+    options.push({ id: 'muscu_kg', label: `${target.toLocaleString('fr-FR')} kg soulevés`, target,
+      value: inWeek.reduce((a, s) => a + muscuVolume(s), 0) }); }
+  const gAvg = prev.filter(wk => mu(wk).length).reduce((a, wk, i, arr) => a + groupsOf(mu(wk)) / arr.length, 0);
+  if (gAvg >= 1) {
+    const target = Math.min(6, Math.round(gAvg) + 1);
+    options.push({ id: 'muscu_groups', label: `${target} groupes de muscles travaillés`, target, value: groupsOf(inWeek) }); }
+  // Record de charge : un exercice fait au moins deux fois avec une charge avant cette semaine
+  const start = weekDays(weekKey)[0];
+  const before = {}, count = {};
+  (data.sessions || []).filter(s => s.sport === 'muscu' && s.date < start).forEach(s => (s.exercises || []).forEach(e => {
+    if (!e.kg) return;
+    before[e.name] = Math.max(before[e.name] || 0, e.kg);
+    count[e.name] = (count[e.name] || 0) + 1;
+  }));
+  if (Object.values(count).some(n => n >= 2)) {
+    const beaten = inWeek.some(s => (s.exercises || []).some(e => e.kg && count[e.name] >= 2 && e.kg > before[e.name]));
+    options.push({ id: 'muscu_record', label: 'Battre un de tes records de charge', target: 1, value: beaten ? 1 : 0 }); }
+  const pick = options[parseInt(weekKey.split('-W')[1], 10) % options.length];
+  return Object.assign(pick, { kind: 'muscu', bonus: true });
+}
+
+// Semaines d'affilée avec les deux défis réussis (le défi bonus de musculation ne compte pas) (la semaine en cours compte si elle est déjà réussie).
 function challengeHistory(data = getData(), idx = activityIndex(data)) {
   const today = localDateStr();
   const current = getISOWeek(today);
@@ -1780,12 +1838,13 @@ function challengeHistory(data = getData(), idx = activityIndex(data)) {
   let run = 0;
   weeks.forEach(wk => {
     const list = weeklyChallenges(wk, data, idx);
-    const ok = list.every(c => c.done);
+    const ok = list.filter(c => !c.bonus).every(c => c.done);
     // Semaine d'arrêt ou de reprise ratée : la série est en pause, pas perdue.
     if (ok) { out.doneWeeks.push(wk); run++; out.best = Math.max(out.best, run); } else if (!list.health) run = 0;
   });
-  out.streak = run + (out.current.every(c => c.done) ? 1 : 0);
-  if (out.current.every(c => c.done)) { out.doneWeeks.push(current); out.best = Math.max(out.best, out.streak); }
+  const curOk = out.current.filter(c => !c.bonus).every(c => c.done);
+  out.streak = run + (curOk ? 1 : 0);
+  if (curOk) { out.doneWeeks.push(current); out.best = Math.max(out.best, out.streak); }
   return out;
 }
 
@@ -1861,14 +1920,31 @@ function getAchievements(data = getData()) {
   add('meals7', 'Semaine notée', 'Repas notés 7 jours d’affilée', 'nutri', m7.date, m7.best, 7);
   const mealSorted = [...idx.mealDays].sort();
   add('meals30', 'Carnet tenu', 'Repas notés sur 30 jours', 'nutri', mealSorted[29], mealSorted.length, 30);
-  const hydObj = {}; Object.entries(idx.hydro).forEach(([d, v]) => { if (v >= HYDRO_TARGET_ML) hydObj[d] = 1; });
+  const hGoal = hydroGoal(data);
+  const hydObj = {}; Object.entries(idx.hydro).forEach(([d, v]) => { if (v >= hGoal) hydObj[d] = 1; });
   const h5 = streakDate(hydObj, 5);
-  add('hydro5', 'Bien hydraté', '2,5 L d’eau 5 jours d’affilée', 'nutri', h5.date, h5.best, 5);
+  add('hydro5', 'Bien hydraté', formatLiters(hGoal) + ' d’eau (ton objectif) 5 jours d’affilée', 'nutri', h5.date, h5.best, 5);
 
   // Ressenti noté sur 10 séances d'affilée
   let fRun = 0, fBest = 0, fDate = null;
   sessions.forEach(s => { fRun = s.sensation ? fRun + 1 : 0; fBest = Math.max(fBest, fRun); if (!fDate && fRun >= 10) fDate = s.date; });
   add('feel10', 'À l’écoute', 'Ressenti noté sur 10 séances d’affilée', 'nutri', fDate, fBest, 10);
+
+  // Musculation : seulement pour ceux qui en font (sinon rien ne change)
+  if (hasMuscu(data)) {
+    const mus = sessions.filter(s => s.sport === 'muscu');
+    add('muscu10', 'Assidu en salle', '10 séances de musculation', 'muscu', mus[9] && mus[9].date, mus.length, 10);
+    let fullDate = null, bestG = 0;
+    weekKeys.forEach(wk => {
+      const g = new Set();
+      idx.byWeek[wk].filter(s => s.sport === 'muscu').sort((a, b) => a.date.localeCompare(b.date)).forEach(s => {
+        (s.exercises || []).forEach(e => { const gr = e.group || MUSCU_GROUP_OF[e.name]; if (gr) g.add(gr); });
+        if (!fullDate && g.size >= MUSCU_CATALOG.length) fullDate = s.date;
+      });
+      bestG = Math.max(bestG, g.size);
+    });
+    add('muscu_full', 'Corps complet', 'Les 6 groupes de muscles travaillés dans la même semaine', 'muscu', fullDate, bestG, MUSCU_CATALOG.length);
+  }
 
   // Compétitions
   const today = localDateStr();
@@ -1889,7 +1965,7 @@ function getAchievements(data = getData()) {
 // Affichage d'un badge (Dashboard et Profil) : médaille avec un repère court, pas d'emoji.
 const BADGE_MARKS = { first: '1', s50: '50', s100: '100', tri_week: '3', velo100: 'km', hours10: '10h', brick: 'V+C',
   swim2k: '2k', half: '21', regular4: '4×3', meals7: '7j', meals30: '30j', hydro5: 'H2O', feel10: '10',
-  finisher: 'F', goal: 'OK', challenge1: '1', challenge4: '4' };
+  finisher: 'F', goal: 'OK', challenge1: '1', challenge4: '4', muscu10: '10', muscu_full: '6' };
 function badgeTileHtml(b) {
   const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const when = b.earned ? 'Obtenu le ' + parseLocalDate(b.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -2872,6 +2948,7 @@ document.addEventListener('DOMContentLoaded', () => {
 migrateWeeksToSessions();
 
 window.TS = {
+  hydroGoal, setHydroGoal, HYDRO_GOAL_DEFAULT, formatLiters,
   getData, saveData, loadData, newId, resetAllData, deleteAccount, clearLocalUserData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,

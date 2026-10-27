@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261105a"></script>
+  <script src="theme.js?v=20261106a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261105a"></script>
+  <script src="auth-guard.js?v=20261106a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261105a">
+  <link rel="stylesheet" href="style.css?v=20261106a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -393,9 +393,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261105a"></script>
-<script src="import.js?v=20261105a"></script>
-<script src="app.js?v=20261105a"></script>
+<script src="fit-parser.js?v=20261106a"></script>
+<script src="import.js?v=20261106a"></script>
+<script src="app.js?v=20261106a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -725,7 +725,7 @@ function renderWkgTable() {
 }
 
 function renderSportAvgs() {
-  const sports = ['nat','velo','run'];
+  const sports = TS.sportsShown();   // + musculation si l'utilisateur en fait
   const el = document.getElementById('sportAvgs');
   el.innerHTML = sports.map(s => {
     const sp = TS.SPORTS[s];
@@ -736,13 +736,28 @@ function renderSportAvgs() {
     const avgFC   = withFC.length   ? Math.round(withFC.reduce((a,x)=>a+x.fc_avg,0)/withFC.length) : null;
     const avgPow  = withP.length    ? Math.round(withP.reduce((a,x)=>a+x.power_avg,0)/withP.length) : null;
     const avgDur  = sessions.length ? sessions.reduce((a,x)=>a+(x.duration||0),0)/sessions.length : null;
+    // Musculation : exercices, séries et kg soulevés moyens par séance (séances avec exercices notés)
+    let muscu = '';
+    if (s === 'muscu') {
+      const withEx = sessions.filter(x => (x.exercises || []).length);
+      const avg = fn => withEx.length ? withEx.reduce((a, x) => a + fn(x), 0) / withEx.length : 0;
+      const exos = avg(x => x.exercises.length), sets = avg(x => x.exercises.reduce((a, e) => a + (e.sets || 0), 0)), kg = avg(x => TS.muscuVolume(x));
+      const withRpe = sessions.filter(x => x.rpe);
+      const rpe = withRpe.length ? withRpe.reduce((a, x) => a + x.rpe, 0) / withRpe.length : 0;
+      const item = (l, v) => `<span style="font-size:12px;color:var(--text-2)">${l}: <b>${v}</b></span>`;
+      muscu = (exos ? item('Exercices / séance', exos.toLocaleString('fr-FR', { maximumFractionDigits: 1 })) : '')
+        + (sets ? item('Séries / séance', Math.round(sets)) : '')
+        + (kg ? item('Kg soulevés / séance', Math.round(kg).toLocaleString('fr-FR') + ' kg') : '')
+        + (rpe ? item('RPE moy', rpe.toLocaleString('fr-FR', { maximumFractionDigits: 1 })) : '');
+    }
     return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:600;color:var(--${s==='nat'?'nat':'velo'===s?'velo':'run'}-light);margin-bottom:6px">${sp.emoji} ${sp.label} <span style="font-size:11px;color:var(--text-3)">${sessions.length} séances</span></div>
+      <div style="font-size:13px;font-weight:600;color:var(--${s});margin-bottom:6px">${sp.emoji} ${sp.label} <span style="font-size:11px;color:var(--text-3)">${sessions.length} séances</span></div>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
         ${avgFC  ? `<span style="font-size:12px;color:var(--text-2)">FC moy: <b>${avgFC} bpm</b></span>` : ''}
         ${avgPow ? `<span style="font-size:12px;color:var(--text-2)">Puissance: <b>${avgPow} W</b></span>` : ''}
         ${avgDur ? `<span style="font-size:12px;color:var(--text-2)">Durée moy: <b>${TS.formatHours(avgDur)}</b></span>` : ''}
-        ${!avgFC&&!avgPow&&!avgDur ? `<span style="font-size:12px;color:var(--text-3)">Aucune donnée</span>` : ''}
+        ${muscu}
+        ${!avgFC&&!avgPow&&!avgDur&&!muscu ? `<span style="font-size:12px;color:var(--text-3)">Aucune donnée</span>` : ''}
       </div>
     </div>`;
   }).join('');

@@ -49,7 +49,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   toutes seules quand une séance du même sport existe le même jour ;
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la
   semaine et badges, calculés à partir des données, seuls les badges déjà
-  annoncés sont gardés dans `data.achievements_seen`) ;
+  annoncés sont gardés dans `data.achievements_seen` ; défi **bonus** de musculation
+  (`muscuChallenge`, `bonus: true`) qui ne compte pas pour la série ;
+  objectif d'eau `hydroGoal(data)` = `data.profile.hydro_goal` en ml, 1,5 L par défaut) ;
   équipement (`data.gear`, `gearRanges` / `gearStats`) : une séance compte pour
   l'équipement de son sport en service ce jour-là (de sa première utilisation à la
   veille du suivant, ou à son retrait), rien n'est stocké sur les séances ;

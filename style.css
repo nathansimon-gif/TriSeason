@@ -369,6 +369,8 @@ input, select, textarea { font-family: var(--font); }
 .news__body ul { margin: 0 0 10px 18px; }
 .news__body li { margin-bottom: 4px; }
 .news__note { font-size: 12.5px; color: var(--text-3); }
+/* Lien d'action discret dans un texte (« Modifier ») */
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent2); font-size: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .mp-empty { padding: 16px 4px; color: var(--text-3); font-size: 13px; }
 #muscuRows { display: flex; flex-direction: column; gap: 6px; }
 /* Téléphone : le nom de l'exercice sur sa ligne, les chiffres en dessous */
@@ -706,6 +708,7 @@ tbody tr:hover td { background: var(--surface2); }
 .challenge + .challenge { border-top: 1px solid var(--border); }
 .challenge__label { font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; }
 .challenge__count { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
+.challenge__bonus { margin-left: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muscu); background: var(--muscu-dim); padding: 1px 6px; border-radius: 999px; }
 .challenge__bar { grid-column: 1 / -1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
 .challenge__bar b { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 .challenge.done .challenge__count { color: var(--accent); }
@@ -719,7 +722,7 @@ tbody tr:hover td { background: var(--surface2); }
 .badge-tile__prog b { display: block; height: 100%; background: var(--text-3); }
 .badge-tile.locked { opacity: .62; }
 .badge-tile.locked .badge-tile__medal { color: var(--text-3) !important; border-style: dashed; }
-.badge-kind--nat { color: var(--nat); } .badge-kind--velo { color: var(--velo); } .badge-kind--run { color: var(--run); }
+.badge-kind--nat { color: var(--nat); } .badge-kind--velo { color: var(--velo); } .badge-kind--run { color: var(--run); } .badge-kind--muscu { color: var(--muscu); }
 .badge-kind--nutri, .badge-kind--all { color: var(--accent); }
 
 /* ── Tirer pour actualiser (appli installée) ─────────────────────────────── */
