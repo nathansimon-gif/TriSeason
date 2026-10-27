@@ -114,7 +114,7 @@ function sampleData() {
   }
   const meals = [];
   for (let i = 1; i <= 30; i++) meals.push({ id: 'm' + i, date: day(-i), type: 'déjeuner', desc: 'riz + poulet', glucides: 150 + (i % 5) * 40, proteines: 40, lipides: 20 });
-  return { profile: { name: 'Test', fcmax: 190 }, weeks: {}, _migrated: true, weight: [{ date: day(-10), value: 70 }], records: [],
+  return { profile: { name: 'Test', fcmax: 190 }, weeks: {}, _migrated: true, news_seen: ['muscu'], weight: [{ date: day(-10), value: 70 }], records: [],
     competitions: [{ id: 'c1', date: day(-20), name: '10 km test', type: 'RUN', distance: '10', goal_time: '0:42:00', actual_time: '0:41:07' },
                    { id: 'c2', date: day(30), name: 'Triathlon test', type: 'TRI', distance: '51.5', goal_time: '2:30:00' }],
     sessions, nutrition: { meals, hydration: { [day(-1)]: 2000 }, fuel: [] } };
@@ -736,10 +736,12 @@ async function main() {
 
   // 5. Données personnelles
   await test('RGPD : déconnexion → plus aucune donnée dans le navigateur', async () => {
-    const v = await newUser();
-    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
+    // Sans news_seen : le message de nouveauté arrive juste après la déconnexion (bug corrigé)
+    const data = sampleData(); delete data.news_seen;
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(500);
     v.setUid(null);
-    await Promise.all([v.page.waitForURL(/login\.html/), v.page.evaluate(() => window.TS_logout())]);
+    await Promise.all([v.page.waitForURL(/login\.html/), v.page.evaluate(() => { window.TS_logout(); setTimeout(() => TS.saveData(TS.getData()), 0); })]);
     const left = await v.page.evaluate(() => [localStorage.getItem('triseason_data'), localStorage.getItem('triseason_owner')]);
     await v.ctx.close();
     assert(!left[0] && !left[1], 'données restantes');
@@ -1347,6 +1349,89 @@ async function main() {
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(!Object.keys(sizes).length, 'champs trop petits ou fenêtres qui glissent : ' + JSON.stringify(sizes));
+  });
+
+  await test('Musculation : records, progression (Sports), carte du corps (Forme), section Records ; rien sans séance', async () => {
+    const data = sampleData();
+    data.sessions.push(
+      { id: 'mu1', date: day(-20), sport: 'muscu', duration: 1, rpe: 7, exercises: [{ name: 'Squat', group: 'Jambes', sets: 4, reps: 8, kg: 60 }, { name: 'Pompes', group: 'Pectoraux', sets: 3, reps: 20 }] },
+      { id: 'mu2', date: day(-10), sport: 'muscu', duration: 1, rpe: 7, exercises: [{ name: 'Squat', group: 'Jambes', sets: 4, reps: 6, kg: 70 }, { name: 'Pompes', group: 'Pectoraux', sets: 3, reps: 25 }] },
+      { id: 'mu3', date: day(-3), sport: 'muscu', duration: 1, rpe: 8, exercises: [{ name: 'Squat', group: 'Jambes', sets: 5, reps: 5, kg: 80 }, { name: 'Gainage (planche)', group: 'Abdos et gainage', sets: 3, reps: 60 }] });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/sport.html?sport=muscu&exo=Pompes`); await v.page.waitForTimeout(800);
+    const sport = await v.page.evaluate(() => ({
+      tab: getComputedStyle(document.getElementById('tab-muscu')).display, view: getComputedStyle(document.getElementById('muscuView')).display,
+      endu: getComputedStyle(document.getElementById('enduranceView')).display, exo: document.getElementById('muscuExo').value,
+      rows: document.querySelectorAll('#muscuRecords .mr-row').length, kpi: document.getElementById('muscuKPIs').textContent,
+      chart: !!Chart.getChart('chartMuscuProg'), map: document.querySelectorAll('#muscuBodyMap .bm-muscle').length }));
+    await v.page.click('#muscuRecords [data-exo="Squat"]'); await v.page.waitForTimeout(200);
+    const note = await v.page.textContent('#muscuProgNote');
+    const calc = await v.page.evaluate(() => {
+      const r = TS.muscuRecords();
+      const sq = r.find(x => x.name === 'Squat'), po = r.find(x => x.name === 'Pompes'), ga = r.find(x => x.name === 'Gainage (planche)');
+      const sets = TS.muscuMuscleLoad({ mode: 'sets' }).totals, kg = TS.muscuMuscleLoad({ mode: 'kg' }).totals;
+      return { sq, po, ga, sets, kg, order: r.map(x => x.name) };
+    });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(800);
+    const forme1 = await v.page.evaluate(() => ({ card: getComputedStyle(document.getElementById('bodyMapCard')).display,
+      quad: document.querySelector('#bodyMap .bm-muscle[data-m="quadriceps"]').style.fillOpacity,
+      calf: document.querySelector('#bodyMap .bm-muscle[data-m="mollets"]').style.fillOpacity,
+      detail: document.querySelector('#bodyMap .bm-detail').textContent }));
+    await v.page.selectOption('#bmPeriod', '7');
+    await v.page.click('#bodyMap .bm-row[data-m="abdos"]'); await v.page.waitForTimeout(100);
+    const forme2 = await v.page.evaluate(() => document.querySelector('#bodyMap .bm-detail').textContent);
+    await v.page.goto(`${BASE}/records.html`); await v.page.waitForTimeout(700);
+    const rec = await v.page.evaluate(() => ({ shown: getComputedStyle(document.getElementById('muscuRecordSection')).display,
+      cards: [...document.querySelectorAll('#records-muscu .record-card')].map(c => c.querySelector('.record-val').textContent) }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // Sans musculation : rien n'apparaît
+    const w = await newUser();
+    await w.page.goto(`${BASE}/sport.html?sport=muscu`); await w.page.waitForTimeout(600);
+    const none = await w.page.evaluate(() => ({ tab: getComputedStyle(document.getElementById('tab-muscu')).display, view: getComputedStyle(document.getElementById('muscuView')).display }));
+    await w.page.goto(`${BASE}/forme.html`); await w.page.waitForTimeout(600);
+    none.forme = await w.page.evaluate(() => getComputedStyle(document.getElementById('bodyMapCard')).display);
+    await w.page.goto(`${BASE}/records.html`); await w.page.waitForTimeout(600);
+    none.rec = await w.page.evaluate(() => getComputedStyle(document.getElementById('muscuRecordSection')).display);
+    assert(!w.errors.length, w.errors[0]);
+    await w.ctx.close();
+
+    assert(sport.tab !== 'none' && sport.view !== 'none' && sport.endu === 'none' && sport.exo === 'Pompes' && sport.rows === 3 && sport.chart && sport.map > 0,
+      'page Sports musculation : ' + JSON.stringify(sport));
+    assert(/60 kg → 80 kg \(\+20 kg\)/.test(note), 'progression : ' + note);
+    assert(calc.sq.maxKg.kg === 80 && calc.sq.maxKg.reps === 5 && calc.sq.orm.value === 93.5 && calc.sq.sessions === 3 && calc.order[0] === 'Squat', 'records Squat : ' + JSON.stringify(calc.sq));
+    assert(!calc.po.maxKg && calc.po.maxReps.reps === 25 && calc.ga.hold && calc.ga.maxReps.reps === 60, 'records sans charge : ' + JSON.stringify([calc.po, calc.ga]));
+    assert(calc.sets.quadriceps === 13 && calc.sets.pecs === 6 && calc.sets.triceps === 3, 'charge par muscle : ' + JSON.stringify(calc.sets));
+    assert(calc.kg.quadriceps === 60 * 32 + 70 * 24 + 80 * 25 && !calc.kg.pecs, 'kg soulevés par muscle : ' + JSON.stringify(calc.kg));
+    assert(forme1.card !== 'none' && forme1.quad === '1' && forme1.calf === '0' && /Quadriceps/.test(forme1.detail) && /Squat/.test(forme1.detail), 'carte du corps : ' + JSON.stringify(forme1));
+    assert(/Abdominaux/.test(forme2) && /Gainage/.test(forme2) && !/Pompes/.test(forme2), 'carte du corps sur 7 jours : ' + forme2);
+    assert(rec.shown !== 'none' && rec.cards.join() === '80 kg,25 rép.,60 s', 'section Records : ' + JSON.stringify(rec));
+    assert(none.tab === 'none' && none.view === 'none' && none.forme === 'none' && none.rec === 'none', 'musculation visible sans séance : ' + JSON.stringify(none));
+  });
+
+  await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {
+    const data = sampleData(); delete data.news_seen;
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
+    const first = await v.page.evaluate(() => { const m = document.getElementById('newsModal'); return m && m.classList.contains('open') && m.textContent; });
+    await v.page.click('#newsModal [data-close]'); await v.page.waitForTimeout(400);
+    const cloud = await v.page.evaluate(() => window.__cloud('testeur').news_seen);
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(1200);
+    const again = await v.page.evaluate(() => !!document.getElementById('newsModal'));
+    // Bouton « Ajouter une séance de musculation »
+    await v.page.goto(`${BASE}/sessions.html?nouvelle=muscu`); await v.page.waitForTimeout(700);
+    const form = await v.page.evaluate(() => ({ open: document.getElementById('sessionModal').classList.contains('open'), sport: document.getElementById('s_sport').value }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const fresh = sampleData(); delete fresh.news_seen; fresh.sessions = [];
+    const w = await newUser({ data: fresh });
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(1500);
+    const newbie = await w.page.evaluate(() => ({ modal: !!document.getElementById('newsModal'), seen: TS.getData().news_seen }));
+    await w.ctx.close();
+    assert(first && /Nouveau : la musculation/.test(first), 'message absent à la première ouverture');
+    assert(cloud && cloud.includes('muscu') && !again, 'message réaffiché : ' + JSON.stringify({ cloud, again }));
+    assert(form.open && form.sport === 'muscu', 'lien vers une séance de musculation : ' + JSON.stringify(form));
+    assert(!newbie.modal && (newbie.seen || []).includes('muscu'), 'nouveau compte : ' + JSON.stringify(newbie));
   });
 
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
