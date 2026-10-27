@@ -449,8 +449,9 @@ function renderMuscuWeeks(range) {
   const all = TS.getSessions({ sport: 'muscu', from: range.from, to: range.to });
   const byWeek = {};
   all.forEach(s => { const w = TS.getISOWeek(TS.parseLocalDate(s.date)); (byWeek[w] = byWeek[w] || []).push(s); });
-  const first = weeks.findIndex(w => byWeek[w]);
-  const shown = weeks.slice(Math.max(0, Math.min(first, weeks.length - 12)));
+  // Les 8 dernières semaines (jusqu'à la semaine en cours, ou la fin de la saison choisie)
+  const cur = TS.getCurrentWeek();
+  const shown = weeks.filter(w => w <= cur).slice(-8);
   makeChart('chartMuscuWeeks', {
     data: { labels: shown.map(w => 'S' + w.split('-W')[1]), datasets: [
       { type: 'bar', label: 'Kg soulevés', data: shown.map(w => (byWeek[w] || []).reduce((a, s) => a + TS.muscuVolume(s), 0)), backgroundColor: 'rgba(146,86,251,.55)', yAxisID: 'y', order: 2 },
@@ -502,10 +503,12 @@ function renderMuscuProgress() {
   const labels = hist.map(h => TS.parseLocalDate(h.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }));
   const datasets = withKg ? [
     { label: 'Charge max (kg)', data: hist.map(h => h.kg), borderColor: MUSCU_COLOR, backgroundColor: MUSCU_COLOR, pointRadius: 3, tension: .25, spanGaps: true },
-    { label: '1RM estimé (kg)', data: hist.map(h => h.orm), borderColor: '#a3abb9', borderDash: [5, 4], pointRadius: 2, tension: .25, spanGaps: true },
+    { label: '1RM estimé (kg, pointillés)', data: hist.map(h => h.orm), borderColor: '#a3abb9', backgroundColor: '#a3abb9', borderDash: [5, 4], pointRadius: 2, tension: .25, spanGaps: true },
   ] : [{ label: hold ? 'Durée max (s)' : 'Répétitions max', data: hist.map(h => h.maxReps), borderColor: MUSCU_COLOR, backgroundColor: MUSCU_COLOR, pointRadius: 3, tension: .25 }];
   makeChart('chartMuscuProg', { type: 'line', data: { labels, datasets },
-    options: { plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 10 } },
+    // Légende : un trait plein de la couleur de chaque courbe (le cadre en pointillés du 1RM était peu lisible)
+    options: { plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 16, boxHeight: 3,
+          generateLabels: ch => Chart.defaults.plugins.legend.labels.generateLabels(ch).map(l => Object.assign(l, { lineDash: [], fillStyle: l.strokeStyle })) } },
         tooltip: { callbacks: { afterLabel: c => { const h = hist[c.dataIndex]; return withKg && c.datasetIndex === 0 && h.reps ? h.kg + ' kg × ' + h.reps + ' rép.' : ''; } } } },
       scales: { x: { ticks: { color: '#6b7383', maxRotation: 0, autoSkip: true }, grid: { display: false } },
         y: { ticks: { color: '#6b7383' }, grid: { color: 'rgba(255,255,255,.06)' } } } } });

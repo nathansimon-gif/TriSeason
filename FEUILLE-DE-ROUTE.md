@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #52 (musculation dans Sports, défis, objectif d’eau) puis recharger le site
+- [ ] 🧑 Fusionner la PR #53 (graphiques de musculation) puis recharger le site
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -110,6 +110,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 28/10/2026 | #53 | **Graphiques de musculation** (Sports → Muscu) : séances et kg soulevés sur les 8 dernières semaines (au lieu de 12) ; légende de « Charge par exercice » plus claire (traits pleins, « 1RM estimé (kg, pointillés) ») |
 | 28/10/2026 | #52 | **Musculation dans Sports, Séances, défis ; eau 1,5 L** : page Sports → Muscu enrichie (charge par exercice, **volume par séance** avec liste déroulante des exercices, heures et séances par mois, effort ressenti, meilleures semaines, objectifs en séances, heures ou kg soulevés) ; Musculation dans « Moyennes par discipline » (Séances) ; **défi bonus de musculation** chaque semaine pour ceux qui en font (séances, kg soulevés, groupes de muscles ou record de charge, ne compte pas pour la série) et 2 badges (10 séances, les 6 groupes de muscles dans la semaine) ; **objectif d'eau 1,5 L par jour**, modifiable (Nutrition → Hydratation → Modifier), utilisé aussi par le défi, le badge et le graphique ; nombres des graphiques au format français |
 | 27/10/2026 | #51 | **Musculation (partie 2)** : page Sports → Muscu (séances et kg soulevés par semaine, progression par exercice avec charge max et 1RM estimé, records par exercice) ; section Musculation dans Records ; **carte du corps** dans Forme (face et dos, 15 muscles, plus ou moins foncés selon les séries, répétitions ou kg soulevés, sur 7 jours à 12 mois ; touche une zone pour voir les exercices) ; **message de nouveauté** affiché une seule fois aux comptes qui ont déjà des séances. Corrigé au passage : plus aucun enregistrement possible juste après une déconnexion |
 | 27/10/2026 | #51 | **Musculation : exercices sur machines et recherche** : liste passée à ~80 exercices (pec fly, presses, hack squat, Smith machine, poulies, abducteurs / adducteurs…) avec les muscles travaillés ; fenêtre de choix avec recherche (nom, muscle ou « machine », sans se soucier des accents) ; exercice libre rangé dans un groupe de muscles, puis proposé dans « Mes exercices ». **Téléphone** : plus de zoom automatique en touchant un champ ou une liste (le zoom à deux doigts reste possible), plus de fenêtre ou de page qui glisse de côté (sauf le grand tableau des séances, trop large pour l'écran) |
