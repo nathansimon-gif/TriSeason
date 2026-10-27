@@ -114,6 +114,13 @@
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
+/* Rien ne doit faire glisser la page de côté sur téléphone (le zoom à deux doigts reste possible) */
+body { overflow-x: clip; }
+/* Téléphone : texte des champs à 16 px, sinon l'iPhone zoome tout seul quand on
+   touche un champ ou une liste déroulante (puis la page glisse de côté) */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
+}
 body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.55; font-size: 14px; -webkit-font-smoothing: antialiased; font-feature-settings: 'tnum' 1; }
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font-family: var(--font); }
@@ -214,6 +221,7 @@ input, select, textarea { font-family: var(--font); }
 .kpi--nat   { --kpi-c: var(--nat); }
 .kpi--velo  { --kpi-c: var(--velo); }
 .kpi--run   { --kpi-c: var(--run); }
+.kpi--muscu { --kpi-c: var(--muscu); box-shadow: inset 0 2px 0 var(--muscu); }
 .kpi--green { --kpi-c: var(--green); }
 .kpi--nat, .kpi--velo, .kpi--run, .kpi--green { box-shadow: inset 0 2px 0 var(--kpi-c); }
 .kpi[class*="kpi--"] .kpi__label::before {
@@ -299,6 +307,69 @@ input, select, textarea { font-family: var(--font); }
 .muscu-cols { font-size: 11px; color: var(--text-3); padding: 0 2px; }
 .muscu-row .form-input { padding: 8px 6px; text-align: center; }
 .muscu-row .form-select { padding: 8px 6px; border-left: 3px solid var(--muscu); }
+.muscu-pick { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 9px !important; }
+.muscu-pick--empty { color: var(--text-3); }
+/* Fenêtre de choix d'un exercice */
+.mp-list { margin-top: 10px; max-height: min(60vh, 520px); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.mp-group { position: sticky; top: 0; background: var(--surface); padding: 10px 2px 4px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+.mp-item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--border);
+  color: var(--text); font-size: 14px; padding: 10px 8px; border-left: 3px solid transparent; }
+.mp-item:hover, .mp-item:focus-visible { background: var(--surface2); outline: none; }
+.mp-item--on { border-left-color: var(--muscu); background: var(--muscu-dim); }
+.mp-muscles { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+.mp-new { padding: 10px; border: 1px dashed var(--border2); border-radius: var(--r-sm); font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.mp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mp-chip { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; }
+.mp-chip:hover { border-color: var(--muscu); }
+/* Carte du corps (musculation) */
+.bm-figs { display: flex; gap: 14px; justify-content: center; }
+.bm-fig { margin: 0; text-align: center; flex: 1; max-width: 170px; }
+.bm-fig svg { width: 100%; height: auto; display: block; }
+.bm-fig figcaption { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.bm-neutral, .bm-base { fill: var(--surface3); }
+.bm-base { stroke: var(--surface); stroke-width: .6; }
+.bm-muscle { fill: var(--muscu); stroke: var(--surface); stroke-width: .6; cursor: pointer; }
+.bm-muscle--on { stroke: var(--text); stroke-width: 1; }
+.bm-line { stroke: var(--surface); stroke-width: .6; fill: none; pointer-events: none; }
+.bm-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-3); justify-content: center; margin-top: 8px; }
+.bm-legend i { width: 14px; height: 10px; border-radius: 2px; background: var(--muscu); display: inline-block; }
+.bm-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 640px) { .bm-layout { grid-template-columns: minmax(0, 1fr); } }
+.bm-detail { font-size: 13px; color: var(--text-2); padding: 10px 12px; background: var(--muscu-dim); border-radius: var(--r-sm); margin-bottom: 10px; }
+.bm-detail b { color: var(--text); }
+.bm-detail__ex { font-size: 12px; margin-top: 3px; }
+.bm-detail__ex span { color: var(--text-3); }
+.bm-list { display: flex; flex-direction: column; }
+.bm-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 56px; gap: 8px; align-items: center; background: none; border: 0;
+  padding: 5px 4px; color: var(--text-2); font-size: 12.5px; text-align: left; border-radius: var(--r-sm); }
+.bm-row:hover, .bm-row--on { background: var(--surface2); color: var(--text); }
+.bm-row__bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.bm-row__bar i { display: block; height: 100%; background: var(--muscu); border-radius: 3px; }
+.bm-row__val { text-align: right; font-variant-numeric: tabular-nums; }
+.bm-rest { font-size: 11.5px; color: var(--text-3); margin-top: 8px; }
+.bm-empty { text-align: center; color: var(--text-3); font-size: 13px; }
+.bm-empty .bm-figs { max-width: 240px; margin: 0 auto 8px; opacity: .6; }
+/* Records par exercice (Sports → Musculation) */
+.mr-list { display: flex; flex-direction: column; }
+.mr-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 4px 14px; align-items: center; width: 100%;
+  background: none; border: 0; border-bottom: 1px solid var(--border); padding: 10px 6px; text-align: left; color: var(--text);
+  border-left: 3px solid transparent; }
+.mr-row:hover { background: var(--surface2); }
+.mr-row--on { border-left-color: var(--muscu); background: var(--muscu-dim); }
+.mr-row__name { font-size: 13.5px; font-weight: 500; min-width: 0; }
+.mr-row__name small { display: block; font-size: 11.5px; font-weight: 400; color: var(--text-3); margin-top: 1px; }
+.mr-row__chips { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-2); }
+.mr-row__chips b { color: var(--text); font-weight: 600; }
+@media (max-width: 640px) { .mr-row { grid-template-columns: minmax(0, 1fr); } }
+/* Message de nouveauté (une fois par compte) */
+.news__body { font-size: 13.5px; color: var(--text-2); line-height: 1.55; }
+.news__body p { margin-bottom: 10px; }
+.news__body b { color: var(--text); }
+.news__body ul { margin: 0 0 10px 18px; }
+.news__body li { margin-bottom: 4px; }
+.news__note { font-size: 12.5px; color: var(--text-3); }
+.mp-empty { padding: 16px 4px; color: var(--text-3); font-size: 13px; }
 #muscuRows { display: flex; flex-direction: column; gap: 6px; }
 /* Téléphone : le nom de l'exercice sur sa ligne, les chiffres en dessous */
 @media (max-width: 560px) {
@@ -385,7 +456,7 @@ input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .modal {
   background: var(--surface); border: 1px solid var(--border2);
   border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 520px;
-  max-height: 92vh; overflow-y: auto;
+  max-height: 92vh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
   transform: translateY(4px); transition: transform .15s;
 }
 .modal-overlay.open .modal { transform: none; }
@@ -615,7 +686,7 @@ tbody tr:hover td { background: var(--surface2); }
 }
 .consent-gate__box {
   background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-lg);
-  padding: 24px; max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto;
+  padding: 24px; max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; overflow-x: hidden;
   font-size: 13px; color: var(--text-2); line-height: 1.6;
 }
 .consent-gate__box p { margin-bottom: 10px; }

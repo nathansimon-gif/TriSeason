@@ -546,6 +546,7 @@ function syncFromCloud(uid) {
         window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
       }
       if (!inDrawers) { cloudMigrateWanted = true; pushToCloudSoon(ref); }
+      setTimeout(showNews, 700);
     } else {
       // Premier login : on envoie ce qu'il y avait déjà en local (saison déjà
       // saisie avant la mise en place des comptes) pour l'attacher au compte.
@@ -578,6 +579,8 @@ document.addEventListener('triseason:auth-ready', e => {
 if (window.TS_USER) syncFromCloud(window.TS_USER.uid);
 
 function saveData(data) {
+  // Déconnexion en cours : une minuterie en retard ne doit pas réécrire les données effacées
+  if (window.TS_LOGGED_OUT) return;
   localStorage.setItem(DB_KEY, JSON.stringify(data));
   window.dispatchEvent(new CustomEvent('triseason:update', { detail: data }));
   pushToCloud(data);
@@ -1915,6 +1918,47 @@ function takeNewAchievements() {
   return { fresh, first: !seen, count: earned.length };
 }
 
+// ── Nouveautés : un message une seule fois par compte (data.news_seen) ───────
+// Seulement pour les comptes qui avaient déjà des séances : un nouveau compte
+// découvre tout avec le guide de démarrage, l'annonce est marquée vue sans s'afficher.
+const NEWS = [{
+  id: 'muscu',
+  skip: data => hasMuscu(data),   // déjà adopté : rien à annoncer
+  title: 'Nouveau : la musculation',
+  html: '<p>Tu peux maintenant noter tes séances de <b>musculation</b> : tes exercices (plus de 80 au choix, machines comprises, avec une recherche), tes séries, répétitions et charges.</p>'
+    + '<ul><li>Elles comptent dans tes heures, ta charge d’entraînement et ta forme.</li>'
+    + '<li>Tes records et ta progression par exercice se calculent tout seuls (Sports → Muscu).</li>'
+    + '<li>Une carte du corps montre les zones travaillées (page Forme).</li>'
+    + '<li>Les séances de musculation de Strava ou de ta montre sont maintenant importées.</li></ul>'
+    + '<p class="news__note">Tu n’en fais pas ? Rien ne change : la musculation n’apparaît qu’à partir de ta première séance.</p>',
+  action: { label: 'Ajouter une séance de musculation', href: 'sessions.html?nouvelle=muscu' },
+}];
+function showNews() {
+  if (!cloudLoaded || window.TS_LOGGED_OUT || document.getElementById('consentGate') || document.getElementById('newsModal')) return;
+  const data = getData();
+  const seen = data.news_seen || [];
+  const todo = NEWS.filter(n => !seen.includes(n.id));
+  if (!todo.length) return;
+  data.news_seen = seen.concat(todo.map(n => n.id));
+  saveData(data);
+  const n = todo.find(x => (data.sessions || []).length && !x.skip(data));
+  if (!n) return;
+  const box = document.createElement('div');
+  box.className = 'modal-overlay';
+  box.id = 'newsModal';
+  box.innerHTML = `<div class="modal news" role="dialog" aria-modal="true" aria-labelledby="newsTitle" style="max-width:460px">
+    <div class="modal__header"><div class="modal__title" id="newsTitle"><span class="sport-dot sport-dot--muscu"></span>${n.title}</div>
+      <button class="modal__close" type="button" data-close aria-label="Fermer">×</button></div>
+    <div class="news__body">${n.html}</div>
+    <div class="form-actions"><button class="btn btn--ghost" type="button" data-close>Plus tard</button>
+      <a class="btn btn--primary" href="${n.action.href}">${n.action.label}</a></div></div>`;
+  document.body.appendChild(box);
+  requestAnimationFrame(() => box.classList.add('open'));
+  box.addEventListener('click', e => {
+    if (e.target === box || e.target.closest('[data-close]')) { box.classList.remove('open'); setTimeout(() => box.remove(), 250); }
+  });
+}
+
 // ── Strava : les séances arrivent toutes seules ─────────────────────────────
 // Réglages publics (ils ne sont pas secrets). La clé secrète de l'appli Strava
 // est gardée par le petit serveur TriSeason (tools/server, Cloudflare), jamais
@@ -2349,16 +2393,130 @@ const COMP_TYPES = ['TRI', 'RUN', 'VELO', 'NAT', 'DUATH', 'AQUA'];
 // sports) et session.exercises = [{ name, group, sets, reps, kg }]. Pour un
 // exercice tenu (gainage), reps = secondes. La musculation n'apparaît dans les
 // filtres, graphiques et listes de sports que si au moins une séance existe.
-const MUSCU_GROUPS = [
-  ['Pectoraux', ['Développé couché (barre)', 'Développé couché (haltères)', 'Développé incliné', 'Pompes', 'Écarté (haltères ou poulie)']],
-  ['Dos', ['Tirage vertical', 'Tirage horizontal', 'Tractions', 'Rowing (barre ou haltère)', 'Soulevé de terre']],
-  ['Épaules', ['Développé militaire', 'Élévations latérales', 'Oiseau (arrière d’épaule)']],
-  ['Bras', ['Curl biceps (barre)', 'Curl biceps (haltères)', 'Curl marteau', 'Tirage triceps (poulie)', 'Barre au front', 'Dips']],
-  ['Jambes', ['Squat', 'Presse à cuisses (assise)', 'Presse à cuisses (verticale)', 'Leg extension', 'Leg curl', 'Fentes', 'Hip thrust', 'Mollets']],
-  ['Abdos et gainage', ['Gainage (planche)', 'Gainage latéral', 'Crunch', 'Relevé de jambes', 'Russian twist', 'Roue abdominale']],
+// Catalogue : [nom, muscles travaillés]. Muscles : clés de MUSCLES ; suffixe « - » =
+// muscle secondaire (compte pour moitié sur la carte du corps). Ne pas renommer un
+// exercice existant (les séances gardent le nom) : en ajouter un nouveau.
+const MUSCLES = {
+  pecs: 'Pectoraux', epaules: 'Épaules', biceps: 'Biceps', triceps: 'Triceps', avantbras: 'Avant-bras',
+  abdos: 'Abdominaux', obliques: 'Obliques', dorsaux: 'Dorsaux', trapezes: 'Trapèzes', lombaires: 'Lombaires',
+  fessiers: 'Fessiers', quadriceps: 'Quadriceps', ischios: 'Ischio-jambiers', adducteurs: 'Adducteurs', mollets: 'Mollets',
+};
+const MUSCU_CATALOG = [
+  ['Pectoraux', [
+    ['Développé couché (barre)', 'pecs triceps- epaules-'],
+    ['Développé couché (haltères)', 'pecs triceps- epaules-'],
+    ['Développé couché (machine)', 'pecs triceps- epaules-'],
+    ['Développé incliné', 'pecs epaules- triceps-'],
+    ['Développé incliné (haltères)', 'pecs epaules- triceps-'],
+    ['Développé incliné (machine)', 'pecs epaules- triceps-'],
+    ['Développé décliné', 'pecs triceps-'],
+    ['Pec fly (machine)', 'pecs epaules-'],
+    ['Écarté (haltères ou poulie)', 'pecs epaules-'],
+    ['Écarté à la poulie (vis-à-vis)', 'pecs epaules-'],
+    ['Pompes', 'pecs triceps- epaules- abdos-'],
+  ]],
+  ['Dos', [
+    ['Tirage vertical', 'dorsaux biceps- trapezes-'],
+    ['Tirage vertical prise serrée', 'dorsaux biceps-'],
+    ['Tirage horizontal', 'dorsaux trapezes- biceps-'],
+    ['Tractions', 'dorsaux biceps- avantbras-'],
+    ['Tractions assistées (machine)', 'dorsaux biceps-'],
+    ['Rowing (barre ou haltère)', 'dorsaux trapezes- biceps- lombaires-'],
+    ['Rowing (machine)', 'dorsaux trapezes- biceps-'],
+    ['Rowing T-bar', 'dorsaux trapezes- lombaires-'],
+    ['Pull-over (poulie ou haltère)', 'dorsaux pecs-'],
+    ['Soulevé de terre', 'lombaires fessiers ischios dorsaux- trapezes- quadriceps- avantbras-'],
+    ['Extensions lombaires (banc)', 'lombaires fessiers- ischios-'],
+    ['Shrugs (trapèzes)', 'trapezes avantbras-'],
+  ]],
+  ['Épaules', [
+    ['Développé militaire', 'epaules triceps- trapezes-'],
+    ['Développé épaules (haltères)', 'epaules triceps-'],
+    ['Développé épaules (machine)', 'epaules triceps-'],
+    ['Élévations latérales', 'epaules trapezes-'],
+    ['Élévations latérales (poulie ou machine)', 'epaules'],
+    ['Élévations frontales', 'epaules pecs-'],
+    ['Oiseau (arrière d’épaule)', 'epaules trapezes- dorsaux-'],
+    ['Reverse fly (machine)', 'epaules trapezes-'],
+    ['Face pull', 'epaules trapezes-'],
+    ['Rowing menton', 'epaules trapezes biceps-'],
+  ]],
+  ['Bras', [
+    ['Curl biceps (barre)', 'biceps avantbras-'],
+    ['Curl biceps (haltères)', 'biceps avantbras-'],
+    ['Curl biceps (machine)', 'biceps'],
+    ['Curl à la poulie', 'biceps avantbras-'],
+    ['Curl pupitre', 'biceps'],
+    ['Curl marteau', 'biceps avantbras'],
+    ['Tirage triceps (poulie)', 'triceps'],
+    ['Extension triceps au-dessus de la tête', 'triceps'],
+    ['Barre au front', 'triceps'],
+    ['Kickback triceps', 'triceps'],
+    ['Dips', 'triceps pecs- epaules-'],
+    ['Dips (machine)', 'triceps pecs-'],
+    ['Curl poignets (avant-bras)', 'avantbras'],
+  ]],
+  ['Jambes', [
+    ['Squat', 'quadriceps fessiers ischios- lombaires- adducteurs-'],
+    ['Front squat', 'quadriceps fessiers- abdos-'],
+    ['Squat (Smith machine)', 'quadriceps fessiers'],
+    ['Goblet squat', 'quadriceps fessiers abdos-'],
+    ['Hack squat (machine)', 'quadriceps fessiers-'],
+    ['Presse à cuisses (assise)', 'quadriceps fessiers ischios-'],
+    ['Presse à cuisses (verticale)', 'quadriceps fessiers ischios-'],
+    ['Presse à cuisses (45°)', 'quadriceps fessiers ischios-'],
+    ['Leg extension', 'quadriceps'],
+    ['Leg curl', 'ischios mollets-'],
+    ['Leg curl (assis)', 'ischios'],
+    ['Soulevé de terre jambes tendues', 'ischios fessiers lombaires-'],
+    ['Fentes', 'quadriceps fessiers ischios- adducteurs-'],
+    ['Fentes bulgares', 'quadriceps fessiers adducteurs-'],
+    ['Step-up', 'quadriceps fessiers'],
+    ['Hip thrust', 'fessiers ischios-'],
+    ['Kickback fessier (poulie ou machine)', 'fessiers ischios-'],
+    ['Abducteurs (machine)', 'fessiers'],
+    ['Adducteurs (machine)', 'adducteurs'],
+    ['Mollets', 'mollets'],
+    ['Mollets assis (machine)', 'mollets'],
+  ]],
+  ['Abdos et gainage', [
+    ['Gainage (planche)', 'abdos obliques- epaules-'],
+    ['Gainage latéral', 'obliques abdos-'],
+    ['Crunch', 'abdos'],
+    ['Crunch (machine)', 'abdos'],
+    ['Crunch à la poulie', 'abdos'],
+    ['Crunch oblique', 'obliques abdos-'],
+    ['Relevé de jambes', 'abdos'],
+    ['Russian twist', 'obliques abdos-'],
+    ['Roue abdominale', 'abdos dorsaux- epaules-'],
+    ['Mountain climbers', 'abdos quadriceps- epaules-'],
+    ['Hollow body', 'abdos'],
+    ['Dead bug', 'abdos lombaires-'],
+    ['Rotation du buste (machine ou poulie)', 'obliques'],
+  ]],
 ];
-const MUSCU_GROUP_OF = {};
-MUSCU_GROUPS.forEach(([g, list]) => list.forEach(n => { MUSCU_GROUP_OF[n] = g; }));
+// Muscles par défaut d'un groupe (exercice libre rangé dans un groupe)
+const MUSCU_GROUP_TARGETS = { 'Pectoraux': 'pecs', 'Dos': 'dorsaux', 'Épaules': 'epaules', 'Bras': 'biceps triceps', 'Jambes': 'quadriceps fessiers ischios', 'Abdos et gainage': 'abdos' };
+const parseTargets = (str) => {
+  const t = {};
+  str.split(' ').filter(Boolean).forEach(k => { t[k.replace(/-$/, '')] = /-$/.test(k) ? 0.5 : 1; });
+  return t;
+};
+const MUSCU_GROUPS = MUSCU_CATALOG.map(([g, list]) => [g, list.map(e => e[0])]);
+const MUSCU_GROUP_OF = {}, MUSCU_TARGETS = {};
+MUSCU_CATALOG.forEach(([g, list]) => list.forEach(([n, m]) => { MUSCU_GROUP_OF[n] = g; MUSCU_TARGETS[n] = parseTargets(m); }));
+// Muscles travaillés par un exercice de séance ({ muscle: 1 ou 0,5 }), {} si inconnu
+function muscuTargets(ex) {
+  if (MUSCU_TARGETS[ex.name]) return MUSCU_TARGETS[ex.name];
+  return ex.group && MUSCU_GROUP_TARGETS[ex.group] ? parseTargets(MUSCU_GROUP_TARGETS[ex.group]) : {};
+}
+// Exercices libres déjà utilisés (pas dans le catalogue), avec leur groupe, du plus récent au plus ancien
+function muscuCustomExercises(data = getData()) {
+  const seen = new Map();
+  (data.sessions || []).filter(s => s.sport === 'muscu').sort((a, b) => b.date.localeCompare(a.date))
+    .forEach(s => (s.exercises || []).forEach(e => { if (!MUSCU_GROUP_OF[e.name] && !seen.has(e.name)) seen.set(e.name, e.group || null); }));
+  return [...seen].map(([name, group]) => ({ name, group }));
+}
 function hasMuscu(data = getData()) { return (data.sessions || []).some(s => s.sport === 'muscu'); }
 // Sports à afficher : les 3 sports, plus la musculation si l'utilisateur en fait
 function sportsShown(data = getData()) { return hasMuscu(data) ? ['nat', 'velo', 'run', 'muscu'] : ['nat', 'velo', 'run']; }
@@ -2368,6 +2526,163 @@ function lastMuscuSession(beforeId) {
 // Tonnage d'une séance (séries × répétitions × kg), exercices sans charge exclus
 function muscuVolume(s) {
   return Math.round((s.exercises || []).reduce((a, e) => a + (e.sets || 0) * (e.reps || 0) * (e.kg || 0), 0));
+}
+
+// Exercices tenus (gainage…) : « reps » contient des secondes
+const MUSCU_HOLD = /^(Gainage|Hollow body)/;
+function isHoldExercise(name) { return MUSCU_HOLD.test(name || ''); }
+// Charge maximale estimée sur 1 répétition (formule d'Epley), seulement jusqu'à 12 répétitions
+function oneRepMax(kg, reps) {
+  if (!(kg > 0) || !(reps > 0) || reps > 12) return null;
+  return reps === 1 ? kg : Math.round(kg * (1 + reps / 30) * 2) / 2;
+}
+// Une ligne par séance où l'exercice a été fait (du plus ancien au plus récent) :
+// charge max (et répétitions à cette charge), 1RM estimé, répétitions max, tonnage
+function muscuExerciseHistory(name, { from, to } = {}) {
+  return getSessions({ sport: 'muscu', from, to }).slice().reverse().map(s => {
+    const rows = (s.exercises || []).filter(e => e.name === name);
+    if (!rows.length) return null;
+    const h = { date: s.date, id: s.id, kg: null, reps: null, orm: null, maxReps: null, volume: 0, sets: 0 };
+    rows.forEach(e => {
+      if (e.kg && (h.kg == null || e.kg > h.kg || (e.kg === h.kg && (e.reps || 0) > (h.reps || 0)))) { h.kg = e.kg; h.reps = e.reps || null; }
+      const o = oneRepMax(e.kg, e.reps);
+      if (o && (h.orm == null || o > h.orm)) h.orm = o;
+      if (e.reps && (h.maxReps == null || e.reps > h.maxReps)) h.maxReps = e.reps;
+      h.volume += (e.sets || 0) * (e.reps || 0) * (e.kg || 0);
+      h.sets += e.sets || 1;
+    });
+    h.volume = Math.round(h.volume);
+    return h;
+  }).filter(Boolean);
+}
+// Records par exercice, calculés à partir des séances (rien n'est enregistré).
+// Triés du plus pratiqué au moins pratiqué.
+function muscuRecords({ from, to } = {}) {
+  const names = new Map();
+  getSessions({ sport: 'muscu', from, to }).forEach(s => (s.exercises || []).forEach(e => {
+    if (!names.has(e.name)) names.set(e.name, e.group || MUSCU_GROUP_OF[e.name] || null);
+  }));
+  return [...names].map(([name, group]) => {
+    const hist = muscuExerciseHistory(name, { from, to });
+    const best = (key) => hist.reduce((b, h) => (h[key] != null && (!b || h[key] > b[key]) ? h : b), null);
+    const kg = best('kg'), orm = best('orm'), reps = best('maxReps'), vol = best('volume');
+    return {
+      name, group, hold: isHoldExercise(name), sessions: hist.length, last: hist.length ? hist[hist.length - 1].date : null,
+      maxKg: kg ? { kg: kg.kg, reps: kg.reps, date: kg.date } : null,
+      orm: orm ? { value: orm.orm, date: orm.date } : null,
+      maxReps: reps ? { reps: reps.maxReps, date: reps.date } : null,
+      volume: vol && vol.volume ? { value: vol.volume, date: vol.date } : null,
+    };
+  }).sort((a, b) => b.sessions - a.sessions || (b.last || '').localeCompare(a.last || ''));
+}
+// Travail par muscle sur une période, pour la carte du corps.
+// mode 'sets' : séries (muscle secondaire = moitié) ; 'reps' : séries × répétitions
+// (exercice tenu : 1 répétition pour 3 s) ; 'kg' : tonnage, exercices avec charge seulement.
+const MUSCU_LOAD_MODES = { sets: 'séries', reps: 'répétitions', kg: 'kg soulevés' };
+function muscuMuscleLoad({ from, to, mode = 'sets' } = {}) {
+  const totals = {}, byExercise = {};
+  getSessions({ sport: 'muscu', from, to }).forEach(s => (s.exercises || []).forEach(e => {
+    const sets = e.sets || 1;
+    const reps = isHoldExercise(e.name) ? Math.round((e.reps || 0) / 3) : (e.reps || 0);
+    const base = mode === 'sets' ? sets : mode === 'reps' ? sets * reps : sets * reps * (e.kg || 0);
+    if (!base) return;
+    const t = muscuTargets(e);
+    Object.keys(t).forEach(m => {
+      const v = base * t[m];
+      totals[m] = (totals[m] || 0) + v;
+      (byExercise[m] = byExercise[m] || {})[e.name] = (byExercise[m][e.name] || 0) + v;
+    });
+  }));
+  Object.keys(totals).forEach(m => { totals[m] = Math.round(totals[m] * 10) / 10; });
+  return { totals, byExercise };
+}
+
+// Carte du corps (face et dos) : un tracé par muscle, côté gauche dessiné puis
+// recopié en miroir. Plus le muscle a travaillé, plus le violet est soutenu
+// (5 niveaux, par rapport au muscle le plus travaillé de la période).
+const BODY_FRONT = [
+  ['trapezes', 'M45 27 L35 33.5 L45 32.5 Z'],
+  ['epaules', 'M35.5 33 C27 32.5 22.5 39 23 49 L29.5 48.5 C30.5 42 32.5 38 37 36 Z'],
+  ['pecs', 'M49.4 35.5 L37.5 35.8 C32.8 39.5 31.6 47 33.4 52.6 C38.2 56.8 45 57 49.4 54 Z'],
+  ['biceps', 'M23 50.5 C21 57.5 21 65 22.6 71.5 L28.6 71.5 C29.8 65.5 30.6 58 29.8 49.8 Z'],
+  ['avantbras', 'M22.4 73.5 C19.8 81.5 19.2 91 19.8 99.5 L24.8 99.5 C26.8 91.5 28.6 82 28.8 73.5 Z'],
+  ['obliques', 'M39.6 57.5 C35.6 61.5 34.4 71.5 35.2 81.5 C36.6 87.5 39.2 91.5 42 94 C40.2 82 39.4 70 40.6 57.5 Z'],
+  ['abdos', 'M49.4 57 L41.6 57.6 C40.6 69.5 41.2 81.5 43.4 93.5 L49.4 96 Z'],
+  ['quadriceps', 'M36.2 96 C33.4 110 33.4 126 36 140 L46.2 140 C47.8 126 48.4 112 48.6 101 L42.4 95.6 Z'],
+  ['adducteurs', 'M49.4 99 C46.4 106 46 116 47.2 126 L49.4 122 Z'],
+  ['mollets', 'M36.4 150 C34.2 162 34.8 176 37 187 L44 187 C46 176 46.4 162 45.4 150 Z'],
+];
+const BODY_BACK = [
+  ['trapezes', 'M50 25.5 L37.5 33.6 L44.5 36.4 L50 53 Z'],
+  ['epaules', 'M35.5 33 C27 32.5 22.5 39 23 49 L29.5 48.5 C30.5 42 32.5 38 37 36 Z'],
+  ['dorsaux', 'M49.4 54.5 L44 37.6 L36.4 37.4 C33 46 33.8 56 37.6 65.5 C41.6 71.5 45.6 75 49.4 77.5 Z'],
+  ['lombaires', 'M49.4 78.5 L43.2 75.4 L42.2 91.5 L49.4 91.5 Z'],
+  ['triceps', 'M23 50.5 C21 57.5 21 65 22.6 71.5 L28.6 71.5 C29.8 65.5 30.6 58 29.8 49.8 Z'],
+  ['avantbras', 'M22.4 73.5 C19.8 81.5 19.2 91 19.8 99.5 L24.8 99.5 C26.8 91.5 28.6 82 28.8 73.5 Z'],
+  ['fessiers', 'M49.4 92.6 L38 92.6 C33.2 98.5 33.2 108 37 113 C42 116.4 46.8 114.6 49.4 111 Z'],
+  ['ischios', 'M37 115.6 C35 125 35 134 37 142 L46.2 142 C48 132.5 48.4 122.5 48.4 115.6 Z'],
+  ['mollets', 'M36.2 148 C33 158 33.8 170 36.8 181 L44.2 181 C46.4 170 46.6 158 45.4 148 Z'],
+];
+// Parties sans muscle suivi (tête, cou, mains, genoux, pieds, bassin)
+const BODY_NEUTRAL = 'M50 3 C55.5 3 59 7.5 59 13.5 C59 20 55.5 25 50 25 C44.5 25 41 20 41 13.5 C41 7.5 44.5 3 50 3 Z '
+  + 'M45.5 24 L54.5 24 L55 30 L45 30 Z '
+  + 'M19.6 101 C17.4 104 17.6 109 20.6 111 C23.6 110 25.4 106 24.8 101 Z M80.4 101 C82.6 104 82.4 109 79.4 111 C76.4 110 74.6 106 75.2 101 Z '
+  + 'M36.4 142 L46 142 L45.6 148.5 L36.6 148.5 Z M63.6 142 L54 142 L54.4 148.5 L63.4 148.5 Z '
+  + 'M37 188 L44.4 188 L46 193.5 L35.4 193.5 Z M63 188 L55.6 188 L54 193.5 L64.6 193.5 Z';
+function bodyMapLevel(v, max) { return !v || !max ? 0 : Math.max(1, Math.min(5, Math.ceil(v / max * 5))); }
+function muscuBodyMapSvg(totals = {}, selected = null) {
+  const max = Math.max(0, ...Object.values(totals));
+  const op = [0, 0.22, 0.4, 0.58, 0.78, 1];
+  const fig = (shapes, label, extra) => {
+    const paths = shapes.map(([m, d]) => {
+      const lvl = bodyMapLevel(totals[m], max);
+      const attrs = `data-m="${m}" class="bm-muscle${selected === m ? ' bm-muscle--on' : ''}" style="fill-opacity:${op[lvl]}"`;
+      return `<path d="${d}" class="bm-base"/><path d="${d}" class="bm-base" transform="matrix(-1 0 0 1 100 0)"/>`
+        + `<path d="${d}" ${attrs}><title>${MUSCLES[m]}</title></path><path d="${d}" ${attrs} transform="matrix(-1 0 0 1 100 0)"><title>${MUSCLES[m]}</title></path>`;
+    }).join('');
+    return `<figure class="bm-fig"><svg viewBox="14 0 72 196" role="img" aria-label="${label}"><path d="${BODY_NEUTRAL}" class="bm-neutral"/>${paths}${extra || ''}</svg><figcaption>${label}</figcaption></figure>`;
+  };
+  // Lignes des abdominaux (décor, pas cliquable)
+  const abs = '<path class="bm-line" d="M42 67 L58 67 M42.4 77.5 L57.6 77.5 M43 87 L57 87"/>';
+  return `<div class="bm-figs">${fig(BODY_FRONT, 'Face', abs)}${fig(BODY_BACK, 'Dos')}</div>`;
+}
+
+// Carte du corps complète dans un conteneur : figures, légende, muscle choisi
+// (exercices qui l'ont travaillé) et classement des muscles. Utilisée par Forme
+// et Sports → Musculation. opts = { from, to, mode }.
+function renderBodyMap(el, opts = {}) {
+  if (!el) return;
+  const mode = opts.mode || 'sets';
+  const load = muscuMuscleLoad({ from: opts.from, to: opts.to, mode });
+  const unit = MUSCU_LOAD_MODES[mode];
+  const fmt = v => (Math.round(v * 10) / 10).toLocaleString('fr-FR');
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const ranked = Object.keys(load.totals).sort((a, b) => load.totals[b] - load.totals[a]);
+  if (!el._bmSel || !load.totals[el._bmSel]) el._bmSel = ranked[0] || null;
+  const max = ranked.length ? load.totals[ranked[0]] : 0;
+  const sel = el._bmSel;
+  const detail = sel ? (() => {
+    const ex = Object.entries(load.byExercise[sel] || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    return `<div class="bm-detail"><b>${MUSCLES[sel]}</b> : ${fmt(load.totals[sel])} ${unit}`
+      + `<div class="bm-detail__ex">${ex.map(([n, v]) => esc(n) + ' <span>' + fmt(v) + '</span>').join(' · ')}</div></div>`;
+  })() : '';
+  const rest = Object.keys(MUSCLES).filter(m => !load.totals[m]);
+  const list = ranked.map(m => `<button type="button" class="bm-row${m === sel ? ' bm-row--on' : ''}" data-m="${m}">
+      <span class="bm-row__name">${MUSCLES[m]}</span><span class="bm-row__bar"><i style="width:${Math.max(4, load.totals[m] / max * 100)}%;opacity:${[0, .4, .55, .7, .85, 1][bodyMapLevel(load.totals[m], max)]}"></i></span>
+      <span class="bm-row__val">${fmt(load.totals[m])}</span></button>`).join('');
+  el.innerHTML = ranked.length
+    ? `<div class="bm-layout"><div>${muscuBodyMapSvg(load.totals, sel)}
+        <div class="bm-legend">moins <i style="opacity:.22"></i><i style="opacity:.4"></i><i style="opacity:.58"></i><i style="opacity:.78"></i><i></i> plus</div></div>
+        <div>${detail}<div class="bm-list">${list}</div>
+        ${rest.length ? `<div class="bm-rest">Pas travaillés sur la période : ${rest.map(m => MUSCLES[m].toLowerCase()).join(', ')}</div>` : ''}
+        ${mode === 'kg' ? '<div class="bm-rest">Kg soulevés : séries × répétitions × charge, exercices avec charge seulement.</div>' : ''}</div></div>`
+    : `<div class="bm-empty">${muscuBodyMapSvg({})}<p>Aucun exercice de musculation noté sur cette période${mode === 'kg' ? ' avec une charge' : ''}.</p></div>`;
+  el.onclick = e => {
+    const t = e.target.closest('[data-m]');
+    if (!t) return;
+    el._bmSel = t.dataset.m;
+    renderBodyMap(el, opts);
+  };
 }
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
@@ -2580,6 +2895,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, hasMuscu, sportsShown, lastMuscuSession, muscuVolume,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume,
+  isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   SPORTS, COMP_TYPES,
 };

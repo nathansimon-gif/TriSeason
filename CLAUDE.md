@@ -56,9 +56,16 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
   et `pain` (0-10) sur les séances, voir RGPD ci-dessous ;
   **musculation** : sport `muscu` (violet), `session.exercises = [{name, group, sets, reps, kg}]`
-  (gainage : secondes dans `reps`), catalogue `MUSCU_GROUPS` par groupe de muscles,
+  (gainage : secondes dans `reps`), catalogue `MUSCU_CATALOG` par groupe : `[nom, muscles]`
+  (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un),
+  `muscuTargets(ex)` : muscles d'un exercice (exercice libre : ceux de son groupe),
   `hasMuscu` / `sportsShown` : la musculation n'apparaît dans les filtres, graphiques
-  et le planning que si l'utilisateur a au moins une séance de musculation).
+  et le planning que si l'utilisateur a au moins une séance de musculation ;
+  `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés, rien
+  d'enregistré ; 1RM estimé Epley jusqu'à 12 rép.), `muscuMuscleLoad` + `renderBodyMap`
+  (carte du corps SVG de Forme et Sports → Muscu) ;
+  **nouveautés** : `NEWS` / `showNews`, message une fois par compte (`data.news_seen`),
+  seulement pour les comptes qui avaient déjà des séances).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
   plus, enregistrés en une fois avec `TS.saveSessions`) et de l'**archive
   Strava** (`readStravaArchive` : lit seulement `activities.csv` dans le .zip,
@@ -84,6 +91,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   « Chargement de tes données… ») ; `html.ts-loading-data` = cartes « en cours
   de chargement » quand il n'y a pas de copie locale et que le compte est relu ;
   `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
+- **Téléphone** : champs de saisie à 16 px sur écran tactile (sinon l'iPhone zoome
+  tout seul), `body { overflow-x: clip }` et fenêtres `.modal` en `overflow-x: hidden` :
+  ne pas réintroduire de défilement horizontal (seul le tableau des séances défile).
 - `style.css` : design system (variables sur `:root`, et `:root[data-theme="light"]`
   pour le thème clair).
 - `theme.js` : chargé **en premier** dans le `<head>` de chaque page. Thème clair /
@@ -189,7 +199,8 @@ le dire dans `confidentialite.html` et sans accord explicite.
 
 - **Copie locale liée à un compte** : `triseason_owner` dans le localStorage.
   `claimLocalData` efface la copie si un autre compte se connecte ;
-  `TS_logout` (auth-guard.js) efface les données locales à la déconnexion.
+  `TS_logout` (auth-guard.js) efface les données locales à la déconnexion et pose
+  `window.TS_LOGGED_OUT` : `saveData` n'écrit plus rien ensuite (minuteries en retard).
 - **Consentement** : `users/{uid}.consent = {healthData, version, at}`. Sans
   consentement à jour, `showConsentGate` bloque l'appli. Augmenter
   `CONSENT_VERSION` (app.js) redemande l'accord à tous, par ex. après une

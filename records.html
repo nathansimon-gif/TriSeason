@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261103a"></script>
+  <script src="theme.js?v=20261105a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261103a"></script>
+  <script src="auth-guard.js?v=20261105a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Records</title>
-  <link rel="stylesheet" href="style.css?v=20261103a">
+  <link rel="stylesheet" href="style.css?v=20261105a">
   <style>
     .record-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -52,6 +52,9 @@
     .record-section--velo .record-section__title::before { background: var(--velo); }
     .record-section--run  .record-section__title::before { background: var(--run); }
     .record-section--tri  .record-section__title::before { background: var(--accent); }
+    .record-section--muscu .record-section__title::before { background: var(--muscu); }
+    .record-card--muscu::before { background: var(--muscu); }
+    .record-card--muscu .record-val { font-size: 22px; }
     .record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     .progress-label { font-size: 11px; color: var(--text-2); margin-bottom: 3px; }
     .edit-overlay {
@@ -89,7 +92,7 @@
   <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:20px">
     <div>
       <h1>Records personnels</h1>
-      <p>Vos meilleures performances — natation, vélo, course et triathlon</p>
+      <p>Vos meilleures performances — natation, vélo, course, triathlon et musculation</p>
     </div>
     <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison : affiche les records réalisés cette année-là"></select>
   </div>
@@ -128,6 +131,16 @@
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'tri')" style="font-size:12px">+ Ajouter</button>
     </div>
     <div class="record-grid" id="records-tri"></div>
+  </div>
+
+  <!-- Musculation : records calculés à partir des séances (seulement si on en fait) -->
+  <div class="record-section record-section--muscu" id="muscuRecordSection" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="record-section__title" style="margin-bottom:0">Musculation</div>
+      <a class="btn btn--ghost btn--sm" href="sport.html?sport=muscu" style="font-size:12px">Progression et tous les exercices</a>
+    </div>
+    <div style="font-size:12px;color:var(--text-3);margin:-4px 0 10px">Calculés tout seuls à partir de tes séances : charge la plus lourde de chaque exercice (ou le plus de répétitions sans charge).</div>
+    <div class="record-grid" id="records-muscu"></div>
   </div>
 
   <!-- Progression card -->
@@ -210,7 +223,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261103a"></script>
+<script src="app.js?v=20261105a"></script>
 <script>
 let editRecordId = null;
 
@@ -285,7 +298,34 @@ function saveRecordData(records) {
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAllRecords() {
   ['nat','velo','run','tri'].forEach(renderSportRecords);
+  renderMuscuRecords();
   renderTimeline();
+}
+
+// Musculation : les 8 exercices les plus pratiqués (filtre de saison respecté)
+function renderMuscuRecords() {
+  const section = document.getElementById('muscuRecordSection');
+  section.style.display = TS.hasMuscu() ? '' : 'none';
+  if (!TS.hasMuscu()) return;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const range = TS.getSeasonRange(TS.getSeasonFilter()) || {};
+  const recs = TS.muscuRecords(range).filter(r => r.maxKg || r.maxReps).slice(0, 8);
+  const el = document.getElementById('records-muscu');
+  if (!recs.length) {
+    el.innerHTML = '<div style="grid-column:1/-1"><div class="empty" style="padding:24px"><div class="empty__text">Aucun exercice noté sur cette saison</div></div></div>';
+    return;
+  }
+  el.innerHTML = recs.map(r => {
+    const best = r.maxKg || r.maxReps;
+    const val = r.maxKg ? r.maxKg.kg.toLocaleString('fr-FR') + ' kg' : r.maxReps.reps + (r.hold ? ' s' : ' rép.');
+    const sub = r.maxKg && r.maxKg.reps ? r.maxKg.reps + ' répétition' + (r.maxKg.reps > 1 ? 's' : '') + (r.orm && r.orm.value !== r.maxKg.kg ? ' · 1RM estimé ' + r.orm.value.toLocaleString('fr-FR') + ' kg' : '') : '';
+    return `<a class="record-card record-card--muscu" href="sport.html?sport=muscu&exo=${encodeURIComponent(r.name)}" style="display:block;color:inherit">
+      <div class="record-label">${esc(r.name)}</div>
+      <div class="record-val" style="color:var(--muscu)">${val}</div>
+      ${sub ? `<div style="font-size:12px;color:var(--text-2);margin-top:4px">${sub}</div>` : ''}
+      <div class="record-meta">${new Date(best.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+    </a>`;
+  }).join('');
 }
 
 function renderSportRecords(sport) {

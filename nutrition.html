@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261103a"></script>
+  <script src="theme.js?v=20261105a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261103a"></script>
+  <script src="auth-guard.js?v=20261105a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261103a">
+  <link rel="stylesheet" href="style.css?v=20261105a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -49,7 +49,7 @@
     .off-search .form-input { flex:1; min-width:0; }
     .off-hint { font-size:11px; color:var(--text-3); margin-top:5px; line-height:1.5; }
     .off-status { font-size:12px; color:var(--text-2); margin-top:6px; }
-    .off-list { margin-top:6px; max-height:230px; overflow-y:auto; }
+    .off-list { margin-top:6px; max-height:230px; overflow-y:auto; overflow-x:hidden; }
     .off-item { display:flex; justify-content:space-between; gap:10px; width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:6px 10px; margin-bottom:4px; color:var(--text); font-size:12px; cursor:pointer; }
     .off-item:hover, .off-item.sel { border-color:var(--accent); }
     .off-item__brand { color:var(--text-2); }
@@ -60,7 +60,7 @@
     .scan-box video { width:100%; height:100%; object-fit:cover; display:block; }
     .scan-box::after { content:''; position:absolute; left:12%; right:12%; top:42%; height:16%; border:2px solid var(--accent); border-radius:6px; }
     .quick-meals__title { font-size:11px; color:var(--text-2); margin-bottom:5px; }
-    .quick-meals__list { max-height:260px; overflow-y:auto; }
+    .quick-meals__list { max-height:260px; overflow-y:auto; overflow-x:hidden; }
     .quick-meal { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:6px 10px; margin-bottom:4px; color:var(--text); font-size:12px; cursor:pointer; }
     .quick-meals__more { background:none; border:none; padding:2px 0; font-size:12px; color:var(--accent); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
     .quick-meal:hover { border-color:var(--accent); }
@@ -465,7 +465,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261103a"></script>
+<script src="app.js?v=20261105a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {

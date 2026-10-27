@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261103a"></script>
+  <script src="theme.js?v=20261105a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261103a"></script>
+  <script src="auth-guard.js?v=20261105a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261103a">
+  <link rel="stylesheet" href="style.css?v=20261105a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -66,8 +66,48 @@
     <button class="sport-tab" onclick="selectSport('nat')"  id="tab-nat"> <span class="sport-dot sport-dot--nat"></span><span class="tab-label">Natation</span></button>
     <button class="sport-tab" onclick="selectSport('velo')" id="tab-velo"> <span class="sport-dot sport-dot--velo"></span><span class="tab-label">Vélo</span></button>
     <button class="sport-tab" onclick="selectSport('run')"  id="tab-run"> <span class="sport-dot sport-dot--run"></span><span class="tab-label">Course</span></button>
+    <button class="sport-tab" onclick="selectSport('muscu')" id="tab-muscu" style="display:none"> <span class="sport-dot sport-dot--muscu"></span><span class="tab-label">Muscu</span></button>
   </div>
 
+  <!-- ── Musculation : vue à part (pas de distance ni d'allure) ── -->
+  <div id="muscuView" style="display:none">
+    <div class="kpi-grid" id="muscuKPIs" style="margin-bottom:16px"></div>
+    <div class="grid-2" style="margin-bottom:12px">
+      <div class="card">
+        <div class="card__title">Séances et kg soulevés par semaine
+          <span class="tip-icon" data-tip="Kg soulevés = séries × répétitions × charge, pour les exercices avec charge.">?</span></div>
+        <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuWeeks"></canvas></div>
+      </div>
+      <div class="card" id="muscuProgCard">
+        <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span>Progression</span>
+          <span class="tip-icon" data-tip="Charge maximale de chaque séance pour cet exercice, et 1RM estimé : la charge que tu pourrais soulever une seule fois, calculée avec la formule d'Epley à partir de tes séries de 12 répétitions ou moins. C'est une estimation, pas un test.">?</span>
+          <select class="form-select" id="muscuExo" onchange="renderMuscuProgress()" style="width:auto;max-width:100%;margin-left:auto" aria-label="Exercice"></select>
+        </div>
+        <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuProg"></canvas></div>
+        <div id="muscuProgNote" style="font-size:12px;color:var(--text-2);margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card__title">Records par exercice
+        <span class="tip-icon" data-tip="Calculés tout seuls à partir de tes séances (avec le filtre de saison). Touche un exercice pour voir sa progression.">?</span></div>
+      <div id="muscuRecords" class="mr-list"></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>Zones travaillées</span>
+        <span class="tip-icon" data-tip="Sur la saison choisie, ou les 12 derniers mois avec « Toutes les saisons ». Un muscle secondaire compte pour moitié. Aussi dans Forme, sur 7 jours à 12 mois.">?</span>
+        <select class="form-select" id="muscuMapMode" onchange="renderMuscuMap()" style="width:auto;margin-left:auto" aria-label="Compter">
+          <option value="sets">Séries</option>
+          <option value="reps">Répétitions</option>
+          <option value="kg">Kg soulevés</option>
+        </select>
+      </div>
+      <div id="muscuBodyMap"></div>
+    </div>
+  </div>
+
+  <div id="enduranceView">
   <div class="kpi-grid" id="sportKPIs" style="margin-bottom:16px"></div>
 
   <div class="grid-2" style="margin-bottom:12px">
@@ -147,6 +187,7 @@
       <div id="monthlyProgress"></div>
     </div>
   </div>
+  </div><!-- /enduranceView -->
 
 </div></div>
 
@@ -164,7 +205,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261103a"></script>
+<script src="app.js?v=20261105a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -185,7 +226,8 @@ function makeChart(id, config) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const sp = new URLSearchParams(window.location.search).get('sport');
-  if (sp && ['nat','velo','run'].includes(sp)) currentSport = sp;
+  if (sp && (['nat','velo','run'].includes(sp) || (sp === 'muscu' && TS.hasMuscu()))) currentSport = sp;
+  muscuExoWanted = new URLSearchParams(window.location.search).get('exo');
   populateSeasonFilter();
   selectSport(currentSport);
   TS.initTooltips();
@@ -196,7 +238,7 @@ window.addEventListener('triseason:update', () => renderSport());
 function selectSport(sport) {
   currentSport = sport;
   document.querySelectorAll('.sport-tab').forEach(t =>
-    t.classList.remove('active--nat','active--velo','active--run'));
+    t.classList.remove('active--nat','active--velo','active--run','active--muscu'));
   document.getElementById(`tab-${sport}`).classList.add(`active--${sport}`);
   renderSport();
 }
@@ -226,6 +268,12 @@ function getWeeksInYear(year) {
 }
 
 function renderSport() {
+  // Onglet Musculation seulement si au moins une séance de musculation existe
+  document.getElementById('tab-muscu').style.display = TS.hasMuscu() ? '' : 'none';
+  if (currentSport === 'muscu' && !TS.hasMuscu()) { selectSport('nat'); return; }
+  document.getElementById('muscuView').style.display = currentSport === 'muscu' ? '' : 'none';
+  document.getElementById('enduranceView').style.display = currentSport === 'muscu' ? 'none' : '';
+  if (currentSport === 'muscu') { renderMuscuView(); return; }
   const s = currentSport;
   const sp = TS.SPORTS[s];
   const seasonValue = TS.getSeasonFilter();
@@ -242,6 +290,109 @@ function renderSport() {
   renderMonthlyProgress(s, seasonRange);
   renderZones(s, seasonRange);
   renderGoals(s); // objectifs : toujours la semaine/mois/année EN COURS, indépendamment du filtre
+}
+
+// ── Musculation ───────────────────────────────────────────────────────────────
+let muscuExoWanted = null;
+const escHtml = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MUSCU_COLOR = '#9256fb';
+function muscuRange() {
+  const r = TS.getSeasonRange(TS.getSeasonFilter());
+  if (r) return r;
+  const t = new Date();
+  return { from: TS.localDateStr(new Date(t.getFullYear() - 1, t.getMonth(), t.getDate() + 1)), to: TS.localDateStr(t), rolling: true };
+}
+const fmtKg = v => v >= 10000 ? (Math.round(v / 100) / 10).toLocaleString('fr-FR') + ' t' : Math.round(v).toLocaleString('fr-FR') + ' kg';
+const fmtDay = d => TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+function renderMuscuView() {
+  const range = muscuRange();
+  const sessions = TS.getSessions({ sport: 'muscu', from: range.from, to: range.to });
+  const hours = sessions.reduce((a, s) => a + (s.duration || 0), 0);
+  const kg = sessions.reduce((a, s) => a + TS.muscuVolume(s), 0);
+  const exos = new Set([].concat(...sessions.map(s => (s.exercises || []).map(e => e.name))));
+  const label = range.rolling ? '12 derniers mois' : 'saison ' + TS.getSeasonFilter();
+  const kpi = (v, l) => `<div class="kpi kpi--muscu"><div class="kpi__label">${l}</div><div><span class="kpi__value">${v}</span></div></div>`;
+  document.getElementById('muscuKPIs').innerHTML = kpi(sessions.length, 'Séances · ' + label) + kpi(TS.formatHours(hours), 'Heures')
+    + kpi(kg ? fmtKg(kg) : '—', 'Kg soulevés') + kpi(exos.size, 'Exercices différents');
+  renderMuscuWeeks(range);
+  renderMuscuRecords(range);
+  renderMuscuProgress();
+  renderMuscuMap();
+}
+function renderMuscuWeeks(range) {
+  const weeks = TS.getSeasonRange(TS.getSeasonFilter()) ? getWeeksInYear(parseInt(TS.getSeasonFilter(), 10)) : TS.getLast52Weeks();
+  const all = TS.getSessions({ sport: 'muscu', from: range.from, to: range.to });
+  const byWeek = {};
+  all.forEach(s => { const w = TS.getISOWeek(TS.parseLocalDate(s.date)); (byWeek[w] = byWeek[w] || []).push(s); });
+  const first = weeks.findIndex(w => byWeek[w]);
+  const shown = weeks.slice(Math.max(0, Math.min(first, weeks.length - 12)));
+  makeChart('chartMuscuWeeks', {
+    data: { labels: shown.map(w => 'S' + w.split('-W')[1]), datasets: [
+      { type: 'bar', label: 'Kg soulevés', data: shown.map(w => (byWeek[w] || []).reduce((a, s) => a + TS.muscuVolume(s), 0)), backgroundColor: 'rgba(146,86,251,.55)', yAxisID: 'y', order: 2 },
+      { type: 'line', label: 'Séances', data: shown.map(w => (byWeek[w] || []).length), borderColor: '#a3abb9', backgroundColor: '#a3abb9', pointRadius: 2, yAxisID: 'y1', order: 1 },
+    ] },
+    options: { plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 10 } }, tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'y' ? fmtKg(c.raw) : c.raw + ' séance' + (c.raw > 1 ? 's' : '') } } },
+      scales: { x: { ticks: { color: '#6b7383', maxRotation: 0, autoSkip: true }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: '#6b7383', callback: v => v >= 1000 ? (v / 1000).toLocaleString('fr-FR') + ' t' : v + ' kg' }, grid: { color: 'rgba(255,255,255,.06)' } },
+        y1: { beginAtZero: true, position: 'right', ticks: { color: '#6b7383', stepSize: 1 }, grid: { display: false } } } },
+  });
+}
+function renderMuscuRecords(range) {
+  const recs = TS.muscuRecords(range);
+  const sel = document.getElementById('muscuExo');
+  const keep = muscuExoWanted || sel.value;
+  sel.innerHTML = recs.map(r => `<option>${escHtml(r.name)}</option>`).join('');
+  if (keep && recs.some(r => r.name === keep)) sel.value = keep;
+  muscuExoWanted = null;
+  const el = document.getElementById('muscuRecords');
+  if (!recs.length) { el.innerHTML = '<div class="empty" style="padding:20px"><div class="empty__text">Aucun exercice noté sur cette période.</div></div>'; return; }
+  el.innerHTML = recs.map(r => {
+    const chips = [];
+    if (r.maxKg) chips.push(`<span>Charge max <b>${r.maxKg.kg.toLocaleString('fr-FR')} kg</b>${r.maxKg.reps ? ' × ' + r.maxKg.reps : ''}</span>`);
+    if (r.orm && r.maxKg && r.orm.value !== r.maxKg.kg) chips.push(`<span>1RM estimé <b>${r.orm.value.toLocaleString('fr-FR')} kg</b></span>`);
+    if (r.maxReps && !r.maxKg) chips.push(`<span>${r.hold ? 'Durée max' : 'Rép. max'} <b>${r.maxReps.reps}${r.hold ? ' s' : ''}</b></span>`);
+    if (r.volume) chips.push(`<span>Meilleure séance <b>${fmtKg(r.volume.value)}</b></span>`);
+    const best = r.maxKg || r.maxReps;
+    return `<button type="button" class="mr-row${r.name === sel.value ? ' mr-row--on' : ''}" data-exo="${escHtml(r.name)}">
+      <span class="mr-row__name">${escHtml(r.name)}<small>${r.group ? escHtml(r.group) + ' · ' : ''}${r.sessions} séance${r.sessions > 1 ? 's' : ''}${best ? ' · record le ' + fmtDay(best.date) : ''}</small></span>
+      <span class="mr-row__chips">${chips.join('')}</span></button>`;
+  }).join('');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#muscuRecords [data-exo]');
+  if (!b) return;
+  document.getElementById('muscuExo').value = b.dataset.exo;
+  document.querySelectorAll('#muscuRecords .mr-row').forEach(r => r.classList.toggle('mr-row--on', r === b));
+  renderMuscuProgress();
+  document.getElementById('muscuProgCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+function renderMuscuProgress() {
+  const name = document.getElementById('muscuExo').value;
+  const note = document.getElementById('muscuProgNote');
+  if (!name) { makeChart('chartMuscuProg', { type: 'line', data: { labels: [], datasets: [] } }); note.textContent = ''; return; }
+  const range = muscuRange();
+  const hist = TS.muscuExerciseHistory(name, range);
+  const withKg = hist.some(h => h.kg);
+  const hold = TS.isHoldExercise(name);
+  const labels = hist.map(h => TS.parseLocalDate(h.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }));
+  const datasets = withKg ? [
+    { label: 'Charge max (kg)', data: hist.map(h => h.kg), borderColor: MUSCU_COLOR, backgroundColor: MUSCU_COLOR, pointRadius: 3, tension: .25, spanGaps: true },
+    { label: '1RM estimé (kg)', data: hist.map(h => h.orm), borderColor: '#a3abb9', borderDash: [5, 4], pointRadius: 2, tension: .25, spanGaps: true },
+  ] : [{ label: hold ? 'Durée max (s)' : 'Répétitions max', data: hist.map(h => h.maxReps), borderColor: MUSCU_COLOR, backgroundColor: MUSCU_COLOR, pointRadius: 3, tension: .25 }];
+  makeChart('chartMuscuProg', { type: 'line', data: { labels, datasets },
+    options: { plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 10 } },
+        tooltip: { callbacks: { afterLabel: c => { const h = hist[c.dataIndex]; return withKg && c.datasetIndex === 0 && h.reps ? h.kg + ' kg × ' + h.reps + ' rép.' : ''; } } } },
+      scales: { x: { ticks: { color: '#6b7383', maxRotation: 0, autoSkip: true }, grid: { display: false } },
+        y: { ticks: { color: '#6b7383' }, grid: { color: 'rgba(255,255,255,.06)' } } } } });
+  const first = hist.find(h => withKg ? h.kg : h.maxReps), last = [...hist].reverse().find(h => withKg ? h.kg : h.maxReps);
+  if (hist.length < 2 || !first || !last) { note.textContent = hist.length === 1 ? 'Une seule séance pour l’instant : la courbe apparaîtra à la prochaine.' : ''; return; }
+  const a = withKg ? first.kg : first.maxReps, b = withKg ? last.kg : last.maxReps, unit = withKg ? ' kg' : hold ? ' s' : ' rép.';
+  const diff = Math.round((b - a) * 10) / 10;
+  note.innerHTML = `${hist.length} séances, du ${fmtDay(first.date)} au ${fmtDay(last.date)} : ${a.toLocaleString('fr-FR')}${unit} → <b>${b.toLocaleString('fr-FR')}${unit}</b> (${diff > 0 ? '+' : ''}${diff.toLocaleString('fr-FR')}${unit}).`;
+}
+function renderMuscuMap() {
+  const range = muscuRange();
+  TS.renderBodyMap(document.getElementById('muscuBodyMap'), { from: range.from, to: range.to, mode: document.getElementById('muscuMapMode').value });
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────

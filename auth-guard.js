@@ -77,6 +77,7 @@
   // Les données locales sont effacées : sur un appareil partagé, la personne
   // suivante ne doit ni les voir ni pouvoir les récupérer.
   window.TS_logout = function () {
+    window.TS_LOGGED_OUT = true;   // plus aucun enregistrement après ce point (minuteries en attente)
     ['triseason_data', 'triseason_owner', 'triseason_active_day', 'triseason_pending_consent'].forEach(function (k) {
       try { localStorage.removeItem(k); } catch (e) {}
     });
