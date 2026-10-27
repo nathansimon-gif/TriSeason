@@ -40,6 +40,10 @@
   --velo-dim:  rgba(216,121,26,0.14);
   --run:       #dc3d6a;
   --run-dim:   rgba(220,61,106,0.14);
+  /* Musculation : violet choisi pour rester distinct du bleu natation avec les
+     trois daltonismes (écart proche de celui des 3 sports entre eux) */
+  --muscu:     #9256fb;
+  --muscu-dim: rgba(146,86,251,0.16);
   /* Accent de marque : boutons principaux, élément actif, jour courant */
   --accent:    #b9ec4a;
   --accent2:   #cdf56e;
@@ -88,6 +92,8 @@
   --velo-dim:  rgba(189,95,0,0.12);
   --run:       #cb2f63;
   --run-dim:   rgba(203,47,99,0.12);
+  --muscu:     #4b2a85;
+  --muscu-dim: rgba(75,42,133,0.12);
   --accent:    #5a8c00;
   --accent2:   #4f7d00;
   --accent-dim:rgba(90,140,0,0.13);
@@ -265,6 +271,7 @@ input, select, textarea { font-family: var(--font); }
 .sport-tab.active--nat, .sport-tab.active--velo, .sport-tab.active--run { color: var(--text); }
 .sport-tab.active--nat  { background: var(--nat-dim);  border-color: var(--nat);  box-shadow: inset 0 -2px 0 var(--nat); }
 .sport-tab.active--velo { background: var(--velo-dim); border-color: var(--velo); box-shadow: inset 0 -2px 0 var(--velo); }
+.sport-tab.active--muscu { background: var(--muscu-dim); border-color: var(--muscu); box-shadow: inset 0 -2px 0 var(--muscu); }
 .sport-tab.active--run  { background: var(--run-dim);  border-color: var(--run);  box-shadow: inset 0 -2px 0 var(--run); }
 
 /* ── Forms ────────────────────────────────────────────────────────────────── */
@@ -283,6 +290,27 @@ input, select, textarea { font-family: var(--font); }
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .form-input::placeholder { color: var(--text-3); }
+/* Musculation : une ligne par exercice (exercice, séries, rép., kg, retirer) */
+.form-hint { font-size: 11.5px; color: var(--text-3); }
+.muscu-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.muscu-cols, .muscu-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 58px 58px 66px 32px; gap: 6px; align-items: center;
+}
+.muscu-cols { font-size: 11px; color: var(--text-3); padding: 0 2px; }
+.muscu-row .form-input { padding: 8px 6px; text-align: center; }
+.muscu-row .form-select { padding: 8px 6px; border-left: 3px solid var(--muscu); }
+#muscuRows { display: flex; flex-direction: column; gap: 6px; }
+/* Téléphone : le nom de l'exercice sur sa ligne, les chiffres en dessous */
+@media (max-width: 560px) {
+  .muscu-cols, .muscu-row { grid-template-columns: 1fr 1fr 1fr 32px; }
+  .muscu-cols span:first-child { display: none; }
+  .muscu-cols span { text-align: center; }
+  .muscu-row { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .muscu-row .form-select { grid-column: 1 / -1; }
+}
+.muscu-list { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--text-2); }
+.muscu-list li { padding: 2px 0; }
+.muscu-list b { color: var(--text); font-weight: 500; }
 /* Icône calendrier / horloge des champs date et heure : en clair sur le fond sombre */
 input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .85; cursor: pointer; }
 input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
@@ -338,6 +366,8 @@ input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .badge-sport--nat  { background: var(--nat-dim); }
 .badge-sport--velo { background: var(--velo-dim); }
 .badge-sport--run  { background: var(--run-dim); }
+.badge-sport--muscu { background: var(--muscu-dim); }
+.badge-sport--muscu::before { background: var(--muscu); }
 .badge-sport--tri  { background: var(--accent-dim); }
 .badge-sport--nat::before  { background: var(--nat); }
 .badge-sport--velo::before { background: var(--velo); }
@@ -573,6 +603,7 @@ tbody tr:hover td { background: var(--surface2); }
 .sport-dot--nat  { background: var(--nat); }
 .sport-dot--velo { background: var(--velo); }
 .sport-dot--run  { background: var(--run); }
+.sport-dot--muscu { background: var(--muscu); }
 .sport-dot--tri  { background: linear-gradient(90deg, var(--nat) 33%, var(--velo) 33% 66%, var(--run) 66%); width: 12px; }
 .sport-tab .sport-dot { margin-right: 0; }
 

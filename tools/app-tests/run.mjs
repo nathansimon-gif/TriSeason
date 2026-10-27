@@ -1248,6 +1248,69 @@ async function main() {
     assert(r.n === 40, 'séances perdues');
   });
 
+  await test('Musculation : cachée sans séance, exercices enregistrés, « Reprendre la dernière séance », comptée dans la charge', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const before = await v.page.evaluate(() => !!document.querySelector('#filterSport option[value="muscu"]'));
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    const shown = await v.page.evaluate(() => ({ dist: getComputedStyle(document.getElementById('distGroup')).display,
+      ex: getComputedStyle(document.getElementById('muscuGroup')).display, rows: document.querySelectorAll('#muscuRows .muscu-row').length,
+      repeat: getComputedStyle(document.getElementById('muscuRepeatBtn')).display }));
+    await v.page.fill('#s_date', day(-3)); await v.page.fill('#s_dur', '1:00:00'); await v.page.fill('#s_rpe', '7');
+    const row1 = '#muscuRows .muscu-row:nth-child(1) ';
+    await v.page.selectOption(row1 + '[data-k="name"]', 'Squat');
+    await v.page.fill(row1 + '[data-k="sets"]', '4'); await v.page.fill(row1 + '[data-k="reps"]', '8'); await v.page.fill(row1 + '[data-k="kg"]', '80');
+    await v.page.click('text=+ Ajouter un exercice');
+    const row2 = '#muscuRows .muscu-row:nth-child(2) ';
+    await v.page.selectOption(row2 + '[data-k="name"]', 'Gainage (planche)');
+    await v.page.fill(row2 + '[data-k="sets"]', '3'); await v.page.fill(row2 + '[data-k="reps"]', '45');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const saved = await v.page.evaluate(() => {
+      const s = TS.getSessions({ sport: 'muscu' })[0];
+      return { s, vol: TS.muscuVolume(s), filter: !!document.querySelector('#filterSport option[value="muscu"]'),
+        cloud: window.__cloud('testeur').sessions.some(x => x.sport === 'muscu' && x.exercises.length === 2) };
+    });
+    // Nouvelle séance : reprendre la dernière
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRepeatBtn');
+    const repeated = await v.page.evaluate(() => [...document.querySelectorAll('#muscuRows .muscu-row')].map(r => r.querySelector('[data-k="name"]').value + '/' + r.querySelector('[data-k="kg"]').value));
+    await v.page.evaluate(() => closeModal());
+    // Dashboard : jour de la séance, totaux, charge (CTL/ATL)
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);
+    const dash = await v.page.evaluate(() => {
+      const s = TS.getSessions({ sport: 'muscu' })[0];
+      return { html: daySessionHtml(s, null, {}, TS.getData()), week: TS.getWeek(TS.getISOWeek(TS.parseLocalDate(s.date))).muscu.sessions,
+        plan: getComputedStyle(document.querySelector('#pl_sport [data-sport="muscu"]')).display };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!before, 'Musculation dans le filtre sans aucune séance');
+    assert(shown.dist === 'none' && shown.ex !== 'none' && shown.rows === 1 && shown.repeat === 'none', 'formulaire musculation : ' + JSON.stringify(shown));
+    const ex = saved.s && saved.s.exercises;
+    assert(ex && ex.length === 2 && ex[0].name === 'Squat' && ex[0].group === 'Jambes' && ex[0].sets === 4 && ex[0].reps === 8 && ex[0].kg === 80
+      && ex[1].reps === 45 && !('kg' in ex[1]) && !('distance' in saved.s), 'exercices mal enregistrés : ' + JSON.stringify(saved.s));
+    assert(saved.vol === 2560 && saved.filter && saved.cloud, 'tonnage / filtre / cloud : ' + JSON.stringify({ vol: saved.vol, f: saved.filter, c: saved.cloud }));
+    assert(repeated.join() === 'Squat/80,Gainage (planche)/', 'reprise de la dernière séance : ' + repeated.join());
+    assert(/Squat<\/b> 4 × 8 × 80 kg/.test(dash.html) && /Tonnage/.test(dash.html) && dash.week === 1, 'détail du jour : ' + dash.html.slice(0, 300));
+  });
+
+  await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    const r = await v.page.evaluate(() => ({
+      strava: TS.stravaToSession({ id: 9, sport_type: 'WeightTraining', type: 'WeightTraining', name: 'Evening Weight Training', start_date_local: '2026-10-20T18:00:00Z', elapsed_time: 3000, distance: 0 }),
+      walk: TS.stravaToSession({ id: 10, sport_type: 'Walk', start_date_local: '2026-10-20T18:00:00Z', elapsed_time: 3000 }),
+      fit: window.TriImport.classifyFit('training', 'strength_training'), cardio: window.TriImport.classifyFit('training', 'cardio_training'),
+      txt: window.TriImport.classifyText('Séance de musculation'),
+    }));
+    await v.ctx.close();
+    assert(r.strava && r.strava.sport === 'muscu' && !r.strava.notes && !r.strava.distance && Math.round(r.strava.duration * 3600) === 3000, 'Strava : ' + JSON.stringify(r.strava));
+    assert(r.walk === null, 'la marche ne doit pas être importée');
+    assert(r.fit.sport === 'muscu' && r.cardio.skip && r.txt.sport === 'muscu', 'import fichiers : ' + JSON.stringify(r));
+  });
+
   await browser.close();
   server.close();
 

@@ -33,7 +33,7 @@
   // Palette sombre → palette claire (mêmes rôles ; couleurs de sport vérifiées :
   // contraste ≥ 4,4 sur blanc, distinctes avec les trois formes de daltonisme).
   var MAP = {
-    '#2f95e6': '#2273c9', '#d8791a': '#bd5f00', '#dc3d6a': '#cb2f63',
+    '#2f95e6': '#2273c9', '#d8791a': '#bd5f00', '#dc3d6a': '#cb2f63', '#9256fb': '#4b2a85',
     '#34c48b': '#1a8a5f', '#2fb8a6': '#187e74', '#ef5350': '#c9302c', '#f0b941': '#9a6500',
     '#a48be0': '#7a5fc0', '#7d8aa0': '#5b6576', '#a3abb9': '#4a5466', '#6b7383': '#6b7486',
     '#242b36': '#dde2e9', '#151a22': '#ffffff', '#b9ec4a': '#5a8c00', '#cdf56e': '#4f7d00',
