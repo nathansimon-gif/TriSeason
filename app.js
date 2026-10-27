@@ -2349,16 +2349,130 @@ const COMP_TYPES = ['TRI', 'RUN', 'VELO', 'NAT', 'DUATH', 'AQUA'];
 // sports) et session.exercises = [{ name, group, sets, reps, kg }]. Pour un
 // exercice tenu (gainage), reps = secondes. La musculation n'apparaît dans les
 // filtres, graphiques et listes de sports que si au moins une séance existe.
-const MUSCU_GROUPS = [
-  ['Pectoraux', ['Développé couché (barre)', 'Développé couché (haltères)', 'Développé incliné', 'Pompes', 'Écarté (haltères ou poulie)']],
-  ['Dos', ['Tirage vertical', 'Tirage horizontal', 'Tractions', 'Rowing (barre ou haltère)', 'Soulevé de terre']],
-  ['Épaules', ['Développé militaire', 'Élévations latérales', 'Oiseau (arrière d’épaule)']],
-  ['Bras', ['Curl biceps (barre)', 'Curl biceps (haltères)', 'Curl marteau', 'Tirage triceps (poulie)', 'Barre au front', 'Dips']],
-  ['Jambes', ['Squat', 'Presse à cuisses (assise)', 'Presse à cuisses (verticale)', 'Leg extension', 'Leg curl', 'Fentes', 'Hip thrust', 'Mollets']],
-  ['Abdos et gainage', ['Gainage (planche)', 'Gainage latéral', 'Crunch', 'Relevé de jambes', 'Russian twist', 'Roue abdominale']],
+// Catalogue : [nom, muscles travaillés]. Muscles : clés de MUSCLES ; suffixe « - » =
+// muscle secondaire (compte pour moitié sur la carte du corps). Ne pas renommer un
+// exercice existant (les séances gardent le nom) : en ajouter un nouveau.
+const MUSCLES = {
+  pecs: 'Pectoraux', epaules: 'Épaules', biceps: 'Biceps', triceps: 'Triceps', avantbras: 'Avant-bras',
+  abdos: 'Abdominaux', obliques: 'Obliques', dorsaux: 'Dorsaux', trapezes: 'Trapèzes', lombaires: 'Lombaires',
+  fessiers: 'Fessiers', quadriceps: 'Quadriceps', ischios: 'Ischio-jambiers', adducteurs: 'Adducteurs', mollets: 'Mollets',
+};
+const MUSCU_CATALOG = [
+  ['Pectoraux', [
+    ['Développé couché (barre)', 'pecs triceps- epaules-'],
+    ['Développé couché (haltères)', 'pecs triceps- epaules-'],
+    ['Développé couché (machine)', 'pecs triceps- epaules-'],
+    ['Développé incliné', 'pecs epaules- triceps-'],
+    ['Développé incliné (haltères)', 'pecs epaules- triceps-'],
+    ['Développé incliné (machine)', 'pecs epaules- triceps-'],
+    ['Développé décliné', 'pecs triceps-'],
+    ['Pec fly (machine)', 'pecs epaules-'],
+    ['Écarté (haltères ou poulie)', 'pecs epaules-'],
+    ['Écarté à la poulie (vis-à-vis)', 'pecs epaules-'],
+    ['Pompes', 'pecs triceps- epaules- abdos-'],
+  ]],
+  ['Dos', [
+    ['Tirage vertical', 'dorsaux biceps- trapezes-'],
+    ['Tirage vertical prise serrée', 'dorsaux biceps-'],
+    ['Tirage horizontal', 'dorsaux trapezes- biceps-'],
+    ['Tractions', 'dorsaux biceps- avantbras-'],
+    ['Tractions assistées (machine)', 'dorsaux biceps-'],
+    ['Rowing (barre ou haltère)', 'dorsaux trapezes- biceps- lombaires-'],
+    ['Rowing (machine)', 'dorsaux trapezes- biceps-'],
+    ['Rowing T-bar', 'dorsaux trapezes- lombaires-'],
+    ['Pull-over (poulie ou haltère)', 'dorsaux pecs-'],
+    ['Soulevé de terre', 'lombaires fessiers ischios dorsaux- trapezes- quadriceps- avantbras-'],
+    ['Extensions lombaires (banc)', 'lombaires fessiers- ischios-'],
+    ['Shrugs (trapèzes)', 'trapezes avantbras-'],
+  ]],
+  ['Épaules', [
+    ['Développé militaire', 'epaules triceps- trapezes-'],
+    ['Développé épaules (haltères)', 'epaules triceps-'],
+    ['Développé épaules (machine)', 'epaules triceps-'],
+    ['Élévations latérales', 'epaules trapezes-'],
+    ['Élévations latérales (poulie ou machine)', 'epaules'],
+    ['Élévations frontales', 'epaules pecs-'],
+    ['Oiseau (arrière d’épaule)', 'epaules trapezes- dorsaux-'],
+    ['Reverse fly (machine)', 'epaules trapezes-'],
+    ['Face pull', 'epaules trapezes-'],
+    ['Rowing menton', 'epaules trapezes biceps-'],
+  ]],
+  ['Bras', [
+    ['Curl biceps (barre)', 'biceps avantbras-'],
+    ['Curl biceps (haltères)', 'biceps avantbras-'],
+    ['Curl biceps (machine)', 'biceps'],
+    ['Curl à la poulie', 'biceps avantbras-'],
+    ['Curl pupitre', 'biceps'],
+    ['Curl marteau', 'biceps avantbras'],
+    ['Tirage triceps (poulie)', 'triceps'],
+    ['Extension triceps au-dessus de la tête', 'triceps'],
+    ['Barre au front', 'triceps'],
+    ['Kickback triceps', 'triceps'],
+    ['Dips', 'triceps pecs- epaules-'],
+    ['Dips (machine)', 'triceps pecs-'],
+    ['Curl poignets (avant-bras)', 'avantbras'],
+  ]],
+  ['Jambes', [
+    ['Squat', 'quadriceps fessiers ischios- lombaires- adducteurs-'],
+    ['Front squat', 'quadriceps fessiers- abdos-'],
+    ['Squat (Smith machine)', 'quadriceps fessiers'],
+    ['Goblet squat', 'quadriceps fessiers abdos-'],
+    ['Hack squat (machine)', 'quadriceps fessiers-'],
+    ['Presse à cuisses (assise)', 'quadriceps fessiers ischios-'],
+    ['Presse à cuisses (verticale)', 'quadriceps fessiers ischios-'],
+    ['Presse à cuisses (45°)', 'quadriceps fessiers ischios-'],
+    ['Leg extension', 'quadriceps'],
+    ['Leg curl', 'ischios mollets-'],
+    ['Leg curl (assis)', 'ischios'],
+    ['Soulevé de terre jambes tendues', 'ischios fessiers lombaires-'],
+    ['Fentes', 'quadriceps fessiers ischios- adducteurs-'],
+    ['Fentes bulgares', 'quadriceps fessiers adducteurs-'],
+    ['Step-up', 'quadriceps fessiers'],
+    ['Hip thrust', 'fessiers ischios-'],
+    ['Kickback fessier (poulie ou machine)', 'fessiers ischios-'],
+    ['Abducteurs (machine)', 'fessiers'],
+    ['Adducteurs (machine)', 'adducteurs'],
+    ['Mollets', 'mollets'],
+    ['Mollets assis (machine)', 'mollets'],
+  ]],
+  ['Abdos et gainage', [
+    ['Gainage (planche)', 'abdos obliques- epaules-'],
+    ['Gainage latéral', 'obliques abdos-'],
+    ['Crunch', 'abdos'],
+    ['Crunch (machine)', 'abdos'],
+    ['Crunch à la poulie', 'abdos'],
+    ['Crunch oblique', 'obliques abdos-'],
+    ['Relevé de jambes', 'abdos'],
+    ['Russian twist', 'obliques abdos-'],
+    ['Roue abdominale', 'abdos dorsaux- epaules-'],
+    ['Mountain climbers', 'abdos quadriceps- epaules-'],
+    ['Hollow body', 'abdos'],
+    ['Dead bug', 'abdos lombaires-'],
+    ['Rotation du buste (machine ou poulie)', 'obliques'],
+  ]],
 ];
-const MUSCU_GROUP_OF = {};
-MUSCU_GROUPS.forEach(([g, list]) => list.forEach(n => { MUSCU_GROUP_OF[n] = g; }));
+// Muscles par défaut d'un groupe (exercice libre rangé dans un groupe)
+const MUSCU_GROUP_TARGETS = { 'Pectoraux': 'pecs', 'Dos': 'dorsaux', 'Épaules': 'epaules', 'Bras': 'biceps triceps', 'Jambes': 'quadriceps fessiers ischios', 'Abdos et gainage': 'abdos' };
+const parseTargets = (str) => {
+  const t = {};
+  str.split(' ').filter(Boolean).forEach(k => { t[k.replace(/-$/, '')] = /-$/.test(k) ? 0.5 : 1; });
+  return t;
+};
+const MUSCU_GROUPS = MUSCU_CATALOG.map(([g, list]) => [g, list.map(e => e[0])]);
+const MUSCU_GROUP_OF = {}, MUSCU_TARGETS = {};
+MUSCU_CATALOG.forEach(([g, list]) => list.forEach(([n, m]) => { MUSCU_GROUP_OF[n] = g; MUSCU_TARGETS[n] = parseTargets(m); }));
+// Muscles travaillés par un exercice de séance ({ muscle: 1 ou 0,5 }), {} si inconnu
+function muscuTargets(ex) {
+  if (MUSCU_TARGETS[ex.name]) return MUSCU_TARGETS[ex.name];
+  return ex.group && MUSCU_GROUP_TARGETS[ex.group] ? parseTargets(MUSCU_GROUP_TARGETS[ex.group]) : {};
+}
+// Exercices libres déjà utilisés (pas dans le catalogue), avec leur groupe, du plus récent au plus ancien
+function muscuCustomExercises(data = getData()) {
+  const seen = new Map();
+  (data.sessions || []).filter(s => s.sport === 'muscu').sort((a, b) => b.date.localeCompare(a.date))
+    .forEach(s => (s.exercises || []).forEach(e => { if (!MUSCU_GROUP_OF[e.name] && !seen.has(e.name)) seen.set(e.name, e.group || null); }));
+  return [...seen].map(([name, group]) => ({ name, group }));
+}
 function hasMuscu(data = getData()) { return (data.sessions || []).some(s => s.sport === 'muscu'); }
 // Sports à afficher : les 3 sports, plus la musculation si l'utilisateur en fait
 function sportsShown(data = getData()) { return hasMuscu(data) ? ['nat', 'velo', 'run', 'muscu'] : ['nat', 'velo', 'run']; }
@@ -2580,6 +2694,6 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, hasMuscu, sportsShown, lastMuscuSession, muscuVolume,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume,
   SPORTS, COMP_TYPES,
 };

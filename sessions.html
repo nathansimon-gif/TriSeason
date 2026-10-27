@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261103a"></script>
+  <script src="theme.js?v=20261104a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261103a"></script>
+  <script src="auth-guard.js?v=20261104a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261103a">
+  <link rel="stylesheet" href="style.css?v=20261104a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -393,9 +393,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261103a"></script>
-<script src="import.js?v=20261103a"></script>
-<script src="app.js?v=20261103a"></script>
+<script src="fit-parser.js?v=20261104a"></script>
+<script src="import.js?v=20261104a"></script>
+<script src="app.js?v=20261104a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -810,45 +810,101 @@ function toggleElevationField() {
 }
 
 // ── Musculation : lignes d'exercices ─────────────────────────────────────────
-function muscuOptions(selected) {
-  const known = !selected || TS.MUSCU_GROUP_OF[selected];
-  return '<option value="">Choisir…</option>'
-    + TS.MUSCU_GROUPS.map(([g, list]) => '<optgroup label="' + escHtml(g) + '">'
-      + list.map(n => '<option' + (n === selected ? ' selected' : '') + '>' + escHtml(n) + '</option>').join('')
-      + '</optgroup>').join('')
-    + (known ? '' : '<option selected>' + escHtml(selected) + '</option>')
-    + '<option value="__other">Autre exercice…</option>';
+// Le nom de l'exercice se choisit dans une fenêtre avec recherche (#muscuPicker)
+function setMuscuPick(btn, name, group) {
+  btn.dataset.name = name || '';
+  btn.dataset.group = (name && (TS.MUSCU_GROUP_OF[name] || group)) || '';
+  btn.textContent = name || 'Choisir un exercice';
+  btn.classList.toggle('muscu-pick--empty', !name);
 }
 function addMuscuRow(ex) {
   const row = document.createElement('div');
   row.className = 'muscu-row';
   const num = v => (v == null || v === '' ? '' : v);
-  row.innerHTML = '<select class="form-select" data-k="name" aria-label="Exercice" onchange="onMuscuPick(this)">' + muscuOptions(ex && ex.name) + '</select>'
+  row.innerHTML = '<button type="button" class="form-select muscu-pick" data-k="name" aria-label="Exercice" onclick="openMuscuPicker(this)"></button>'
     + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="sets" aria-label="Séries" placeholder="séries" value="' + num(ex && ex.sets) + '">'
     + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="reps" aria-label="Répétitions" placeholder="rép." value="' + num(ex && ex.reps) + '">'
     + '<input class="form-input" type="number" min="0" step="0.5" inputmode="decimal" data-k="kg" aria-label="Charge en kg" placeholder="kg" value="' + num(ex && ex.kg) + '">'
     + '<button type="button" class="btn btn--ghost btn--sm btn--icon" onclick="this.parentNode.remove()" title="Retirer cet exercice" aria-label="Retirer cet exercice">✕</button>';
+  setMuscuPick(row.querySelector('.muscu-pick'), ex && ex.name, ex && ex.group);
   document.getElementById('muscuRows').appendChild(row);
-}
-// « Autre exercice… » : nom libre, ajouté à la liste de cette ligne
-function onMuscuPick(sel) {
-  if (sel.value !== '__other') return;
-  const name = (prompt('Nom de l’exercice') || '').trim().slice(0, 60);
-  sel.innerHTML = muscuOptions(name || '');
+  return row;
 }
 function readMuscuRows() {
   const int = v => { const n = Math.round(parseFloat(v)); return n > 0 ? n : null; };
   return [...document.querySelectorAll('#muscuRows .muscu-row')].map(row => {
     const get = k => row.querySelector('[data-k="' + k + '"]').value;
-    const name = get('name');
-    if (!name || name === '__other') return null;
+    const pick = row.querySelector('.muscu-pick');
+    const name = pick.dataset.name;
+    if (!name) return null;
     const kg = parseFloat(String(get('kg')).replace(',', '.'));
-    const ex = { name, sets: int(get('sets')), reps: int(get('reps')), kg: kg > 0 ? Math.round(kg * 10) / 10 : null };
-    if (TS.MUSCU_GROUP_OF[name]) ex.group = TS.MUSCU_GROUP_OF[name];
+    const ex = { name, group: pick.dataset.group || null, sets: int(get('sets')), reps: int(get('reps')), kg: kg > 0 ? Math.round(kg * 10) / 10 : null };
     Object.keys(ex).forEach(k => { if (ex[k] == null) delete ex[k]; });
     return ex;
   }).filter(Boolean);
 }
+
+// Fenêtre de choix : recherche sur le nom, le groupe et les muscles (« pec fly »,
+// « triceps », « machine »…), exercices libres déjà utilisés en haut, et ajout
+// d'un nouvel exercice avec son groupe de muscles.
+let muscuPickBtn = null;
+const mpNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function openMuscuPicker(btn) {
+  muscuPickBtn = btn;
+  const q = document.getElementById('mpSearch');
+  q.value = '';
+  renderMuscuPicker();
+  document.getElementById('muscuPicker').classList.add('open');
+  document.getElementById('mpList').scrollTop = 0;
+  if (!matchMedia('(pointer: coarse)').matches) q.focus();   // téléphone : pas de clavier d'office
+}
+function closeMuscuPicker() {
+  document.getElementById('muscuPicker').classList.remove('open');
+  muscuPickBtn = null;
+}
+function muscuPickerItem(name, group, targets) {
+  const main = Object.keys(targets).filter(k => targets[k] === 1).map(k => TS.MUSCLES[k]);
+  const sub = Object.keys(targets).filter(k => targets[k] < 1).map(k => TS.MUSCLES[k].toLowerCase());
+  const label = main.join(', ') + (sub.length ? ' · ' + sub.join(', ') : '');
+  const cur = muscuPickBtn && muscuPickBtn.dataset.name === name;
+  return '<button type="button" class="mp-item' + (cur ? ' mp-item--on' : '') + '" data-name="' + escHtml(name) + '" data-group="' + escHtml(group || '') + '">'
+    + escHtml(name) + (label ? '<span class="mp-muscles">' + escHtml(label) + '</span>' : '') + '</button>';
+}
+function renderMuscuPicker() {
+  const raw = document.getElementById('mpSearch').value.trim();
+  const words = mpNorm(raw).split(/\s+/).filter(Boolean);
+  // Muscles principaux seulement : « triceps » ne remonte pas tous les développés couchés
+  const hay = (name, group, targets) => { const main = Object.keys(targets).filter(k => targets[k] === 1);
+    return mpNorm([name, group || ''].concat(main, main.map(k => TS.MUSCLES[k])).join(' ')); };
+  const match = (name, group, targets) => words.every(w => hay(name, group, targets).includes(w));
+  let html = '', exact = false;
+  const mine = TS.muscuCustomExercises().filter(e => match(e.name, e.group, TS.muscuTargets(e)));
+  if (mine.length) html += '<div class="mp-group">Mes exercices</div>' + mine.map(e => muscuPickerItem(e.name, e.group, TS.muscuTargets(e))).join('');
+  TS.MUSCU_CATALOG.forEach(([g, list]) => {
+    const items = list.filter(([n]) => match(n, g, TS.muscuTargets({ name: n })));
+    if (items.length) html += '<div class="mp-group">' + escHtml(g) + '</div>' + items.map(([n]) => muscuPickerItem(n, g, TS.muscuTargets({ name: n }))).join('');
+  });
+  const all = TS.MUSCU_CATALOG.flatMap(([, list]) => list.map(e => e[0])).concat(TS.muscuCustomExercises().map(e => e.name));
+  exact = all.some(n => mpNorm(n) === mpNorm(raw));
+  if (raw && !exact) {
+    const name = raw.slice(0, 60);
+    const add = '<div class="mp-new"><div>Ajouter « <b>' + escHtml(name) + '</b> » : quel groupe de muscles ?</div><div class="mp-chips">'
+      + TS.MUSCU_CATALOG.map(([g]) => '<button type="button" class="mp-chip" data-name="' + escHtml(name) + '" data-group="' + escHtml(g) + '">' + escHtml(g) + '</button>').join('')
+      + '<button type="button" class="mp-chip" data-name="' + escHtml(name) + '" data-group="">Autre</button></div></div>';
+    html = html ? html + add : add;   // proposé après les résultats, ou seul s'il n'y en a pas
+  }
+  if (!html) html = '<div class="mp-empty">Écris le nom d’un exercice ou d’un muscle.</div>';
+  document.getElementById('mpList').innerHTML = html;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#mpList [data-name]');
+  if (!b || !muscuPickBtn) return;
+  setMuscuPick(muscuPickBtn, b.dataset.name, b.dataset.group);
+  const row = muscuPickBtn.closest('.muscu-row');
+  closeMuscuPicker();
+  const sets = row && row.querySelector('[data-k="sets"]');
+  if (sets && !sets.value && !matchMedia('(pointer: coarse)').matches) sets.focus();
+});
 function fillMuscuRows(list) {
   document.getElementById('muscuRows').innerHTML = '';
   (list || []).forEach(addMuscuRow);
@@ -1509,6 +1565,18 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
   </script>
 
 
+
+<!-- Choix d'un exercice de musculation (au-dessus de la fenêtre de séance) -->
+<div class="modal-overlay" id="muscuPicker" style="z-index:210" onclick="if (event.target === this) closeMuscuPicker()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal__header">
+      <div class="modal__title">Choisir un exercice</div>
+      <button class="modal__close" type="button" onclick="closeMuscuPicker()" aria-label="Fermer">×</button>
+    </div>
+    <input class="form-input" type="search" id="mpSearch" placeholder="Rechercher : pec fly, triceps…" oninput="renderMuscuPicker()" autocomplete="off" aria-label="Rechercher un exercice">
+    <div id="mpList" class="mp-list"></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="feelingModal">
   <div class="modal" style="max-width:520px">

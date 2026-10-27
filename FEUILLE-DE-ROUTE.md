@@ -9,8 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #50 (écrans de chargement + musculation partie 1) puis recharger le site, et essayer : Séances → + Nouvelle séance → Sport « Musculation »
-- [ ] 🤖 **Musculation, partie 2** : records par exercice (charge max, répétitions max), graphique de progression, page Sports → Musculation (partie 1 faite le 27/10/2026, voir « Fait »)
+- [ ] 🧑 Fusionner la PR des exercices sur machines (recherche, pas de zoom) puis recharger le site
+- [ ] 🤖 **Musculation, partie 2** : records par exercice (charge max, répétitions max), graphique de progression, page Sports → Musculation, **carte du corps** dans Forme (zones travaillées, plus ou moins foncées selon les séries, répétitions et charges), **message de nouveauté** à la première ouverture pour dire que la musculation est disponible (partie 1 faite le 27/10/2026, voir « Fait »)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -111,6 +111,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 27/10/2026 | à venir | **Musculation : exercices sur machines et recherche** : liste passée à ~80 exercices (pec fly, presses, hack squat, Smith machine, poulies, abducteurs / adducteurs…) avec les muscles travaillés ; fenêtre de choix avec recherche (nom, muscle ou « machine », sans se soucier des accents) ; exercice libre rangé dans un groupe de muscles, puis proposé dans « Mes exercices ». **Téléphone** : plus de zoom automatique en touchant un champ ou une liste (le zoom à deux doigts reste possible), plus de fenêtre ou de page qui glisse de côté (sauf le grand tableau des séances, trop large pour l'écran) |
 | 27/10/2026 | #50 | **Musculation (partie 1)** : nouveau sport violet ; séance avec exercices rangés par muscles (pectoraux, dos, épaules, bras, jambes, abdos et gainage) + exercices libres, séries × répétitions × kg, tonnage ; « Reprendre la dernière séance » ; comptée dans les heures, la charge et la forme ; séances Strava / montre / .fit de musculation importées (avant : ignorées) ; visible dans les filtres et le planning seulement si on en a fait une |
 | 27/10/2026 | #50 | **Écrans de chargement** : écran de démarrage (logo + roue) au lieu d'une page vide pendant la connexion ; cartes « en cours de chargement » quand le compte est relu sur un nouvel appareil ; pastille « Synchronisation… / Enregistré » et message clair hors connexion ; roues de chargement pendant les imports, l'historique Strava, la recherche d'aliments et les boutons Strava |
 | 26/10/2026 | #49 | Nutrition : le graphique « 7 derniers jours » montre au choix (liste déroulante, choix gardé) les **kcal consommées par jour avec le besoin du jour** (« Kcal consommées et besoins ») (trait pointillé, même calcul que « Besoins énergétiques », objectif manuel compris) ou le nombre de repas ; nombres au format français ; barres citron vert plus soutenues en mode clair |

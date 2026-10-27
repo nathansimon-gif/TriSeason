@@ -1259,11 +1259,13 @@ async function main() {
       repeat: getComputedStyle(document.getElementById('muscuRepeatBtn')).display }));
     await v.page.fill('#s_date', day(-3)); await v.page.fill('#s_dur', '1:00:00'); await v.page.fill('#s_rpe', '7');
     const row1 = '#muscuRows .muscu-row:nth-child(1) ';
-    await v.page.selectOption(row1 + '[data-k="name"]', 'Squat');
+    await v.page.click(row1 + '.muscu-pick'); await v.page.fill('#mpSearch', 'squat');
+    await v.page.click('#mpList [data-name="Squat"]');
     await v.page.fill(row1 + '[data-k="sets"]', '4'); await v.page.fill(row1 + '[data-k="reps"]', '8'); await v.page.fill(row1 + '[data-k="kg"]', '80');
     await v.page.click('text=+ Ajouter un exercice');
     const row2 = '#muscuRows .muscu-row:nth-child(2) ';
-    await v.page.selectOption(row2 + '[data-k="name"]', 'Gainage (planche)');
+    await v.page.click(row2 + '.muscu-pick'); await v.page.fill('#mpSearch', 'planche');
+    await v.page.click('#mpList [data-name="Gainage (planche)"]');
     await v.page.fill(row2 + '[data-k="sets"]', '3'); await v.page.fill(row2 + '[data-k="reps"]', '45');
     await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
     const saved = await v.page.evaluate(() => {
@@ -1275,7 +1277,7 @@ async function main() {
     await v.page.click('text=+ Nouvelle séance');
     await v.page.selectOption('#s_sport', 'muscu');
     await v.page.click('#muscuRepeatBtn');
-    const repeated = await v.page.evaluate(() => [...document.querySelectorAll('#muscuRows .muscu-row')].map(r => r.querySelector('[data-k="name"]').value + '/' + r.querySelector('[data-k="kg"]').value));
+    const repeated = await v.page.evaluate(() => [...document.querySelectorAll('#muscuRows .muscu-row')].map(r => r.querySelector('.muscu-pick').dataset.name + '/' + r.querySelector('[data-k="kg"]').value));
     await v.page.evaluate(() => closeModal());
     // Dashboard : jour de la séance, totaux, charge (CTL/ATL)
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);
@@ -1294,6 +1296,57 @@ async function main() {
     assert(saved.vol === 2560 && saved.filter && saved.cloud, 'tonnage / filtre / cloud : ' + JSON.stringify({ vol: saved.vol, f: saved.filter, c: saved.cloud }));
     assert(repeated.join() === 'Squat/80,Gainage (planche)/', 'reprise de la dernière séance : ' + repeated.join());
     assert(/Squat<\/b> 4 × 8 × 80 kg/.test(dash.html) && /Tonnage/.test(dash.html) && dash.week === 1, 'détail du jour : ' + dash.html.slice(0, 300));
+  });
+
+  await test('Musculation : recherche d’exercice (machines, muscles) et exercice libre rangé dans un groupe', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRows .muscu-pick');
+    const names = async q => { await v.page.fill('#mpSearch', q); return v.page.$$eval('#mpList .mp-item', els => els.map(e => e.dataset.name)); };
+    const fly = await names('pec fly');
+    const tri = await names('triceps');
+    const machine = await names('machine');
+    const accents = await names('ecarte');
+    await v.page.fill('#mpSearch', 'Mollets debout (machine)');
+    await v.page.click('#mpList .mp-chip[data-group="Jambes"]');
+    await v.page.fill('#s_date', day(-1)); await v.page.fill('#s_dur', '0:45:00');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => {
+      const ex = TS.getSessions({ sport: 'muscu' })[0].exercises[0];
+      return { ex, targets: TS.muscuTargets(ex), mine: TS.muscuCustomExercises().map(e => e.name) };
+    });
+    // Rouvrir : l'exercice libre est proposé dans « Mes exercices »
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRows .muscu-pick');
+    const mine = await v.page.$$eval('#mpList .mp-group', els => els.map(e => e.textContent));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(fly[0] === 'Pec fly (machine)', 'pec fly : ' + fly.join());
+    assert(tri.includes('Dips') && tri.includes('Tirage triceps (poulie)') && !tri.includes('Développé couché (barre)'), 'triceps : ' + tri.join());
+    assert(machine.length >= 15 && machine.every(n => /machine/i.test(n)), 'machine : ' + machine.join());
+    assert(accents.includes('Écarté (haltères ou poulie)'), 'recherche sans accents : ' + accents.join());
+    assert(r.ex.name === 'Mollets debout (machine)' && r.ex.group === 'Jambes' && r.targets.quadriceps === 1, 'exercice libre : ' + JSON.stringify(r));
+    assert(r.mine.includes('Mollets debout (machine)') && mine[0] === 'Mes exercices', 'Mes exercices : ' + mine.join());
+  });
+
+  await test('Téléphone : champs en 16 px (pas de zoom automatique de l’iPhone), aucune fenêtre qui glisse de côté', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
+    const sizes = {};
+    for (const p of ['sessions', 'nutrition']) {
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(600);
+      Object.assign(sizes, await v.page.evaluate(() => {
+        const out = {};
+        document.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]), select, textarea')
+          .forEach(el => { const f = parseFloat(getComputedStyle(el).fontSize); if (f < 16) out[el.id || el.className] = f; });
+        document.querySelectorAll('.modal').forEach(m => { if (getComputedStyle(m).overflowX !== 'hidden') out['modal ' + (m.parentNode.id || '')] = getComputedStyle(m).overflowX; });
+        return out;
+      }));
+    }
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!Object.keys(sizes).length, 'champs trop petits ou fenêtres qui glissent : ' + JSON.stringify(sizes));
   });
 
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
