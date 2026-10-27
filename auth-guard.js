@@ -25,8 +25,27 @@
   var path = location.pathname;
   var isLoginPage = /\/login\.html$/.test(path) || path.endsWith('login.html');
 
-  // Cache le contenu tant qu'on ne sait pas si la personne est connectée.
-  document.documentElement.style.visibility = 'hidden';
+  // Cache le contenu tant qu'on ne sait pas si la personne est connectée, et
+  // affiche à la place un écran de démarrage (logo + roue), qui n'apparaît que
+  // si l'attente dépasse ~0,3 s (style.css : html.ts-boot, #tsSplash).
+  var root = document.documentElement;
+  root.classList.add('ts-boot');
+  function showSplash() {
+    if (!root.classList.contains('ts-boot') || document.getElementById('tsSplash') || !document.body) return;
+    var sp = document.createElement('div');
+    sp.id = 'tsSplash';
+    sp.setAttribute('role', 'status');
+    sp.innerHTML = '<div class="ts-splash__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>'
+      + '<span class="spinner spinner--lg" aria-hidden="true"></span><div class="ts-splash__txt">Ouverture…</div>';
+    document.body.appendChild(sp);
+  }
+  if (document.body) showSplash(); else document.addEventListener('DOMContentLoaded', showSplash);
+  function reveal() {
+    root.classList.remove('ts-boot');
+    root.style.visibility = 'visible';
+    var sp = document.getElementById('tsSplash');
+    if (sp) sp.remove();
+  }
 
   // Filet de sécurité : si Firebase ne répond jamais (coupure réseau au tout
   // premier chargement, service non joignable...), on affiche quand même la
@@ -35,7 +54,7 @@
   var failSafeTimer = setTimeout(function () {
     if (settled) return;
     console.warn('[TriSeason] Connexion au service de compte trop lente ou indisponible — affichage sans confirmation.');
-    document.documentElement.style.visibility = 'visible';
+    reveal();
   }, 8000);
 
   firebase.auth().onAuthStateChanged(function (user) {
@@ -50,7 +69,7 @@
       return;
     }
     window.TS_USER = user || null;
-    document.documentElement.style.visibility = 'visible';
+    reveal();
     document.dispatchEvent(new CustomEvent('triseason:auth-ready', { detail: user }));
   });
 

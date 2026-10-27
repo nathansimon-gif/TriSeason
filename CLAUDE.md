@@ -73,7 +73,13 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   secrète Strava (échange et renouvellement des jetons, déconnexion) et relaie
   la recherche Open Food Facts. N'enregistre rien. Mise en place : son README.
 - `auth-guard.js` : connexion Firebase, redirige vers `login.html` si personne
-  n'est connecté.
+  n'est connecté. Pendant la vérification, `html.ts-boot` cache la page et un
+  écran de démarrage (`#tsSplash`, visible après ~0,3 s) s'affiche.
+- **États de chargement** (app.js) : `syncPill(state)` = pastille sous la barre
+  du haut (« Synchronisation… », « Enregistré », hors connexion, erreur,
+  « Chargement de tes données… ») ; `html.ts-loading-data` = cartes « en cours
+  de chargement » quand il n'y a pas de copie locale et que le compte est relu ;
+  `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
 - `style.css` : design system (variables sur `:root`, et `:root[data-theme="light"]`
   pour le thème clair).
 - `theme.js` : chargé **en premier** dans le `<head>` de chaque page. Thème clair /

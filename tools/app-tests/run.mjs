@@ -48,7 +48,7 @@ const firebaseStub = (uid) => `
   const user = ${uid ? `{uid:'${uid}', email:'${uid}@test.fr', providerData:[{providerId:'password'}],
     reauthenticateWithCredential(){return Promise.resolve();}, reauthenticateWithPopup(){return Promise.resolve();},
     delete(){return Promise.resolve();}}` : 'null'};
-  const authObj={ currentUser:user, languageCode:null, onAuthStateChanged(cb){setTimeout(()=>cb(user),10)},
+  const authObj={ currentUser:user, languageCode:null, onAuthStateChanged(cb){setTimeout(()=>cb(user),+(localStorage.getItem('__authDelay')||10))},
     signOut(){return Promise.resolve()}, sendPasswordResetEmail(){return Promise.resolve()},
     createUserWithEmailAndPassword(){return Promise.resolve()}, signInWithEmailAndPassword(){return Promise.resolve()}, signInWithPopup(){return Promise.resolve()} };
   window.firebase={apps:[],initializeApp(){this.apps.push(1)},
@@ -77,7 +77,7 @@ const firebaseStub = (uid) => `
       else d=clone(v); putRaw(st,d); st.writes=(st.writes||0)+1;};
     const applyDel=st=>{if(top)delete st.docs[path];else if(st.sub)delete st.sub[path]; st.writes=(st.writes||0)+1;};
     const ref={id:path.split('/').pop(),_deny:deny,_applySet:applySet,_applyDel:applyDel,
-      get(){if(deny())return denied();const st=load();st.reads=(st.reads||0)+1;save(st);const d=getRaw(st);return Promise.resolve({id:ref.id,exists:!!d,data:()=>clone(d||{})});},
+      get(){if(deny())return denied();const st=load();st.reads=(st.reads||0)+1;save(st);const d=getRaw(st);const snap={id:ref.id,exists:!!d,data:()=>clone(d||{})};const wait=top?+(localStorage.getItem('__fbDelay')||0):0;return wait?new Promise(r=>setTimeout(()=>r(snap),wait)):Promise.resolve(snap);},
       set(v,opt){if(deny())return denied();const st=load();applySet(st,v,opt);save(st);return Promise.resolve();},
       delete(){if(deny())return denied();const st=load();applyDel(st);save(st);return Promise.resolve();},
       collection(name){return mkCol(path+'/'+name);}};
@@ -1118,6 +1118,44 @@ async function main() {
     assert(kcal.need[5] === 3100 && kcal.need[6] > 1500, 'besoin du jour : ' + kcal.need);
     assert(/^Repas:/.test(meals[0]) && meals.length === 1, 'graphique repas : ' + meals);
     assert(kept === 'meals', 'choix non gardé');
+  });
+
+  await test('Chargement : écran de démarrage si la connexion tarde, cartes en chargement sur un nouvel appareil, pastille Enregistré / hors connexion', async () => {
+    // 1. Connexion lente : écran de démarrage, contenu caché, puis page normale
+    const v = await newUser();
+    await v.ctx.addInitScript(() => localStorage.setItem('__authDelay', '1500'));
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const boot = await v.page.evaluate(() => ({ splash: !!document.getElementById('tsSplash') && getComputedStyle(document.getElementById('tsSplash')).opacity === '1',
+      hidden: getComputedStyle(document.querySelector('.page')).visibility }));
+    await v.page.waitForTimeout(1500);
+    const after = await v.page.evaluate(() => ({ splash: !!document.getElementById('tsSplash'), vis: getComputedStyle(document.querySelector('.page')).visibility }));
+    // 2. Enregistrement : « Enregistré »
+    await v.page.evaluate(() => TS.saveSession({ date: TS.localDateStr(), sport: 'run', duration: 0.5, distance: 5 }));
+    await v.page.waitForTimeout(150);
+    const saved = await v.page.evaluate(() => document.getElementById('tsSync')?.textContent);
+    // 3. Hors connexion : message qui reste
+    await v.ctx.setOffline(true); await v.page.waitForTimeout(200);
+    const off = await v.page.evaluate(() => ({ t: document.getElementById('tsSync').textContent, on: document.getElementById('tsSync').classList.contains('ts-sync--on') }));
+    await v.ctx.setOffline(false); await v.page.waitForTimeout(200);
+    const back = await v.page.evaluate(() => document.getElementById('tsSync').classList.contains('ts-sync--offline'));
+    const fb = await fbState(v.page);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // 4. Nouvel appareil, lecture du compte lente : cartes « en chargement », puis les vraies données
+    const w = await otherDevice(fb);
+    await w.ctx.addInitScript(() => localStorage.setItem('__fbDelay', '1500'));
+    await w.page.goto(`${BASE}/sessions.html`); await w.page.waitForTimeout(700);
+    const loading = await w.page.evaluate(() => ({ cls: document.documentElement.classList.contains('ts-loading-data'), pill: document.getElementById('tsSync')?.textContent }));
+    await w.page.waitForTimeout(1800);
+    const loaded = await w.page.evaluate(() => ({ cls: document.documentElement.classList.contains('ts-loading-data'), n: TS.getData().sessions.length }));
+    assert(!w.errors.length, w.errors[0]);
+    await w.ctx.close();
+    assert(boot.splash && boot.hidden === 'hidden', 'écran de démarrage : ' + JSON.stringify(boot));
+    assert(!after.splash && after.vis === 'visible', 'page pas affichée après connexion : ' + JSON.stringify(after));
+    assert(/Synchronisation|Enregistré/.test(saved || ''), 'pastille après enregistrement : ' + saved);
+    assert(off.on && /Pas de réseau/.test(off.t) && !back, 'hors connexion : ' + JSON.stringify(off) + ' / revenu ' + back);
+    assert(loading.cls && /Chargement de tes données/.test(loading.pill || ''), 'nouvel appareil pendant la lecture : ' + JSON.stringify(loading));
+    assert(!loaded.cls && loaded.n === 41, 'après la lecture : ' + JSON.stringify(loaded));
   });
 
   // Option santé : blessures, maladie, reprise (accord à part, RGPD art. 9)

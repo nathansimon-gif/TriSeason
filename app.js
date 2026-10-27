@@ -98,6 +98,42 @@ function pushToCloud(data) {
   if (!cloudSending) sendToCloud(ref);
 }
 let cloudSending = false, cloudPending = null;
+
+// ── Pastille d'état (sous la barre du haut) : synchronisation, enregistré,
+// hors connexion, chargement des données. Discrète, ne bloque rien.
+let syncPillTimer = null;
+function syncPill(state, text) {
+  if (!document.body) return;
+  let el = document.getElementById('tsSync');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tsSync'; el.className = 'ts-sync'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  clearTimeout(syncPillTimer);
+  if (!state) { el.className = 'ts-sync'; return; }
+  // Hors connexion : le message reste affiché tant que le réseau n'est pas revenu
+  if (!navigator.onLine && state !== 'offline') state = 'offline';
+  const labels = {
+    loading: '<span class="spinner"></span>Chargement de tes données…',
+    sending: '<span class="spinner"></span>Synchronisation…',
+    saved: 'Enregistré',
+    error: 'Pas encore enregistré dans le cloud : nouvel essai au prochain enregistrement',
+    offline: cloudLoaded ? 'Pas de réseau : tes saisies seront envoyées au retour du réseau'
+      : 'Pas de réseau : données de cet appareil affichées. Reconnecte-toi avant de saisir.',
+  };
+  el.innerHTML = text || labels[state];
+  el.className = 'ts-sync ts-sync--on ts-sync--' + state;
+  if (state === 'saved') syncPillTimer = setTimeout(() => syncPill(null), 1400);
+  if (state === 'error') syncPillTimer = setTimeout(() => syncPill(null), 4500);
+}
+window.addEventListener('offline', () => syncPill('offline'));
+window.addEventListener('online', () => syncPill(cloudSending ? 'sending' : null));
+document.addEventListener('DOMContentLoaded', () => {
+  if (!navigator.onLine) syncPill('offline');
+  else if (document.documentElement.classList.contains('ts-loading-data')) syncPill('loading');
+});
+
 async function sendToCloud(ref) {
   cloudSending = true;
   try {
@@ -109,11 +145,14 @@ async function sendToCloud(ref) {
       }
       const data = cloudPending;
       cloudPending = null;
+      syncPill('sending');
       try {
         if (cloudLayout === 2) await writeDrawers(ref, data);
         else await writeSingleDoc(ref, data);
+        if (!cloudPending) syncPill(navigator.onLine ? 'saved' : 'offline');
       } catch (err) {
         console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
+        syncPill('error');
       }
     }
   } finally { cloudSending = false; }
@@ -476,6 +515,16 @@ function syncFromCloud(uid) {
   const ref = getUserDocRef(uid);
   if (!ref) { cloudSyncing = false; return; }
   claimLocalData(uid);
+  // Pas de copie locale (nouvel appareil, après une déconnexion) : cartes « en
+  // cours de chargement » le temps de lire le compte, plutôt que des pages vides.
+  let hadLocal = true;
+  try { hadLocal = !!localStorage.getItem(DB_KEY); } catch {}
+  if (!hadLocal) { document.documentElement.classList.add('ts-loading-data'); syncPill('loading'); }
+  const doneLoading = () => {
+    if (!document.documentElement.classList.contains('ts-loading-data')) return;
+    document.documentElement.classList.remove('ts-loading-data');
+    syncPill(navigator.onLine ? null : 'offline');
+  };
 
   ref.get().then(async doc => {
     checkConsent(uid, doc);
@@ -511,8 +560,11 @@ function syncFromCloud(uid) {
   }).catch(err => {
     // cloudLoaded reste à false : pas d'envoi vers le cloud pour ne pas l'écraser.
     console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);
+    if (!hadLocal) setTimeout(() => syncPill(navigator.onLine ? 'error' : 'offline',
+      navigator.onLine ? 'Données du compte pas encore chargées : recharge la page' : null), 50);
   }).finally(() => {
     cloudSyncing = false;
+    doneLoading();
   });
 }
 // Lance le déménagement (file d'envoi : jamais en même temps qu'un enregistrement).

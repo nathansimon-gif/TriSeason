@@ -9,7 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #49 (Nutrition : kcal consommées et besoins sur le graphique 7 jours) puis recharger le site
+- [ ] 🧑 Fusionner la PR #50 (écrans de chargement) puis recharger le site
+- [ ] 🤖 **Musculation** : en cours (décidé le 27/10/2026 : couleur violette, exercices par groupes de muscles, liste de base de Nathan ; PR 1 = séance avec exercices, PR 2 = records et progression)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -35,11 +36,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 **Ensuite :**
 
-- [ ] 🧑🤖 **Écrans de chargement** (à voir ensemble avant de commencer) : que l'appli montre clairement quand elle travaille, au lieu d'une page vide ou de chiffres qui changent d'un coup. Pistes :
-  - écran de démarrage de l'appli installée (logo TriSeason sur fond ardoise) pendant l'ouverture
-  - cartes « en cours de chargement » (formes grises qui se remplissent) pendant la lecture des données du compte, surtout sur un nouvel appareil (tous les tiroirs sont relus)
-  - petit indicateur « Synchronisation… » / « Enregistré » quand les données partent vers le cloud, et message clair hors connexion (« Pas de réseau : tes saisies seront envoyées au retour du réseau »)
-  - indicateur pendant les imports (fichiers .fit, archive Strava, historique Strava) et la recherche d'aliments
+- [x] 🧑🤖 **Écrans de chargement** : fait (PR #50)
 - [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
 - [ ] 🧑🤖 **Choisir ses sports** (à discuter ensemble avant de commencer) : à la création du compte, une page s'ouvre pour cocher les sports qu'on veut suivre (course, vélo, natation, et musculation si on l'ajoute). L'appli n'affiche ensuite que ces sports : Dashboard, Sports, filtres, records, défis, graphiques. Pistes :
   - choix modifiable à tout moment dans Profil ; les comptes existants gardent les 3 sports par défaut
@@ -120,6 +117,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 27/10/2026 | #50 | **Écrans de chargement** : écran de démarrage (logo + roue) au lieu d'une page vide pendant la connexion ; cartes « en cours de chargement » quand le compte est relu sur un nouvel appareil ; pastille « Synchronisation… / Enregistré » et message clair hors connexion ; roues de chargement pendant les imports, l'historique Strava, la recherche d'aliments et les boutons Strava |
 | 26/10/2026 | #49 | Nutrition : le graphique « 7 derniers jours » montre au choix (liste déroulante, choix gardé) les **kcal consommées par jour avec le besoin du jour** (« Kcal consommées et besoins ») (trait pointillé, même calcul que « Besoins énergétiques », objectif manuel compris) ou le nombre de repas ; nombres au format français ; barres citron vert plus soutenues en mode clair |
 | 26/10/2026 | #48 | Test « Archive Strava : date locale » corrigé : il supposait l'heure d'été (course à 22h30 UTC attendue le lendemain) ; course placée à 23h30 UTC, le lendemain à Paris toute l'année. L'appli n'avait pas de bug |
 | 25/10/2026 | #47 | Rapport du lundi : **graphiques d'évolution sur 8 semaines** (comptes, utilisateurs actifs, séances, repas ; lectures / écritures Firebase quand Google les fournit), en barres lisibles dans la conversation et dans l'e-mail |
