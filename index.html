@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261105a"></script>
+  <script src="theme.js?v=20261106a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261105a"></script>
+  <script src="auth-guard.js?v=20261106a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261105a">
+  <link rel="stylesheet" href="style.css?v=20261106a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -496,7 +496,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261105a"></script>
+<script src="app.js?v=20261106a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -651,20 +651,23 @@ function renderChallenges() {
   const today = TS.localDateStr();
   const daysLeft = 7 - ((TS.parseLocalDate(today).getDay() + 6) % 7) - 1;
   document.getElementById('challengeList').innerHTML = hist.current.map(c => {
-    const dot = ['nat', 'velo', 'run'].includes(c.kind) ? `<span class="sport-dot sport-dot--${c.kind}"></span>` : '';
+    const dot = ['nat', 'velo', 'run', 'muscu'].includes(c.kind) ? `<span class="sport-dot sport-dot--${c.kind}"></span>` : '';
     const pct = Math.min(100, Math.round(c.value / c.target * 100));
     return `<div class="challenge${c.done ? ' done' : ''}">
-      <div class="challenge__label">${dot}<span>${c.label}</span></div>
+      <div class="challenge__label">${dot}<span>${c.label}</span>${c.bonus ? '<span class="challenge__bonus">Bonus</span>' : ''}</div>
       <div class="challenge__count">${c.done ? 'Réussi' : Math.min(c.value, c.target) + ' / ' + c.target}</div>
       <div class="challenge__bar"><b style="width:${pct}%"></b></div>
     </div>`;
   }).join('');
-  const allDone = hist.current.every(c => c.done);
-  const n = hist.current.length;
+  // Le défi bonus (musculation) ne compte pas pour la série : la note parle des défis principaux
+  const main = hist.current.filter(c => !c.bonus);
+  const allDone = main.every(c => c.done);
+  const n = main.length;
   document.getElementById('challengeNote').textContent = (allDone
     ? (n > 1 ? 'Les deux défis sont réussis.' : 'Défi réussi.') + ' Nouveaux défis lundi.'
     : (daysLeft ? `Encore ${daysLeft} jour${daysLeft > 1 ? 's' : ''} pour ${n > 1 ? 'les relever' : 'le relever'}.` : `Dernier jour pour ${n > 1 ? 'les relever' : 'le relever'}.`)
       + (hist.paused ? '' : ' Ils sont choisis d’après tes 4 dernières semaines.'))
+    + (hist.current.some(c => c.bonus) ? ' Le défi bonus de musculation ne compte pas pour ta série.' : '')
     + (hist.paused === 'arret' ? ' Pendant ton arrêt, pas de défi d’entraînement et ta série est en pause.'
       : hist.paused === 'reprise' ? ' Pendant ta reprise, le défi porte sur la régularité et une semaine ratée ne casse pas ta série.' : '');
   document.getElementById('challengeStreak').textContent = hist.streak

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261105a"></script>
+  <script src="theme.js?v=20261106a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261105a"></script>
+  <script src="auth-guard.js?v=20261106a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261105a">
+  <link rel="stylesheet" href="style.css?v=20261106a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -218,14 +218,15 @@
       <div class="card">
         <div class="card__title">
           Hydratation
-          <span class="tip-icon" data-tip="Objectif indicatif : 35-40ml/kg/jour au repos, +500-800ml/h d'effort.">?</span>
+          <span class="tip-icon" data-tip="Objectif de 1,5 L par jour au départ, à adapter avec « Modifier » (repère courant : 35 à 40 ml par kg et par jour au repos, plus pendant l'effort).">?</span>
         </div>
         <div style="display:flex;align-items:center;gap:20px">
           <div class="hydro-ring" id="hydroRing" style="--pct:0%">
             <div class="hydro-ring__val" id="hydroVal">0</div>
           </div>
           <div style="flex:1">
-            <div style="font-size:12px;color:var(--text-2);margin-bottom:8px">Objectif : <span id="hydroTarget">2500</span> ml</div>
+            <div style="font-size:12px;color:var(--text-2);margin-bottom:8px" id="hydroGoalLine">Objectif : <span id="hydroTarget">1,5 L</span>
+              <button type="button" class="link-btn" onclick="editHydroGoal()">Modifier</button></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="tag-btn" onclick="addHydro(100)">+100 ml</button>
               <button class="tag-btn" onclick="addHydro(250)">+250 ml</button>
@@ -465,7 +466,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261105a"></script>
+<script src="app.js?v=20261106a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -796,11 +797,28 @@ function renderFuelList() {
 
 function renderHydration() {
   const ml  = getDayHydro(currentDay);
-  const target = 2500;
+  const target = TS.hydroGoal();
   const pct = Math.min(100, Math.round(ml / target * 100));
   document.getElementById('hydroRing').style.setProperty('--pct', pct+'%');
   document.getElementById('hydroVal').textContent = ml >= 1000 ? (ml/1000).toFixed(1)+'L' : ml+'ml';
-  document.getElementById('hydroTarget').textContent = target;
+  document.getElementById('hydroGoalLine').innerHTML = 'Objectif : <span id="hydroTarget">' + TS.formatLiters(target) + '</span> '
+    + '<button type="button" class="link-btn" onclick="editHydroGoal()">Modifier</button>';
+}
+// Objectif d'eau : en litres, 1,5 L par défaut (« Par défaut » efface le réglage)
+function editHydroGoal() {
+  const cur = TS.hydroGoal() / 1000;
+  document.getElementById('hydroGoalLine').innerHTML = '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    + '<input class="form-input" type="number" id="hydroGoalInput" min="0.5" max="8" step="0.1" inputmode="decimal" style="width:80px" value="' + cur + '" aria-label="Objectif en litres"> L'
+    + '<button class="btn btn--primary btn--sm" onclick="saveHydroGoal()">OK</button>'
+    + '<button class="btn btn--ghost btn--sm" onclick="TS.setHydroGoal(null);renderAll()">Par défaut (1,5 L)</button></div>';
+  if (!matchMedia('(pointer: coarse)').matches) document.getElementById('hydroGoalInput').focus();
+}
+function saveHydroGoal() {
+  const l = parseFloat(String(document.getElementById('hydroGoalInput').value).replace(',', '.'));
+  if (!(l >= 0.5 && l <= 8)) { TS.toast('Indique un objectif entre 0,5 et 8 litres', 'error'); return; }
+  TS.setHydroGoal(l * 1000);
+  renderAll();
+  TS.toast('Objectif d’eau : ' + TS.formatLiters(l * 1000) + ' par jour');
 }
 
 function renderCharts() {
@@ -819,7 +837,8 @@ function renderCharts() {
   makeChart('chartHydro', {
     type:'bar',
     data:{ labels, datasets:[
-      { label:'Hydratation (ml)', data:hydroData, backgroundColor:'rgba(47,149,230,.6)', borderRadius:4 },
+      { label:'Hydratation (ml)', data:hydroData, backgroundColor:'rgba(47,149,230,.6)', borderRadius:4, order:2 },
+      { type:'line', label:'Objectif', data:days.map(() => TS.hydroGoal()), borderColor:'#a3abb9', borderDash:[5,4], borderWidth:1.5, pointRadius:0, order:1 },
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -2092,8 +2111,9 @@ function renderPerfComparison() {
   });
   var dayList = Object.values(days).filter(function(d){ return d.rpes.length>0; });
   var avgArr  = function(arr){ return arr.reduce(function(a,b){return a+b;},0)/arr.length; };
-  var wh      = dayList.filter(function(d){ return d.hydro>=2000; });
-  var ph      = dayList.filter(function(d){ return d.hydro>0&&d.hydro<2000; });
+  var hGoal   = TS.hydroGoal();
+  var wh      = dayList.filter(function(d){ return d.hydro>=hGoal; });
+  var ph      = dayList.filter(function(d){ return d.hydro>0&&d.hydro<hGoal; });
   var rpeWH   = wh.length ? (wh.reduce(function(a,d){return a+avgArr(d.rpes);},0)/wh.length).toFixed(1) : null;
   var rpePH   = ph.length ? (ph.reduce(function(a,d){return a+avgArr(d.rpes);},0)/ph.length).toFixed(1) : null;
   var out = '';

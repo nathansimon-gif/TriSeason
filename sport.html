@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261105a"></script>
+  <script src="theme.js?v=20261106a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261105a"></script>
+  <script src="auth-guard.js?v=20261106a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261105a">
+  <link rel="stylesheet" href="style.css?v=20261106a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -80,12 +80,27 @@
       </div>
       <div class="card" id="muscuProgCard">
         <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span>Progression</span>
+          <span>Charge par exercice</span>
           <span class="tip-icon" data-tip="Charge maximale de chaque séance pour cet exercice, et 1RM estimé : la charge que tu pourrais soulever une seule fois, calculée avec la formule d'Epley à partir de tes séries de 12 répétitions ou moins. C'est une estimation, pas un test.">?</span>
           <select class="form-select" id="muscuExo" onchange="renderMuscuProgress()" style="width:auto;max-width:100%;margin-left:auto" aria-label="Exercice"></select>
         </div>
         <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuProg"></canvas></div>
         <div id="muscuProgNote" style="font-size:12px;color:var(--text-2);margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-bottom:12px">
+      <div class="card">
+        <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span>Volume par séance</span>
+          <span class="tip-icon" data-tip="Kg soulevés à chaque séance (séries × répétitions × charge). Pour un exercice sans charge : le total de répétitions (ou de secondes pour le gainage).">?</span>
+          <select class="form-select" id="muscuVolExo" onchange="renderMuscuVolume()" style="width:auto;max-width:100%;margin-left:auto" aria-label="Exercice"></select>
+        </div>
+        <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuVol"></canvas></div>
+        <div id="muscuVolNote" style="font-size:12px;color:var(--text-2);margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <div class="card__title">Heures et séances par mois</div>
+        <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuMonthly"></canvas></div>
       </div>
     </div>
     <div class="card" style="margin-bottom:12px">
@@ -105,6 +120,18 @@
       </div>
       <div id="muscuBodyMap"></div>
     </div>
+    <div class="grid-2" style="margin-bottom:12px">
+      <div class="card">
+        <div class="card__title">Effort ressenti
+          <span class="tip-icon" data-tip="Part du temps de musculation selon l'effort (RPE) noté sur tes séances.">?</span></div>
+        <div id="muscuEffort"></div>
+      </div>
+      <div class="card">
+        <div class="card__title">Meilleures semaines</div>
+        <div id="muscuBestWeeks"></div>
+      </div>
+    </div>
+    <div id="muscuGoalsSlot" style="margin-bottom:12px"></div>
   </div>
 
   <div id="enduranceView">
@@ -141,8 +168,8 @@
       <div id="zonesContent"></div>
     </div>
 
-    <!-- Objectifs -->
-    <div class="card">
+    <!-- Objectifs (déplacée dans la vue Musculation quand elle est affichée) -->
+    <div id="enduGoalsSlot" style="display:flex;flex-direction:column"><div class="card" id="goalsCard" style="flex:1">
       <div class="card__title">
         Objectifs & Progression
         <span class="tip-icon" data-tip="Définissez des objectifs hebdo, mensuels ou annuels. La progression est calculée depuis vos séances.">?</span>
@@ -174,7 +201,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </div></div>
 
   <!-- Meilleures semaines + Progression mensuelle -->
   <div class="grid-2" style="margin-bottom:12px">
@@ -205,7 +232,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261105a"></script>
+<script src="app.js?v=20261106a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -273,7 +300,12 @@ function renderSport() {
   if (currentSport === 'muscu' && !TS.hasMuscu()) { selectSport('nat'); return; }
   document.getElementById('muscuView').style.display = currentSport === 'muscu' ? '' : 'none';
   document.getElementById('enduranceView').style.display = currentSport === 'muscu' ? 'none' : '';
-  if (currentSport === 'muscu') { renderMuscuView(); return; }
+  // Une seule carte Objectifs, placée dans la vue affichée ; types adaptés au sport
+  const goalsCard = document.getElementById('goalsCard');
+  const slot = document.getElementById(currentSport === 'muscu' ? 'muscuGoalsSlot' : 'enduGoalsSlot');
+  if (goalsCard.parentNode !== slot) slot.appendChild(goalsCard);
+  fillGoalTypes(currentSport);
+  if (currentSport === 'muscu') { renderMuscuView(); renderGoals('muscu'); return; }
   const s = currentSport;
   const sp = TS.SPORTS[s];
   const seasonValue = TS.getSeasonFilter();
@@ -317,7 +349,100 @@ function renderMuscuView() {
   renderMuscuWeeks(range);
   renderMuscuRecords(range);
   renderMuscuProgress();
+  renderMuscuVolume();
+  renderMuscuMonthly(range);
+  renderMuscuEffort(range);
+  renderMuscuBestWeeks(range);
   renderMuscuMap();
+}
+// Volume de chaque séance : toutes les séances (kg soulevés + séries) ou un exercice
+function renderMuscuVolume() {
+  const range = muscuRange();
+  const sel = document.getElementById('muscuVolExo');
+  const names = TS.muscuRecords(range).map(r => r.name);
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">Toutes les séances</option>' + names.map(n => `<option>${escHtml(n)}</option>`).join('');
+  if (names.includes(keep)) sel.value = keep;
+  const name = sel.value;
+  const note = document.getElementById('muscuVolNote');
+  const day = d => TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  const opts = (unitFmt) => ({ plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 10 } }, tooltip: { callbacks: { label: c => c.dataset.label + ' : ' + unitFmt(c) } } },
+    scales: { x: { ticks: { color: '#6b7383', maxRotation: 0, autoSkip: true }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { color: '#6b7383' }, grid: { color: 'rgba(255,255,255,.06)' } },
+      y1: { beginAtZero: true, position: 'right', display: !name, ticks: { color: '#6b7383' }, grid: { display: false } } } });
+  if (!name) {
+    const list = TS.getSessions({ sport: 'muscu', from: range.from, to: range.to }).slice().reverse().filter(s => (s.exercises || []).length);
+    makeChart('chartMuscuVol', { data: { labels: list.map(s => day(s.date)), datasets: [
+      { type: 'bar', label: 'Kg soulevés', data: list.map(s => TS.muscuVolume(s)), backgroundColor: 'rgba(146,86,251,.6)', borderRadius: 3, yAxisID: 'y', order: 2 },
+      { type: 'line', label: 'Séries', data: list.map(s => s.exercises.reduce((a, e) => a + (e.sets || 0), 0)), borderColor: '#a3abb9', backgroundColor: '#a3abb9', pointRadius: 2, yAxisID: 'y1', order: 1 },
+    ] }, options: opts(c => c.dataset.yAxisID === 'y' ? fmtKg(c.raw) : c.raw) });
+    const kgs = list.map(s => TS.muscuVolume(s)).filter(Boolean);
+    note.textContent = kgs.length ? 'En moyenne ' + fmtKg(kgs.reduce((a, b) => a + b, 0) / kgs.length) + ' par séance, ' + list.length + ' séances avec exercices.' : '';
+    return;
+  }
+  const hist = TS.muscuExerciseHistory(name, range);
+  const withKg = hist.some(h => h.volume);
+  const hold = TS.isHoldExercise(name);
+  // Sans charge : répétitions (ou secondes) totales de la séance pour cet exercice
+  const reps = h => TS.getSessions({ sport: 'muscu', from: h.date, to: h.date }).filter(s => s.id === h.id)
+    .reduce((a, s) => a + s.exercises.filter(e => e.name === name).reduce((b, e) => b + (e.sets || 1) * (e.reps || 0), 0), 0);
+  const data = hist.map(h => withKg ? h.volume : reps(h));
+  const label = withKg ? 'Kg soulevés' : hold ? 'Secondes au total' : 'Répétitions au total';
+  makeChart('chartMuscuVol', { type: 'bar', data: { labels: hist.map(h => day(h.date)), datasets: [
+    { label, data, backgroundColor: 'rgba(146,86,251,.6)', borderRadius: 3 }] }, options: opts(c => withKg ? fmtKg(c.raw) : c.raw) });
+  const best = Math.max(0, ...data);
+  note.textContent = hist.length ? hist.length + ' séance' + (hist.length > 1 ? 's' : '') + ' · meilleure : ' + (withKg ? fmtKg(best) : best + (hold ? ' s' : ' rép.')) : '';
+}
+function renderMuscuMonthly(range) {
+  const months = {};
+  TS.getSessions({ sport: 'muscu', from: range.from, to: range.to }).forEach(s => {
+    const k = s.date.slice(0, 7);
+    months[k] = months[k] || { h: 0, n: 0 };
+    months[k].h += s.duration || 0; months[k].n += 1;
+  });
+  const keys = Object.keys(months).sort().slice(-12);
+  makeChart('chartMuscuMonthly', { data: {
+    labels: keys.map(k => { const [y, m] = k.split('-'); return new Date(y, m - 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }); }),
+    datasets: [
+      { type: 'bar', label: 'Heures', data: keys.map(k => Math.round(months[k].h * 100) / 100), backgroundColor: 'rgba(146,86,251,.6)', borderRadius: 3, yAxisID: 'y', order: 2 },
+      { type: 'line', label: 'Séances', data: keys.map(k => months[k].n), borderColor: '#a3abb9', backgroundColor: '#a3abb9', pointRadius: 2, yAxisID: 'y1', order: 1 }] },
+    options: { plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 10 } }, tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'y' ? TS.formatHours(c.raw) : c.raw + ' séance' + (c.raw > 1 ? 's' : '') } } },
+      scales: { x: { ticks: { color: '#6b7383', maxRotation: 0 }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: '#6b7383', callback: v => TS.formatHours(v) }, grid: { color: 'rgba(255,255,255,.06)' } },
+        y1: { beginAtZero: true, position: 'right', ticks: { color: '#6b7383', stepSize: 1 }, grid: { display: false } } } } });
+}
+// Effort ressenti : part du temps par niveau de RPE (des faits, pas de conseil)
+const MUSCU_EFFORT = [
+  { label: 'Léger', range: [1, 4], color: '#c4b0fd' }, { label: 'Modéré', range: [5, 6], color: '#a885fc' },
+  { label: 'Difficile', range: [7, 8], color: '#9256fb' }, { label: 'Maximal', range: [9, 10], color: '#6a35c9' }];
+function renderMuscuEffort(range) {
+  const list = TS.getSessions({ sport: 'muscu', from: range.from, to: range.to }).filter(s => s.rpe);
+  const el = document.getElementById('muscuEffort');
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty__text">Note l’effort (RPE) de tes séances pour voir la répartition</div></div>'; return; }
+  const tot = MUSCU_EFFORT.map(z => list.filter(s => s.rpe >= z.range[0] && s.rpe <= z.range[1]).reduce((a, s) => a + (s.duration || 0.5), 0));
+  const sum = tot.reduce((a, b) => a + b, 0);
+  const pct = tot.map(t => sum ? Math.round(t / sum * 100) : 0);
+  const avg = list.reduce((a, s) => a + s.rpe, 0) / list.length;
+  el.innerHTML = `<div class="zone-bar">${MUSCU_EFFORT.map((z, i) => `<div class="zone-seg" style="width:${pct[i]}%;background:${z.color}" title="${z.label} : ${pct[i]} %">${pct[i] > 8 ? pct[i] + '%' : ''}</div>`).join('')}</div>
+    <div class="zone-legend">${MUSCU_EFFORT.map((z, i) => `<div class="zone-dot"><div style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0"></div><span>${z.label} (RPE ${z.range[0]}-${z.range[1]}) <b>${pct[i]}%</b></span></div>`).join('')}</div>
+    <div style="font-size:12px;color:var(--text-2);margin-top:10px">Effort moyen : <b>${avg.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} / 10</b> sur ${list.length} séance${list.length > 1 ? 's' : ''}.</div>`;
+}
+function renderMuscuBestWeeks(range) {
+  const byWeek = {};
+  TS.getSessions({ sport: 'muscu', from: range.from, to: range.to }).forEach(s => {
+    const w = TS.getISOWeek(TS.parseLocalDate(s.date));
+    byWeek[w] = byWeek[w] || { kg: 0, n: 0, h: 0 };
+    byWeek[w].kg += TS.muscuVolume(s); byWeek[w].n += 1; byWeek[w].h += s.duration || 0;
+  });
+  const top = Object.entries(byWeek).sort((a, b) => b[1].kg - a[1].kg || b[1].h - a[1].h).slice(0, 5);
+  document.getElementById('muscuBestWeeks').innerHTML = top.length ? top.map(([w, x], i) => `<div class="stat-row">
+      <span style="font-size:16px;font-weight:600;color:var(--text-3);min-width:20px">${i + 1}</span>
+      <div style="flex:1;padding-left:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--muscu)">${x.kg ? fmtKg(x.kg) : x.n + ' séance' + (x.n > 1 ? 's' : '')}</div>
+        <div style="font-size:11px;color:var(--text-2)">Semaine du ${TS.getWeekMonday(w).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} · ${x.n} séance${x.n > 1 ? 's' : ''}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-3)">${x.h ? TS.formatHours(x.h) : ''}</div></div>`).join('')
+    : '<div class="empty"><div class="empty__text">Aucune donnée</div></div>';
 }
 function renderMuscuWeeks(range) {
   const weeks = TS.getSeasonRange(TS.getSeasonFilter()) ? getWeeksInYear(parseInt(TS.getSeasonFilter(), 10)) : TS.getLast52Weeks();
@@ -668,8 +793,17 @@ const GOAL_LABELS = {
   dist_week:'Distance / semaine (km)', dist_month:'Distance / mois (km)',
   dist_year:'Distance / an (km)', dur_week:'Durée / semaine (h)',
   dur_month:'Durée / mois (h)', sessions_week:'Séances / semaine',
-  sessions_month:'Séances / mois',
+  sessions_month:'Séances / mois', kg_week:'Kg soulevés / semaine', kg_month:'Kg soulevés / mois',
 };
+// Types d'objectif proposés selon le sport (musculation : pas de distance, mais des kg soulevés)
+const GOAL_TYPES = { muscu: ['sessions_week', 'sessions_month', 'dur_week', 'dur_month', 'kg_week', 'kg_month'] };
+function fillGoalTypes(s) {
+  const sel = document.getElementById('goalType');
+  const types = GOAL_TYPES[s] || ['dist_week', 'dist_month', 'dist_year', 'dur_week', 'dur_month', 'sessions_week', 'sessions_month'];
+  if (sel.dataset.sport === s) return;
+  sel.dataset.sport = s;
+  sel.innerHTML = types.map(t => `<option value="${t}">${GOAL_LABELS[t]}</option>`).join('');
+}
 
 function getGoalProgress(sport, type, target) {
   const now   = new Date();
@@ -701,6 +835,10 @@ function getGoalProgress(sport, type, target) {
     const cur = sessions.filter(s=>{ const d=TS.parseLocalDate(s.date); return d.getFullYear()===year&&d.getMonth()===month; });
     return { current: cur.length, unit:'' };
   }
+  if (type === 'kg_week' || type === 'kg_month') {
+    const from = type === 'kg_week' ? TS.localDateStr(TS.getWeekMonday(TS.getCurrentWeek())) : TS.localDateStr(new Date(year, month, 1));
+    return { current: TS.getSessions({ sport, from }).reduce((a, s) => a + TS.muscuVolume(s), 0), unit: 'kg' };
+  }
   if (type === 'dist_year') {
     const cur = sessions.filter(s=>TS.parseLocalDate(s.date).getFullYear()===year);
     return { current: cur.reduce((a,s)=>a+(s.distance||0),0), unit:'km' };
@@ -710,7 +848,7 @@ function getGoalProgress(sport, type, target) {
 
 function renderGoals(s) {
   const goals = TS.getGoals(s);
-  const color  = s==='nat'?'var(--nat)':s==='velo'?'var(--velo)':'var(--run)';
+  const color  = 'var(--' + s + ')';
   const el = document.getElementById('goalsContent');
   if (!goals.length) {
     el.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:8px 0">Aucun objectif défini pour ce sport.</div>';
@@ -725,6 +863,7 @@ function renderGoals(s) {
         <div class="goal-label">${GOAL_LABELS[g.type]||g.type}</div>
         <div class="progress"><div class="progress__bar" style="width:${pct}%;background:${barColor}"></div></div>
         <div class="goal-val">${prog.unit === 'h' ? TS.formatHours(prog.current) + ' / ' + TS.formatHours(g.target)
+          : prog.unit === 'kg' ? Math.round(prog.current).toLocaleString('fr-FR') + ' / ' + g.target.toLocaleString('fr-FR') + ' kg'
           : prog.current.toFixed(g.type.startsWith('sessions')?0:1) + ' ' + prog.unit + ' / ' + g.target + ' ' + prog.unit}</div>
       </div>
       <div class="goal-pct" style="color:${barColor}">${pct}%</div>

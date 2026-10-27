@@ -9,8 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #51 (exercices sur machines, recherche, pas de zoom, musculation partie 2) puis recharger le site
-- [ ] 🧑 Après la fusion de la PR #51 : au premier lancement, chaque testeur verra une fois le message « Nouveau : la musculation »
+- [ ] 🧑 Fusionner la PR #52 (musculation dans Sports, défis, objectif d’eau) puis recharger le site
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -42,7 +41,6 @@ Les cases cochées passent dans « Fait » en bas de page.
   - choix modifiable à tout moment dans Profil ; les comptes existants gardent les 3 sports par défaut
   - rien n'est supprimé : une séance d'un sport non coché (import Strava, montre) reste enregistrée, on demande simplement « Ajouter ce sport à tes sports ? »
   - à décider : un seul sport choisi = l'appli parle de « course à pied » et plus de « triathlon » (textes, compétitions, formats FFTri cachés)
-- [ ] 🧑🤖 **Musculation dans les défis et les badges** (à discuter) : aujourd'hui les défis d'entraînement ne proposent que natation, vélo et course
 - [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries, séries détaillées (charges différentes à chaque série)
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
@@ -112,6 +110,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 28/10/2026 | #52 | **Musculation dans Sports, Séances, défis ; eau 1,5 L** : page Sports → Muscu enrichie (charge par exercice, **volume par séance** avec liste déroulante des exercices, heures et séances par mois, effort ressenti, meilleures semaines, objectifs en séances, heures ou kg soulevés) ; Musculation dans « Moyennes par discipline » (Séances) ; **défi bonus de musculation** chaque semaine pour ceux qui en font (séances, kg soulevés, groupes de muscles ou record de charge, ne compte pas pour la série) et 2 badges (10 séances, les 6 groupes de muscles dans la semaine) ; **objectif d'eau 1,5 L par jour**, modifiable (Nutrition → Hydratation → Modifier), utilisé aussi par le défi, le badge et le graphique ; nombres des graphiques au format français |
 | 27/10/2026 | #51 | **Musculation (partie 2)** : page Sports → Muscu (séances et kg soulevés par semaine, progression par exercice avec charge max et 1RM estimé, records par exercice) ; section Musculation dans Records ; **carte du corps** dans Forme (face et dos, 15 muscles, plus ou moins foncés selon les séries, répétitions ou kg soulevés, sur 7 jours à 12 mois ; touche une zone pour voir les exercices) ; **message de nouveauté** affiché une seule fois aux comptes qui ont déjà des séances. Corrigé au passage : plus aucun enregistrement possible juste après une déconnexion |
 | 27/10/2026 | #51 | **Musculation : exercices sur machines et recherche** : liste passée à ~80 exercices (pec fly, presses, hack squat, Smith machine, poulies, abducteurs / adducteurs…) avec les muscles travaillés ; fenêtre de choix avec recherche (nom, muscle ou « machine », sans se soucier des accents) ; exercice libre rangé dans un groupe de muscles, puis proposé dans « Mes exercices ». **Téléphone** : plus de zoom automatique en touchant un champ ou une liste (le zoom à deux doigts reste possible), plus de fenêtre ou de page qui glisse de côté (sauf le grand tableau des séances, trop large pour l'écran) |
 | 27/10/2026 | #50 | **Musculation (partie 1)** : nouveau sport violet ; séance avec exercices rangés par muscles (pectoraux, dos, épaules, bras, jambes, abdos et gainage) + exercices libres, séries × répétitions × kg, tonnage ; « Reprendre la dernière séance » ; comptée dans les heures, la charge et la forme ; séances Strava / montre / .fit de musculation importées (avant : ignorées) ; visible dans les filtres et le planning seulement si on en a fait une |
