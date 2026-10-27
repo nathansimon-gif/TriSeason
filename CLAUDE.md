@@ -54,7 +54,11 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   l'équipement de son sport en service ce jour-là (de sa première utilisation à la
   veille du suivant, ou à son retrait), rien n'est stocké sur les séances ;
   option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
-  et `pain` (0-10) sur les séances, voir RGPD ci-dessous).
+  et `pain` (0-10) sur les séances, voir RGPD ci-dessous ;
+  **musculation** : sport `muscu` (violet), `session.exercises = [{name, group, sets, reps, kg}]`
+  (gainage : secondes dans `reps`), catalogue `MUSCU_GROUPS` par groupe de muscles,
+  `hasMuscu` / `sportsShown` : la musculation n'apparaît dans les filtres, graphiques
+  et le planning que si l'utilisateur a au moins une séance de musculation).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
   plus, enregistrés en une fois avec `TS.saveSessions`) et de l'**archive
   Strava** (`readStravaArchive` : lit seulement `activities.csv` dans le .zip,
@@ -73,7 +77,13 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   secrète Strava (échange et renouvellement des jetons, déconnexion) et relaie
   la recherche Open Food Facts. N'enregistre rien. Mise en place : son README.
 - `auth-guard.js` : connexion Firebase, redirige vers `login.html` si personne
-  n'est connecté.
+  n'est connecté. Pendant la vérification, `html.ts-boot` cache la page et un
+  écran de démarrage (`#tsSplash`, visible après ~0,3 s) s'affiche.
+- **États de chargement** (app.js) : `syncPill(state)` = pastille sous la barre
+  du haut (« Synchronisation… », « Enregistré », hors connexion, erreur,
+  « Chargement de tes données… ») ; `html.ts-loading-data` = cartes « en cours
+  de chargement » quand il n'y a pas de copie locale et que le compte est relu ;
+  `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
 - `style.css` : design system (variables sur `:root`, et `:root[data-theme="light"]`
   pour le thème clair).
 - `theme.js` : chargé **en premier** dans le `<head>` de chaque page. Thème clair /
@@ -162,7 +172,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
    framboise) en touches : barres, fonds teintés `--*-dim`. Pas de dégradés,
    de halos ni d'emojis décoratifs. Utiliser les variables de `style.css` (`--nat`, `--velo`,
    `--run`, `--text-2`…) et le repère `.sport-dot` plutôt que des emojis de sport.
-   Les 3 couleurs de sport ont été validées (daltonisme compris) sur le fond
+   Les 3 couleurs de sport et le violet de la musculation (`--muscu` : `#9256fb`,
+   clair `#4b2a85`) ont été validés (daltonisme compris) sur le fond
    sombre, et leurs versions claires (`#2273c9`, `#bd5f00`, `#cb2f63`, contraste
    ≥ 4,4 sur blanc) sur le fond clair : ne pas les modifier sans revérifier qu'elles
    restent distinguables. Thème clair : accent texte `#5a8c00`, boutons principaux

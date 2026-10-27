@@ -200,17 +200,18 @@ function parseFIT(buffer) {
 
 // ── Sport detection ───────────────────────────────────────────────────────────
 // ── Classification des activités ──────────────────────────────────────────────
-// Seules la natation, le vélo et la course sont suivies. La marche / randonnée et
-// la musculation / fitness sont reconnues pour être IGNORÉES à l'import, au lieu
-// d'être rangées par erreur dans "course". Résultat : { sport } ou { skip }.
+// Natation, vélo, course et musculation sont suivies. La marche / randonnée et le
+// fitness générique sont reconnus pour être IGNORÉS à l'import, au lieu d'être
+// rangés par erreur dans "course". Résultat : { sport } ou { skip }.
 
 // FIT : noms de sport normalisés du décodeur (session.sport / session.sub_sport)
 function classifyFit(sportRaw, subRaw) {
   const s   = String(sportRaw || '').toLowerCase();
   const sub = String(subRaw   || '').toLowerCase();
 
-  // Musculation, fitness, cardio en salle... ("training" = catégorie générique FIT)
-  if (s === 'training' || /strength|weight/.test(sub)) return { skip: 'musculation' };
+  // Musculation (importée) ; autre « training » générique (cardio en salle…) ignoré
+  if (/strength|weight/.test(sub)) return { sport: 'muscu' };
+  if (s === 'training') return { skip: 'fitness' };
   // Marche, randonnée
   if (s === 'walking' || s === 'hiking' || /walk|hik/.test(sub)) return { skip: 'marche' };
 
@@ -218,7 +219,7 @@ function classifyFit(sportRaw, subRaw) {
   if (s === 'fitness_equipment') {
     if (/cycling|spin/.test(sub)) return { sport: 'velo' };
     if (sub === 'treadmill')      return { sport: 'run' };
-    return { skip: 'musculation' };
+    return { skip: 'fitness' };
   }
 
   if (s.indexOf('swim') !== -1)                                  return { sport: 'nat' };
@@ -244,8 +245,8 @@ function classifyText(text) {
   if (/swim|natation|pool|open.water|nata|piscine/.test(t))        return { sport: 'nat' };
   if (/ride|cycling|velo|bik(e|ing)|cycle|zwift|vtt|mtb|gravel/.test(t)) return { sport: 'velo' };
   if (/run|course|jogging|trail|marathon|10k|5k/.test(t))          return { sport: 'run' };
-  // 2) Activités non suivies
-  if (/strength|weight ?training|weights|muscu|renforcement|\bgym\b/.test(t)) return { skip: 'musculation' };
+  // 2) Musculation, puis activités non suivies
+  if (/strength|weight ?training|weights|muscu|renforcement|\bgym\b/.test(t)) return { sport: 'muscu' };
   if (/walk|marche|hik(e|ing)|randonnee|\brando\b/.test(t))                   return { skip: 'marche' };
   // 3) Mots-clés plus faibles
   if (/indoor|trainer/.test(t))   return { sport: 'velo' };
@@ -461,6 +462,7 @@ function stravaTypeToSport(type) {
   if (/swim|natation|nage/.test(t)) return 'nat';
   if (/ride|v[ée]lo|vtt|gravel|bike|cycl|velomobile|handcycle/.test(t)) return 'velo';
   if (/run|course|trail|jogging/.test(t)) return 'run';
+  if (/weight ?training|musculation|crossfit/.test(t)) return 'muscu';
   return null;
 }
 

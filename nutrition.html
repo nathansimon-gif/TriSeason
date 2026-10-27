@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261101a"></script>
+  <script src="theme.js?v=20261103a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261101a"></script>
+  <script src="auth-guard.js?v=20261103a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261101a">
+  <link rel="stylesheet" href="style.css?v=20261103a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -465,7 +465,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261101a"></script>
+<script src="app.js?v=20261103a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -997,7 +997,7 @@ async function offSearch() {
   const q = document.getElementById('off_q').value.trim();
   if (!q) { document.getElementById('off_q').focus(); return; }
   if (/^\d{8,14}$/.test(q)) return offLookup(q);
-  offStatus('Recherche…');
+  offStatus('<span class="spinner"></span>Recherche…');
   try {
     // Par le serveur TriSeason s'il est en place (nouvelle recherche, plus rapide),
     // sinon directement l'ancienne recherche d'Open Food Facts.
@@ -1012,7 +1012,7 @@ async function offSearch() {
 }
 
 async function offLookup(code) {
-  offStatus('Recherche du code-barres ' + code + '…');
+  offStatus('<span class="spinner"></span>Recherche du code-barres ' + code + '…');
   try {
     const data = await offFetch(OFF_BASE + '/api/v2/product/' + encodeURIComponent(code) + '.json?fields=' + OFF_FIELDS);
     const p = data && data.status === 1 ? offProduct({ code, ...data.product }) : null;

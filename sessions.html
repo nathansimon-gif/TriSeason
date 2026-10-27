@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261101a"></script>
+  <script src="theme.js?v=20261103a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261101a"></script>
+  <script src="auth-guard.js?v=20261103a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261101a">
+  <link rel="stylesheet" href="style.css?v=20261103a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -290,6 +290,7 @@
             <option value="nat">Natation</option>
             <option value="velo">Vélo</option>
             <option value="run">Course</option>
+            <option value="muscu">Musculation</option>
           </select>
         </div>
       </div>
@@ -298,7 +299,7 @@
           <label class="form-label" data-tip="Formats acceptés : 1:30:15 (h:mm:ss), 1h30'15, 45min20s, 1h30, 1:30 ou 1.5">Durée</label>
           <input class="form-input" type="text" id="s_dur" placeholder="ex: 1:30:15 ou 1h30'15">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="distGroup">
           <label class="form-label">Distance (km)</label>
           <input class="form-input" type="number" step="0.1" id="s_dist" placeholder="">
         </div>
@@ -314,6 +315,17 @@
           <label class="form-label" data-tip="Dénivelé positif cumulé sur la séance, en mètres">Dénivelé (m)</label>
           <input class="form-input" type="number" id="s_elevation" placeholder="">
         </div>
+      </div>
+      <!-- Musculation : exercices (séries × répétitions × charge) -->
+      <div class="form-group" id="muscuGroup" style="display:none">
+        <div class="muscu-head">
+          <label class="form-label" style="margin:0">Exercices</label>
+          <button type="button" class="btn btn--ghost btn--sm" id="muscuRepeatBtn" onclick="repeatLastMuscu()">Reprendre la dernière séance</button>
+        </div>
+        <div class="muscu-cols" aria-hidden="true"><span>Exercice</span><span>Séries</span><span>Rép.</span><span>kg</span><span></span></div>
+        <div id="muscuRows"></div>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="addMuscuRow()" style="align-self:flex-start">+ Ajouter un exercice</button>
+        <div class="form-hint">Gainage et exercices tenus : mets les secondes dans « Rép. ». Sans charge (pompes, tractions…) : laisse « kg » vide.</div>
       </div>
       <div class="form-group">
         <label class="form-label" data-tip="Comment vous sentiez-vous pendant et après la séance ?">Sensation</label>
@@ -381,9 +393,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261101a"></script>
-<script src="import.js?v=20261101a"></script>
-<script src="app.js?v=20261101a"></script>
+<script src="fit-parser.js?v=20261103a"></script>
+<script src="import.js?v=20261103a"></script>
+<script src="app.js?v=20261103a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -457,7 +469,7 @@ function renderStravaRefresh() {
   if (!btn) return;
   btn.style.display = TS.stravaAvailable() && TS.getStrava() ? '' : 'none';
   btn.disabled = stravaRefreshing;
-  btn.textContent = stravaRefreshing ? 'Actualisation…' : 'Actualiser Strava';
+  btn.innerHTML = stravaRefreshing ? '<span class="spinner"></span>Actualisation…' : 'Actualiser Strava';
 }
 async function refreshStrava() {
   if (stravaRefreshing) return;
@@ -479,8 +491,18 @@ function toggleAdvancedFilters() {
   btn.textContent = open ? 'Plus de filtres ▾' : 'Moins de filtres ▴';
 }
 
+// Musculation dans le filtre seulement si au moins une séance existe
+// (option ajoutée / retirée : Safari ignore « hidden » sur une option)
+function syncMuscuFilter() {
+  const sel = document.getElementById('filterSport');
+  const opt = sel.querySelector('option[value="muscu"]');
+  if (TS.hasMuscu() && !opt) sel.add(new Option('Musculation', 'muscu'));
+  if (!TS.hasMuscu() && opt && sel.value !== 'muscu') opt.remove();
+}
+
 function renderSessions() {
   renderFeelingNudge();
+  syncMuscuFilter();
   const sport = document.getElementById('filterSport').value;
   const from  = document.getElementById('filterFrom').value;
   const to    = document.getElementById('filterTo').value;
@@ -529,8 +551,8 @@ function renderSessions() {
       <td style="white-space:nowrap">${s.date ? new Date(s.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—'}</td>
       <td><span class="badge-sport badge-sport--${s.sport}">${sp.label||s.sport}</span></td>
       <td class="td-num">${s.duration ? formatDuration(s.duration) : '—'}</td>
-      <td class="td-num">${s.distance ? s.distance+' km' : '—'}</td>
-      <td class="td-num">${pace||'—'}</td>
+      <td class="td-num">${s.distance ? s.distance+' km' : (s.exercises ? s.exercises.length + ' exo' + (s.exercises.length > 1 ? 's' : '') : '—')}</td>
+      <td class="td-num"${s.exercises ? ' title="Tonnage : séries × répétitions × kg"' : ''}>${pace || (s.exercises && TS.muscuVolume(s) ? TS.muscuVolume(s).toLocaleString('fr-FR') + ' kg' : '—')}</td>
       <td class="td-num">${s.fc_avg ? s.fc_avg+' bpm' : '—'}</td>
       <td class="td-num">${s.power_avg ? s.power_avg+' W' : '—'}</td>
       <td class="td-num" style="color:${wkg ? TS.wkgLevel(wkg).color : 'var(--text-2)'}">${wkg ? wkg+' W/kg' : '—'}</td>
@@ -754,6 +776,7 @@ function openSessionModal(session = null) {
   painKeep = session?.pain ?? null;
   updatePainField();
   populateCompSelect(session?.comp_id || null);
+  fillMuscuRows(session?.exercises);
   toggleElevationField();
   updateCalc();
   document.getElementById('sessionModal').classList.add('open');
@@ -779,7 +802,69 @@ function painValue() {
 function toggleElevationField() {
   const sport = document.getElementById('s_sport').value;
   const grp   = document.getElementById('elevationGroup');
-  if (grp) grp.style.display = sport === 'nat' ? 'none' : '';
+  if (grp) grp.style.display = (sport === 'nat' || sport === 'muscu') ? 'none' : '';
+  document.getElementById('distGroup').style.display = sport === 'muscu' ? 'none' : '';
+  document.getElementById('muscuGroup').style.display = sport === 'muscu' ? '' : 'none';
+  if (sport === 'muscu' && !document.querySelector('#muscuRows .muscu-row')) addMuscuRow();
+  updateMuscuRepeat();
+}
+
+// ── Musculation : lignes d'exercices ─────────────────────────────────────────
+function muscuOptions(selected) {
+  const known = !selected || TS.MUSCU_GROUP_OF[selected];
+  return '<option value="">Choisir…</option>'
+    + TS.MUSCU_GROUPS.map(([g, list]) => '<optgroup label="' + escHtml(g) + '">'
+      + list.map(n => '<option' + (n === selected ? ' selected' : '') + '>' + escHtml(n) + '</option>').join('')
+      + '</optgroup>').join('')
+    + (known ? '' : '<option selected>' + escHtml(selected) + '</option>')
+    + '<option value="__other">Autre exercice…</option>';
+}
+function addMuscuRow(ex) {
+  const row = document.createElement('div');
+  row.className = 'muscu-row';
+  const num = v => (v == null || v === '' ? '' : v);
+  row.innerHTML = '<select class="form-select" data-k="name" aria-label="Exercice" onchange="onMuscuPick(this)">' + muscuOptions(ex && ex.name) + '</select>'
+    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="sets" aria-label="Séries" placeholder="séries" value="' + num(ex && ex.sets) + '">'
+    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="reps" aria-label="Répétitions" placeholder="rép." value="' + num(ex && ex.reps) + '">'
+    + '<input class="form-input" type="number" min="0" step="0.5" inputmode="decimal" data-k="kg" aria-label="Charge en kg" placeholder="kg" value="' + num(ex && ex.kg) + '">'
+    + '<button type="button" class="btn btn--ghost btn--sm btn--icon" onclick="this.parentNode.remove()" title="Retirer cet exercice" aria-label="Retirer cet exercice">✕</button>';
+  document.getElementById('muscuRows').appendChild(row);
+}
+// « Autre exercice… » : nom libre, ajouté à la liste de cette ligne
+function onMuscuPick(sel) {
+  if (sel.value !== '__other') return;
+  const name = (prompt('Nom de l’exercice') || '').trim().slice(0, 60);
+  sel.innerHTML = muscuOptions(name || '');
+}
+function readMuscuRows() {
+  const int = v => { const n = Math.round(parseFloat(v)); return n > 0 ? n : null; };
+  return [...document.querySelectorAll('#muscuRows .muscu-row')].map(row => {
+    const get = k => row.querySelector('[data-k="' + k + '"]').value;
+    const name = get('name');
+    if (!name || name === '__other') return null;
+    const kg = parseFloat(String(get('kg')).replace(',', '.'));
+    const ex = { name, sets: int(get('sets')), reps: int(get('reps')), kg: kg > 0 ? Math.round(kg * 10) / 10 : null };
+    if (TS.MUSCU_GROUP_OF[name]) ex.group = TS.MUSCU_GROUP_OF[name];
+    Object.keys(ex).forEach(k => { if (ex[k] == null) delete ex[k]; });
+    return ex;
+  }).filter(Boolean);
+}
+function fillMuscuRows(list) {
+  document.getElementById('muscuRows').innerHTML = '';
+  (list || []).forEach(addMuscuRow);
+}
+function updateMuscuRepeat() {
+  const last = TS.lastMuscuSession(editId);
+  const btn = document.getElementById('muscuRepeatBtn');
+  btn.style.display = last ? '' : 'none';
+  if (last) btn.title = 'Exercices du ' + TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+}
+// Recopie les exercices de la dernière séance de musculation (à ajuster ensuite)
+function repeatLastMuscu() {
+  const last = TS.lastMuscuSession(editId);
+  if (!last) return;
+  fillMuscuRows(last.exercises.map(e => Object.assign({}, e)));
+  TS.toast('Exercices du ' + TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + ' repris : ajuste les charges si besoin.');
 }
 
 function editSession(id) {
@@ -824,6 +909,11 @@ function saveSessionForm() {
   };
   const pain = painValue();
   if (pain != null) session.pain = pain;
+  if (session.sport === 'muscu') {
+    session.distance = null; session.elevation = null;
+    const exercises = readMuscuRows();
+    if (exercises.length) session.exercises = exercises;
+  }
   if (!session.date || !session.sport) { TS.toast('Date et sport obligatoires', 'error'); return; }
   // Course à laquelle la séance était reliée avant cette modification (si on édite)
   const previous = editId ? TS.getSessions().find(s => s.id === editId) : null;
@@ -911,7 +1001,7 @@ async function handleArchive(e) {
   e.target.value = '';
   if (!file) return;
   const box = document.getElementById('archiveResult');
-  box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)">Lecture de l’archive…</div>';
+  box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)"><span class="spinner"></span>Lecture de l’archive…</div>';
   try {
     archiveActs = await window.TriImport.readStravaArchive(file);
     archiveSource = 'archive';
@@ -927,7 +1017,7 @@ async function handleArchive(e) {
 let archiveSource = 'archive';
 async function loadStravaHistory() {
   const box = document.getElementById('archiveResult');
-  box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)" id="historyProgress">Récupération de ton historique sur Strava…</div>';
+  box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)"><span class="spinner"></span><span id="historyProgress">Récupération de ton historique sur Strava…</span></div>';
   document.getElementById('historique-strava').scrollIntoView({ behavior: 'smooth', block: 'start' });
   try {
     archiveActs = await TS.stravaFetchHistory(n => {
@@ -955,6 +1045,14 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHistoryButton();
   // Lien depuis le calendrier du Dashboard : sessions.html?seance=<id> ouvre la séance.
   const sid = new URLSearchParams(location.search).get('seance');
+  // Depuis le Dashboard (graphique, musculation) : sessions.html?sport=muscu filtre la liste
+  const sportParam = new URLSearchParams(location.search).get('sport');
+  if (sportParam && TS.SPORTS[sportParam]) {
+    history.replaceState(null, '', location.pathname);
+    syncMuscuFilter();
+    document.getElementById('filterSport').value = sportParam;
+    renderSessions();
+  }
   if (sid) {
     history.replaceState(null, '', location.pathname);
     const s = TS.getSessions().find(x => x.id === sid);
@@ -979,15 +1077,15 @@ function renderArchivePlan() {
   const since = archiveSince();
   const prev = document.getElementById('archiveSince')?.value || '';
   const plan = TS.planStravaArchive(archiveActs, { since });
-  const by = { nat: 0, velo: 0, run: 0 };
+  const by = { nat: 0, velo: 0, run: 0, muscu: 0 };
   plan.add.forEach(s => { by[s.sport]++; });
   const years = [...new Set(archiveActs.map(a => a.start.getFullYear()))].sort();
   const lines = [
     archiveActs.length + (archiveSource === 'strava' ? ' activités sur ton compte Strava' : ' activités dans l’archive') + (years.length ? ' (' + years[0] + (years.length > 1 ? '–' + years[years.length - 1] : '') + ')' : '') + '.',
     plan.add.length ? '<b style="color:var(--text)">' + plan.add.length + ' séance' + (plan.add.length > 1 ? 's' : '') + ' à ajouter</b> : '
-      + ['nat', 'velo', 'run'].filter(k => by[k]).map(k => by[k] + ' ' + TS.SPORTS[k].label.toLowerCase()).join(', ') + '.' : 'Aucune nouvelle séance à ajouter.',
+      + ['nat', 'velo', 'run', 'muscu'].filter(k => by[k]).map(k => by[k] + ' ' + TS.SPORTS[k].label.toLowerCase()).join(', ') + '.' : 'Aucune nouvelle séance à ajouter.',
     plan.already + plan.link.length ? (plan.already + plan.link.length) + ' déjà dans TriSeason (pas de doublon).' : '',
-    plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, musculation, autres sports).' : '',
+    plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, autres sports).' : '',
     plan.before ? plan.before + ' plus ancienne' + (plan.before > 1 ? 's' : '') + ' que la période choisie.' : '',
     plan.dropped ? '<span style="color:var(--velo)">' + plan.dropped + ' séance' + (plan.dropped > 1 ? 's' : '') + ' plus ancienne' + (plan.dropped > 1 ? 's' : '')
       + ' que le ' + TS.formatDate(plan.oldestKept) + ' ne rentre' + (plan.dropped > 1 ? 'nt' : '') + ' pas : ' + (TS.cloudLayoutNow() === 2 ? 'la place est limitée sur cet appareil' : 'la place par compte est limitée pour l’instant') + '.</span>' : '',
@@ -1046,7 +1144,7 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-var IGNORED_LABELS = { marche: 'marche / randonn\u00e9e', musculation: 'musculation / fitness' };
+var IGNORED_LABELS = { marche: 'marche / randonn\u00e9e', fitness: 'fitness / cardio en salle' };
 
 function buildImportSummary(imported, similar, ignored) {
   const parts = [];
@@ -1091,11 +1189,11 @@ async function processImportFiles(files) {
     files = files.slice(0, IMPORT_MAX_FILES);
   }
   for (const [i, file] of files.entries()) {
-    progress.innerHTML = '<span style="color:var(--accent2)">\u23f3 Lecture de ' + escHtml(file.name) + ' (' + (i + 1) + ' / ' + files.length + ')\u2026</span>';
+    progress.innerHTML = '<span style="color:var(--accent2)"><span class="spinner"></span>Lecture de ' + escHtml(file.name) + ' (' + (i + 1) + ' / ' + files.length + ')\u2026</span>';
     await new Promise(r => setTimeout(r, 0)); // laisse la page respirer entre deux fichiers
     try {
       const session = await window.TriImport.parseActivityFile(file);
-      if (session._skip) {           // marche / musculation : jamais importées
+      if (session._skip) {           // marche, fitness : jamais importés
         ignored.push({ name: file.name, reason: session._skip, date: session.date, distance: session.distance });
         continue;
       }

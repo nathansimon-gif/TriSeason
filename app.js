@@ -98,6 +98,42 @@ function pushToCloud(data) {
   if (!cloudSending) sendToCloud(ref);
 }
 let cloudSending = false, cloudPending = null;
+
+// ── Pastille d'état (sous la barre du haut) : synchronisation, enregistré,
+// hors connexion, chargement des données. Discrète, ne bloque rien.
+let syncPillTimer = null;
+function syncPill(state, text) {
+  if (!document.body) return;
+  let el = document.getElementById('tsSync');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tsSync'; el.className = 'ts-sync'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  clearTimeout(syncPillTimer);
+  if (!state) { el.className = 'ts-sync'; return; }
+  // Hors connexion : le message reste affiché tant que le réseau n'est pas revenu
+  if (!navigator.onLine && state !== 'offline') state = 'offline';
+  const labels = {
+    loading: '<span class="spinner"></span>Chargement de tes données…',
+    sending: '<span class="spinner"></span>Synchronisation…',
+    saved: 'Enregistré',
+    error: 'Pas encore enregistré dans le cloud : nouvel essai au prochain enregistrement',
+    offline: cloudLoaded ? 'Pas de réseau : tes saisies seront envoyées au retour du réseau'
+      : 'Pas de réseau : données de cet appareil affichées. Reconnecte-toi avant de saisir.',
+  };
+  el.innerHTML = text || labels[state];
+  el.className = 'ts-sync ts-sync--on ts-sync--' + state;
+  if (state === 'saved') syncPillTimer = setTimeout(() => syncPill(null), 1400);
+  if (state === 'error') syncPillTimer = setTimeout(() => syncPill(null), 4500);
+}
+window.addEventListener('offline', () => syncPill('offline'));
+window.addEventListener('online', () => syncPill(cloudSending ? 'sending' : null));
+document.addEventListener('DOMContentLoaded', () => {
+  if (!navigator.onLine) syncPill('offline');
+  else if (document.documentElement.classList.contains('ts-loading-data')) syncPill('loading');
+});
+
 async function sendToCloud(ref) {
   cloudSending = true;
   try {
@@ -109,11 +145,14 @@ async function sendToCloud(ref) {
       }
       const data = cloudPending;
       cloudPending = null;
+      syncPill('sending');
       try {
         if (cloudLayout === 2) await writeDrawers(ref, data);
         else await writeSingleDoc(ref, data);
+        if (!cloudPending) syncPill(navigator.onLine ? 'saved' : 'offline');
       } catch (err) {
         console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
+        syncPill('error');
       }
     }
   } finally { cloudSending = false; }
@@ -476,6 +515,16 @@ function syncFromCloud(uid) {
   const ref = getUserDocRef(uid);
   if (!ref) { cloudSyncing = false; return; }
   claimLocalData(uid);
+  // Pas de copie locale (nouvel appareil, après une déconnexion) : cartes « en
+  // cours de chargement » le temps de lire le compte, plutôt que des pages vides.
+  let hadLocal = true;
+  try { hadLocal = !!localStorage.getItem(DB_KEY); } catch {}
+  if (!hadLocal) { document.documentElement.classList.add('ts-loading-data'); syncPill('loading'); }
+  const doneLoading = () => {
+    if (!document.documentElement.classList.contains('ts-loading-data')) return;
+    document.documentElement.classList.remove('ts-loading-data');
+    syncPill(navigator.onLine ? null : 'offline');
+  };
 
   ref.get().then(async doc => {
     checkConsent(uid, doc);
@@ -511,8 +560,11 @@ function syncFromCloud(uid) {
   }).catch(err => {
     // cloudLoaded reste à false : pas d'envoi vers le cloud pour ne pas l'écraser.
     console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);
+    if (!hadLocal) setTimeout(() => syncPill(navigator.onLine ? 'error' : 'offline',
+      navigator.onLine ? 'Données du compte pas encore chargées : recharge la page' : null), 50);
   }).finally(() => {
     cloudSyncing = false;
+    doneLoading();
   });
 }
 // Lance le déménagement (file d'envoi : jamais en même temps qu'un enregistrement).
@@ -617,6 +669,7 @@ function getWeek(weekKey) {
     nat:  { dur: 0, dist: 0, rpe: 0, sessions: 0, rpeSum: 0, elevation: 0 },
     velo: { dur: 0, dist: 0, rpe: 0, sessions: 0, rpeSum: 0, elevation: 0 },
     run:  { dur: 0, dist: 0, rpe: 0, sessions: 0, rpeSum: 0, elevation: 0 },
+    muscu: { dur: 0, dist: 0, rpe: 0, sessions: 0, rpeSum: 0, elevation: 0 },
     notes: data.weeks[weekKey]?.notes || ''
   };
 
@@ -631,7 +684,7 @@ function getWeek(weekKey) {
   }
 
   // Average RPE per sport
-  for (const sp of ['nat','velo','run']) {
+  for (const sp of ['nat','velo','run','muscu']) {
     result[sp].rpe = result[sp].sessions > 0
       ? result[sp].rpeSum / result[sp].sessions
       : 0;
@@ -668,7 +721,7 @@ function newId() {
 // - durée arrondie à 6 décimales d'heure : reste exacte à la seconde (écart < 0,002 s) ;
 // - séance Strava : pas de « · Strava » dans les notes (strava_id le dit déjà),
 //   et pas de nom automatique (« Morning Run », « Course à pied le matin »…).
-const STRAVA_DEFAULT_NAME = /^(?:(?:morning|lunch|afternoon|evening|night) (?:run|ride|swim|walk|hike|activity|workout|trail run|virtual ride|virtual run|mountain bike ride|gravel ride|e-bike ride)|(?:course à pied|course|trail|sortie (?:à )?vélo|vélo|natation|activité|randonnée|marche) (?:(?:le|du|de|en) |dans l['’]|à l['’]heure du |l['’])?(?:matin|matinale|midi|soir|soirée|nuit|nocturne|après-midi|déjeuner))$/i;
+const STRAVA_DEFAULT_NAME = /^(?:(?:morning|lunch|afternoon|evening|night) (?:run|ride|swim|walk|hike|activity|workout|trail run|virtual ride|virtual run|mountain bike ride|gravel ride|e-bike ride|weight training)|(?:course à pied|course|trail|sortie (?:à )?vélo|vélo|natation|activité|randonnée|marche|musculation|entraînement aux poids) (?:(?:le|du|de|en) |dans l['’]|à l['’]heure du |l['’])?(?:matin|matinale|midi|soir|soirée|nuit|nocturne|après-midi|déjeuner))$/i;
 function compactSession(s) {
   Object.keys(s).forEach(k => { if (s[k] == null || s[k] === '') delete s[k]; });
   if (typeof s.duration === 'number') s.duration = Math.round(s.duration * 1e6) / 1e6;
@@ -1270,6 +1323,7 @@ function getSeasonStats() {
     nat:  { km: 0, h: 0, sessions: 0 },
     velo: { km: 0, h: 0, sessions: 0 },
     run:  { km: 0, h: 0, sessions: 0 },
+    muscu: { km: 0, h: 0, sessions: 0 },
     total: { h: 0, sessions: 0, tss: 0 },
     rpe: [],
   };
@@ -1883,6 +1937,7 @@ const STRAVA_SPORTS = {
   Ride: 'velo', VirtualRide: 'velo', GravelRide: 'velo', MountainBikeRide: 'velo',
   EBikeRide: 'velo', EMountainBikeRide: 'velo', Velomobile: 'velo', Handcycle: 'velo',
   Swim: 'nat',
+  WeightTraining: 'muscu', Crossfit: 'muscu',
 };
 
 function stravaAvailable() { return !!(STRAVA_CLIENT_ID && TS_SERVER_URL); }
@@ -2283,10 +2338,37 @@ const SPORTS = {
   nat:  { label: 'Natation',  emoji: '<span class="sport-dot sport-dot--nat"></span>', color: '#2f95e6', unit: 'km', paceLabel: 'Allure', paceUnit: '/100m' },
   velo: { label: 'Vélo',      emoji: '<span class="sport-dot sport-dot--velo"></span>', color: '#d8791a', unit: 'km', paceLabel: 'Vitesse', paceUnit: 'km/h' },
   run:  { label: 'Course',    emoji: '<span class="sport-dot sport-dot--run"></span>', color: '#dc3d6a', unit: 'km', paceLabel: 'Allure', paceUnit: '/km' },
+  muscu: { label: 'Musculation', emoji: '<span class="sport-dot sport-dot--muscu"></span>', color: '#9256fb', unit: '', paceLabel: null, paceUnit: '' },
 };
 
 const COMP_TYPES = ['TRI', 'RUN', 'VELO', 'NAT', 'DUATH', 'AQUA'];
 
+
+// ── Musculation ─────────────────────────────────────────────────────────────
+// Séance sport 'muscu' : durée + RPE (charge d'entraînement comme les autres
+// sports) et session.exercises = [{ name, group, sets, reps, kg }]. Pour un
+// exercice tenu (gainage), reps = secondes. La musculation n'apparaît dans les
+// filtres, graphiques et listes de sports que si au moins une séance existe.
+const MUSCU_GROUPS = [
+  ['Pectoraux', ['Développé couché (barre)', 'Développé couché (haltères)', 'Développé incliné', 'Pompes', 'Écarté (haltères ou poulie)']],
+  ['Dos', ['Tirage vertical', 'Tirage horizontal', 'Tractions', 'Rowing (barre ou haltère)', 'Soulevé de terre']],
+  ['Épaules', ['Développé militaire', 'Élévations latérales', 'Oiseau (arrière d’épaule)']],
+  ['Bras', ['Curl biceps (barre)', 'Curl biceps (haltères)', 'Curl marteau', 'Tirage triceps (poulie)', 'Barre au front', 'Dips']],
+  ['Jambes', ['Squat', 'Presse à cuisses (assise)', 'Presse à cuisses (verticale)', 'Leg extension', 'Leg curl', 'Fentes', 'Hip thrust', 'Mollets']],
+  ['Abdos et gainage', ['Gainage (planche)', 'Gainage latéral', 'Crunch', 'Relevé de jambes', 'Russian twist', 'Roue abdominale']],
+];
+const MUSCU_GROUP_OF = {};
+MUSCU_GROUPS.forEach(([g, list]) => list.forEach(n => { MUSCU_GROUP_OF[n] = g; }));
+function hasMuscu(data = getData()) { return (data.sessions || []).some(s => s.sport === 'muscu'); }
+// Sports à afficher : les 3 sports, plus la musculation si l'utilisateur en fait
+function sportsShown(data = getData()) { return hasMuscu(data) ? ['nat', 'velo', 'run', 'muscu'] : ['nat', 'velo', 'run']; }
+function lastMuscuSession(beforeId) {
+  return getSessions({ sport: 'muscu' }).find(s => s.id !== beforeId && (s.exercises || []).length) || null;
+}
+// Tonnage d'une séance (séries × répétitions × kg), exercices sans charge exclus
+function muscuVolume(s) {
+  return Math.round((s.exercises || []).reduce((a, e) => a + (e.sets || 0) * (e.reps || 0) * (e.kg || 0), 0));
+}
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
 function getGoals(sport) {
@@ -2498,5 +2580,6 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, hasMuscu, sportsShown, lastMuscuSession, muscuVolume,
   SPORTS, COMP_TYPES,
 };

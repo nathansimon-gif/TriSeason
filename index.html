@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261101a"></script>
+  <script src="theme.js?v=20261103a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261101a"></script>
+  <script src="auth-guard.js?v=20261103a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261101a">
+  <link rel="stylesheet" href="style.css?v=20261103a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -116,7 +116,7 @@
     .day-sec { font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 6px; }
     .day-sec:first-child { margin-top:0; }
     .day-sess { border:1px solid var(--border); border-left:3px solid var(--text-3); border-radius:var(--r-sm); background:var(--surface2); padding:10px 12px; margin-bottom:6px; }
-    .day-sess--nat { border-left-color:var(--nat); } .day-sess--velo { border-left-color:var(--velo); } .day-sess--run { border-left-color:var(--run); }
+    .day-sess--nat { border-left-color:var(--nat); } .day-sess--velo { border-left-color:var(--velo); } .day-sess--run { border-left-color:var(--run); } .day-sess--muscu { border-left-color:var(--muscu); }
     .day-sess__head { display:flex; align-items:center; gap:8px; }
     .day-sess__title { font-size:13px; font-weight:600; flex:1; min-width:0; }
     .day-sess__main { font-family:var(--mono); font-size:14px; margin-top:4px; }
@@ -455,6 +455,7 @@
           <button type="button" class="btn btn--sm" data-sport="nat"><span class="sport-dot sport-dot--nat"></span>Natation</button>
           <button type="button" class="btn btn--sm" data-sport="velo"><span class="sport-dot sport-dot--velo"></span>Vélo</button>
           <button type="button" class="btn btn--sm" data-sport="run"><span class="sport-dot sport-dot--run"></span>Course</button>
+          <button type="button" class="btn btn--sm" data-sport="muscu" style="display:none"><span class="sport-dot sport-dot--muscu"></span>Musculation</button>
         </div>
       </div>
       <div class="form-row">
@@ -495,7 +496,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261101a"></script>
+<script src="app.js?v=20261103a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -907,21 +908,21 @@ function renderMonthSummary() {
   document.getElementById('msHeures').textContent = calFormatDur(totalH);
 
   // Répartition par sport
-  const bySport = { nat: { km: 0, h: 0, n: 0 }, velo: { km: 0, h: 0, n: 0 }, run: { km: 0, h: 0, n: 0 } };
+  const bySport = { nat: { km: 0, h: 0, n: 0 }, velo: { km: 0, h: 0, n: 0 }, run: { km: 0, h: 0, n: 0 }, muscu: { km: 0, h: 0, n: 0 } };
   sessions.forEach(s => {
     if (!bySport[s.sport]) return;
     bySport[s.sport].km += s.distance || 0;
     bySport[s.sport].h  += s.duration || 0;
     bySport[s.sport].n  += 1;
   });
-  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)' };
+  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)', muscu: 'var(--muscu)' };
   const breakdown = Object.keys(bySport)
     .filter(k => bySport[k].n > 0)
     .map(k => `<div class="month-sport-row">
       <span style="width:8px;height:8px;border-radius:50%;background:${SPORT_COLOR[k]};flex-shrink:0"></span>
       <span style="flex:1">${TS.SPORTS[k]?.label || k}</span>
       <span style="color:var(--text-2)">${bySport[k].n} séance${bySport[k].n>1?'s':''}</span>
-      <span style="font-weight:700;min-width:60px;text-align:right">${bySport[k].km.toFixed(0)} km</span>
+      <span style="font-weight:700;min-width:60px;text-align:right">${k === 'muscu' ? TS.formatHours(bySport[k].h) : bySport[k].km.toFixed(0) + ' km'}</span>
     </div>`).join('');
   document.getElementById('msSportBreakdown').innerHTML = breakdown
     || '<div style="font-size:12px;color:var(--text-3);padding:8px 0">Aucune séance ce mois-ci.</div>';
@@ -985,7 +986,7 @@ function renderActivityCalendar() {
 
   const MAX_H = 3;
   const MIN_PX = 6, MAX_PX = 18;
-  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)' };
+  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)', muscu: 'var(--muscu)' };
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = calYear + '-' + String(calMonthIdx+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
@@ -1088,6 +1089,11 @@ function showPlanForm(on) {
   document.getElementById('planForm').style.display = on ? '' : 'none';
   document.getElementById('planFormOpen').style.display = on ? 'none' : '';
 }
+// « 4 × 10 × 60 kg » (séries × répétitions × charge, ce qui est renseigné)
+function muscuSets(e) {
+  const reps = e.reps && /^Gainage/.test(e.name) ? e.reps + ' s' : e.reps;   // gainage : secondes
+  return [e.sets, reps].filter(Boolean).join(' × ') + (e.kg ? (e.sets || e.reps ? ' × ' : '') + e.kg.toLocaleString('fr-FR') + ' kg' : '');
+}
 // Détail d'une séance faite (dans la fenêtre du jour).
 function daySessionHtml(s, plan, st, data) {
   const sp = TS.SPORTS[s.sport] || { label: s.sport };
@@ -1106,6 +1112,7 @@ function daySessionHtml(s, plan, st, data) {
     chip('Ressenti', s.sensation ? s.sensation + '/5' : ''),
     chip('Dépense', s.kcal ? Math.round(s.kcal).toLocaleString('fr-FR') + ' kcal' : ''),
     chip('Douleur', s.pain != null && TS.healthEnabled(data) ? s.pain + '/10' : ''),
+    chip('Tonnage', s.exercises && TS.muscuVolume(s) ? TS.muscuVolume(s).toLocaleString('fr-FR') + ' kg' : ''),
     chip(TS.GEAR_KINDS[s.sport] || 'Équipement', (TS.gearForSession(s, data) || {}).name ? esc(TS.gearForSession(s, data).name) : ''),
   ].join('');
   return `<div class="day-sess day-sess--${s.sport}">
@@ -1113,6 +1120,7 @@ function daySessionHtml(s, plan, st, data) {
       <a class="btn btn--sm" href="sessions.html?seance=${encodeURIComponent(s.id)}">Modifier</a></div>
     ${main ? `<div class="day-sess__main">${main}</div>` : ''}
     ${chips ? `<div class="day-sess__chips">${chips}</div>` : ''}
+    ${s.exercises ? `<ul class="muscu-list">${s.exercises.map(e => `<li><b>${esc(e.name)}</b> ${muscuSets(e)}</li>`).join('')}</ul>` : ''}
     ${s.notes ? `<div class="day-sess__notes">${esc(s.notes)}</div>` : ''}
     ${plan ? `<div class="day-sess__plan">Prévue : ${planTarget(plan)} · ${PLAN_STATE_LABEL[st[plan.id].state]}${st[plan.id].ratio != null ? ' (' + Math.round(st[plan.id].ratio * 100) + ' %)' : ''}</div>` : ''}
   </div>`;
@@ -1120,6 +1128,7 @@ function daySessionHtml(s, plan, st, data) {
 function fillPlanForm(p, date) {
   planEditId = p ? p.id : null;
   planSport = p ? p.sport : planSport;
+  document.querySelector('#pl_sport [data-sport="muscu"]').style.display = TS.hasMuscu() || planSport === 'muscu' ? '' : 'none';
   document.getElementById('planFormTitle').textContent = p ? 'Modifier la séance prévue' : 'Planifier une séance';
   document.getElementById('pl_date').value = p ? p.date : date;
   document.getElementById('pl_dist').value = p && p.distance ? p.distance : '';
@@ -1156,13 +1165,14 @@ function deletePlanForm() {
 }
 
 function goToSport(sport) {
-  window.location.href = `sport.html?sport=${sport}`;
+  // Pas encore de page Sports pour la musculation : liste des séances filtrée
+  window.location.href = sport === 'muscu' ? 'sessions.html?sport=muscu' : `sport.html?sport=${sport}`;
 }
 
 // ── Totals ────────────────────────────────────────────────────────────────────
 function renderTotals() {
   let totalH = 0, totalSes = 0;
-  for (const sport of ['nat', 'velo', 'run']) {
+  for (const sport of TS.sportsShown()) {
     const d = aggregateSessions(getSessionsForPeriod(sport));
     totalH   += d.dur;
     totalSes += d.sessions;
@@ -1214,11 +1224,11 @@ function renderFrequencyChart() {
       { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#2f95e6' },
       { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#d8791a' },
       { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#dc3d6a' },
-    ]},
+    ].concat(TS.hasMuscu() ? [{ label: 'Musculation', data: weeks.map(w => TS.getWeek(w).muscu?.sessions || 0), backgroundColor: '#9256fb' }] : []) },
     options: {
       ...CO,
       scales: { ...CO.scales, x: { ...CO.scales.x, stacked: true }, y: { ...CO.scales.y, stacked: true, ticks: { ...CO.scales.y.ticks, stepSize: 1 } } },
-      onClick: (e, el) => { if (el.length) { const ds = ['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } }
+      onClick: (e, el) => { if (el.length) { const ds = ['nat','velo','run','muscu'][el[0].datasetIndex]; goToSport(ds); } }
     }
   });
 }
@@ -1248,19 +1258,20 @@ function renderMonthlyChart() {
 
 function renderDonutChart() {
   const stats=TS.getSeasonStats();
-  const vals=[stats.nat.h,stats.velo.h,stats.run.h];
+  const keys=TS.sportsShown();
+  const vals=keys.map(k=>stats[k].h);
   const total=vals.reduce((a,b)=>a+b,0);
+  const colors=keys.map(k=>TS.SPORTS[k].color);
+  const labels=keys.map(k=>TS.SPORTS[k].label);
   charts['chartDonut'] = makeChart('chartDonut', {
     type:'doughnut',
     data:{
-      labels:['Natation','Vélo','Course'],
-      datasets:[{data:vals,backgroundColor:['#2f95e6','#d8791a','#dc3d6a'],borderWidth:0,hoverOffset:8}]
+      labels,
+      datasets:[{data:vals,backgroundColor:colors,borderWidth:0,hoverOffset:8}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${TS.formatHours(ctx.raw)} (${total?Math.round(ctx.raw/total*100):0}%)`}}}}
   });
   // legend manual
-  const colors=['#2f95e6','#d8791a','#dc3d6a'];
-  const labels=['Natation','Vélo','Course'];
   document.getElementById('donutLegend').innerHTML=labels.map((l,i)=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <div style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0"></div>
