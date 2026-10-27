@@ -1421,7 +1421,9 @@ async function main() {
       monthly: !!Chart.getChart('chartMuscuMonthly'), effort: document.getElementById('muscuEffort').textContent,
       best: document.querySelectorAll('#muscuBestWeeks .stat-row').length,
       goalTypes: [...document.querySelectorAll('#goalType option')].map(o => o.value),
-      goalsIn: document.getElementById('goalsCard').parentNode.id }));
+      goalsIn: document.getElementById('goalsCard').parentNode.id,
+      weeks: Chart.getChart('chartMuscuWeeks').data.labels.length,
+      legend: Chart.getChart('chartMuscuProg').legend.legendItems.map(l => l.text + ':' + (l.lineDash || []).length) }));
     await v.page.selectOption('#muscuVolExo', 'Pompes'); await v.page.waitForTimeout(100);
     const pompes = await v.page.evaluate(() => ({ label: Chart.getChart('chartMuscuVol').data.datasets[0].label, data: Chart.getChart('chartMuscuVol').data.datasets[0].data }));
     await v.page.selectOption('#goalType', 'kg_month'); await v.page.fill('#goalTarget', '20000');
@@ -1441,6 +1443,8 @@ async function main() {
     const none = await w.page.evaluate(() => ({ avgs: document.getElementById('sportAvgs').textContent, ch: TS.weeklyChallenges(TS.getCurrentWeek()).map(c => c.id),
       badges: TS.getAchievements().filter(b => b.kind === 'muscu').length }));
     await w.ctx.close();
+    assert(page.weeks === 8, 'graphique par semaine : ' + page.weeks + ' semaines au lieu de 8');
+    assert(page.legend.length === 2 && page.legend.every(l => /:0$/.test(l)), 'légende charge / 1RM : ' + page.legend.join());
     assert(page.volOpts[0] === 'Toutes les séances' && page.volOpts.includes('Squat') && page.allBars === 10 && page.monthly, 'volume par séance : ' + JSON.stringify(page));
     assert(/Difficile/.test(page.effort) && /Effort moyen/.test(page.effort) && page.best >= 3, 'effort / meilleures semaines : ' + JSON.stringify(page));
     assert(page.goalTypes.includes('kg_week') && !page.goalTypes.includes('dist_week') && page.goalsIn === 'muscuGoalsSlot', 'objectifs musculation : ' + JSON.stringify(page));
