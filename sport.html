@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261106a"></script>
+  <script src="theme.js?v=20261107a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261106a"></script>
+  <script src="auth-guard.js?v=20261107a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261106a">
+  <link rel="stylesheet" href="style.css?v=20261107a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -232,7 +232,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261106a"></script>
+<script src="app.js?v=20261107a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -374,7 +374,7 @@ function renderMuscuVolume() {
     const list = TS.getSessions({ sport: 'muscu', from: range.from, to: range.to }).slice().reverse().filter(s => (s.exercises || []).length);
     makeChart('chartMuscuVol', { data: { labels: list.map(s => day(s.date)), datasets: [
       { type: 'bar', label: 'Kg soulevés', data: list.map(s => TS.muscuVolume(s)), backgroundColor: 'rgba(146,86,251,.6)', borderRadius: 3, yAxisID: 'y', order: 2 },
-      { type: 'line', label: 'Séries', data: list.map(s => s.exercises.reduce((a, e) => a + (e.sets || 0), 0)), borderColor: '#a3abb9', backgroundColor: '#a3abb9', pointRadius: 2, yAxisID: 'y1', order: 1 },
+      { type: 'line', label: 'Séries', data: list.map(s => s.exercises.reduce((a, e) => a + TS.exSeries(e).length, 0)), borderColor: '#a3abb9', backgroundColor: '#a3abb9', pointRadius: 2, yAxisID: 'y1', order: 1 },
     ] }, options: opts(c => c.dataset.yAxisID === 'y' ? fmtKg(c.raw) : c.raw) });
     const kgs = list.map(s => TS.muscuVolume(s)).filter(Boolean);
     note.textContent = kgs.length ? 'En moyenne ' + fmtKg(kgs.reduce((a, b) => a + b, 0) / kgs.length) + ' par séance, ' + list.length + ' séances avec exercices.' : '';
@@ -385,7 +385,7 @@ function renderMuscuVolume() {
   const hold = TS.isHoldExercise(name);
   // Sans charge : répétitions (ou secondes) totales de la séance pour cet exercice
   const reps = h => TS.getSessions({ sport: 'muscu', from: h.date, to: h.date }).filter(s => s.id === h.id)
-    .reduce((a, s) => a + s.exercises.filter(e => e.name === name).reduce((b, e) => b + (e.sets || 1) * (e.reps || 0), 0), 0);
+    .reduce((a, s) => a + s.exercises.filter(e => e.name === name).reduce((b, e) => b + TS.exSeries(e).reduce((c, x) => c + (x.reps || 0), 0), 0), 0);
   const data = hist.map(h => withKg ? h.volume : reps(h));
   const label = withKg ? 'Kg soulevés' : hold ? 'Secondes au total' : 'Répétitions au total';
   makeChart('chartMuscuVol', { type: 'bar', data: { labels: hist.map(h => day(h.date)), datasets: [
@@ -509,7 +509,7 @@ function renderMuscuProgress() {
     // Légende : un trait plein de la couleur de chaque courbe (le cadre en pointillés du 1RM était peu lisible)
     options: { plugins: { legend: { labels: { color: '#a3abb9', boxWidth: 16, boxHeight: 3,
           generateLabels: ch => Chart.defaults.plugins.legend.labels.generateLabels(ch).map(l => Object.assign(l, { lineDash: [], fillStyle: l.strokeStyle })) } },
-        tooltip: { callbacks: { afterLabel: c => { const h = hist[c.dataIndex]; return withKg && c.datasetIndex === 0 && h.reps ? h.kg + ' kg × ' + h.reps + ' rép.' : ''; } } } },
+        tooltip: { callbacks: { afterLabel: c => { const h = hist[c.dataIndex]; return withKg && c.datasetIndex === 0 && h.reps ? h.kg + ' kg × ' + h.reps + ' rép.' + (h.max ? ' (série max)' : '') : ''; } } } },
       scales: { x: { ticks: { color: '#6b7383', maxRotation: 0, autoSkip: true }, grid: { display: false } },
         y: { ticks: { color: '#6b7383' }, grid: { color: 'rgba(255,255,255,.06)' } } } } });
   const first = hist.find(h => withKg ? h.kg : h.maxReps), last = [...hist].reverse().find(h => withKg ? h.kg : h.maxReps);

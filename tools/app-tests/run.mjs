@@ -101,9 +101,12 @@ const CLOUD_HELPER = `window.__cloud = function (uid) {
 };`;
 
 // ── Données de test ──────────────────────────────────────────────────────────
+// Jour J+offset sur le calendrier de Paris. On part de la date du jour à Paris et on
+// compte en jours de calendrier : décaler l'heure UTC puis convertir donnait deux fois
+// le même jour autour d'un changement d'heure (ex. le 28/10 à 22 h UTC).
 function day(offset) {
-  const d = new Date(); d.setDate(d.getDate() + offset);
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10);
 }
 function sampleData() {
   const sessions = [];
@@ -1529,6 +1532,58 @@ async function main() {
     assert(r.race && r.flag && /Compétition : Triathlon test/.test(r.label) && !r.plain, 'calendrier : ' + JSON.stringify(r));
     assert(/Triathlon test/.test(r.modal) && /Dans 30 jours/.test(r.modal) && /Objectif 2:30:00/.test(r.modal) && !r.formOpen, 'fenêtre du jour (à venir) : ' + r.modal);
     assert(/10 km test/.test(r.past) && /Réalisé 0:41:07/.test(r.past) && /Course à pied/.test(r.past), 'fenêtre du jour (passée) : ' + r.past);
+  });
+
+  await test('Musculation : séries détaillées (charges différentes, série « Max ») dans un seul exercice', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.fill('#s_date', day(-1)); await v.page.fill('#s_dur', '1:00:00');
+    const row = '#muscuRows .muscu-row:nth-child(1) ';
+    await v.page.click(row + '.muscu-pick'); await v.page.fill('#mpSearch', 'squat'); await v.page.click('#mpList [data-name="Squat"]');
+    await v.page.fill(row + '> [data-k="sets"]', '3'); await v.page.fill(row + '> [data-k="reps"]', '8'); await v.page.fill(row + '> [data-k="kg"]', '60');
+    await v.page.click(row + '.muscu-detail__open');
+    const prefilled = await v.page.$$eval(row + '.muscu-serie', ls => ls.map(l => l.querySelector('[data-k="reps"]').value + 'x' + l.querySelector('[data-k="kg"]').value));
+    const s2 = row + '.muscu-serie:nth-child(2) ', s3 = row + '.muscu-serie:nth-child(3) ';
+    await v.page.fill(s2 + '[data-k="reps"]', '6'); await v.page.fill(s2 + '[data-k="kg"]', '70');
+    await v.page.fill(s3 + '[data-k="reps"]', ''); await v.page.fill(s3 + '[data-k="kg"]', '90');
+    await v.page.click(s3 + '.muscu-max');
+    const maxReps = await v.page.inputValue(s3 + '[data-k="reps"]');
+    // Deuxième exercice : séries détaillées mais toutes pareilles → forme courte
+    await v.page.click('text=+ Ajouter un exercice');
+    const row2 = '#muscuRows .muscu-row:nth-child(2) ';
+    await v.page.click(row2 + '.muscu-pick'); await v.page.fill('#mpSearch', 'leg extension'); await v.page.click('#mpList [data-name="Leg extension"]');
+    await v.page.click(row2 + '.muscu-detail__open');
+    await v.page.fill(row2 + '.muscu-serie [data-k="reps"]', '12'); await v.page.fill(row2 + '.muscu-serie [data-k="kg"]', '40');
+    await v.page.click(row2 + '.muscu-series__actions .btn');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => {
+      const s = TS.getSessions({ sport: 'muscu' })[0];
+      const h = TS.muscuExerciseHistory('Squat')[0];
+      return { ex: s.exercises, vol: TS.muscuVolume(s), h, text: TS.muscuSetsText(s.exercises[0]), load: TS.muscuMuscleLoad({ mode: 'sets' }).totals.quadriceps, id: s.id };
+    });
+    // Réouverture : les séries détaillées reviennent telles quelles
+    await v.page.evaluate(id => editSession(id), r.id); await v.page.waitForTimeout(200);
+    const reopened = await v.page.evaluate(() => {
+      const row = document.querySelector('#muscuRows .muscu-row');
+      return { detail: row.classList.contains('muscu-row--detail'), n: row.querySelectorAll('.muscu-serie').length,
+        max: [...row.querySelectorAll('.muscu-max')].map(b => b.getAttribute('aria-pressed')).join() };
+    });
+    await v.page.click('#muscuRows .muscu-row:nth-child(1) .muscu-series__actions .link-btn');
+    const simple = await v.page.evaluate(() => { const row = document.querySelector('#muscuRows .muscu-row');
+      return ['sets', 'reps', 'kg'].map(k => row.querySelector(':scope > [data-k="' + k + '"]').value).join('/') + ':' + row.classList.contains('muscu-row--detail'); });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(prefilled.join() === '8x60,8x60,8x60' && maxReps === '1', 'pré-remplissage / Max : ' + prefilled.join() + ' ' + maxReps);
+    assert(r.ex.length === 2 && r.ex[0].name === 'Squat' && r.ex[0].series.length === 3 && r.ex[0].series[2].max === true && r.ex[0].series[2].reps === 1
+      && !('max' in r.ex[0].series[0]) && !('sets' in r.ex[0]), 'exercice détaillé : ' + JSON.stringify(r.ex[0]));
+    assert(!r.ex[1].series && r.ex[1].sets === 2 && r.ex[1].reps === 12 && r.ex[1].kg === 40, 'forme courte : ' + JSON.stringify(r.ex[1]));
+    assert(r.vol === 8 * 60 + 6 * 70 + 90 + 2 * 12 * 40, 'tonnage : ' + r.vol);
+    assert(r.h.kg === 90 && r.h.reps === 1 && r.h.max && r.h.sets === 3, 'charge de la séance = la plus lourde : ' + JSON.stringify(r.h));
+    assert(r.text === '8 × 60 kg · 6 × 70 kg · 1 × 90 kg (max)' && r.load === 5, 'texte / carte du corps : ' + r.text + ' ' + r.load);
+    assert(reopened.detail && reopened.n === 3 && reopened.max === 'false,false,true', 'réouverture : ' + JSON.stringify(reopened));
+    assert(simple === '3/8/60:false', 'retour à la forme simple : ' + simple);
   });
 
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {

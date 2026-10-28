@@ -58,6 +58,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
   et `pain` (0-10) sur les séances, voir RGPD ci-dessous ;
   **musculation** : sport `muscu` (violet), `session.exercises = [{name, group, sets, reps, kg}]`
+  ou, si les séries diffèrent, `{name, group, series: [{reps, kg, max}]}` (`max` = série au maximum) :
+  toujours lire les séries avec `exSeries(e)` (charge d'une séance = série la plus lourde)
   (gainage : secondes dans `reps`), catalogue `MUSCU_CATALOG` par groupe : `[nom, muscles]`
   (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un),
   `muscuTargets(ex)` : muscles d'un exercice (exercice libre : ceux de son groupe),
