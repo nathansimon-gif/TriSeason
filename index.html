@@ -101,6 +101,19 @@
     .cal-plan--done { background:currentColor; }
     .cal-plan--missed { opacity:.45; border-style:dashed; }
     .cal-check { position:absolute; top:1px; right:3px; font-size:9px; color:var(--accent); font-weight:700; }
+    /* Jour de course : petit drapeau en haut à droite et contour de la couleur de la course */
+    .cal-cell--race { box-shadow:inset 0 0 0 1.5px var(--race-c); }
+    .cal-cell--race.cal-cell--today { box-shadow:inset 0 0 0 1.5px var(--race-c), inset 0 0 0 3px var(--accent); }
+    .cal-flag { position:absolute; top:2px; right:3px; width:9px; height:10px; color:var(--race-c, var(--accent)); }
+    .cal-flag svg { display:block; width:100%; height:100%; }
+    .cal-cell--race .cal-check { right:13px; }
+    .day-race { border-left:3px solid var(--race-c); background:var(--surface2); border-radius:var(--r-sm); padding:10px 12px; margin-bottom:8px; }
+    .day-race__head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .day-race__name { font-weight:600; font-size:14px; }
+    .day-race__chip { font-size:11px; padding:1px 8px; border-radius:20px; background:var(--surface3); color:var(--race-c); }
+    .day-race__when { font-size:11px; color:var(--text-2); margin-left:auto; }
+    .day-race__facts { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-2); margin-top:6px; }
+    .day-race__facts b { color:var(--text); font-family:var(--mono); font-weight:500; }
     .plan-list { display:grid; gap:6px; margin-top:12px; }
     .plan-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface2); cursor:pointer; text-align:left; font:inherit; color:inherit; width:100%; }
     .plan-row:hover { border-color:var(--text-3); }
@@ -334,8 +347,10 @@
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--nat);display:inline-block"></span> Natation</span>
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--velo);display:inline-block"></span> Vélo</span>
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--run);display:inline-block"></span> Course</span>
+      <span class="cal-legend__dot" id="calLegendMuscu" style="display:none"><span style="width:8px;height:8px;border-radius:50%;background:var(--muscu);display:inline-block"></span> Musculation</span>
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2);display:inline-block"></span> Plusieurs sports</span>
       <span class="cal-legend__dot"><span class="cal-plan" style="color:var(--text-2)"></span> Séance prévue</span>
+      <span class="cal-legend__dot"><span class="cal-flag" style="position:static;color:var(--accent)"><svg viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.5 V9.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M1.6 0.8 H8.4 L6.6 3 L8.4 5.2 H1.6 Z" fill="currentColor"/></svg></span> Compétition</span>
       <span style="margin-left:auto">Appuie sur un jour pour voir le détail ou planifier</span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap">
@@ -965,6 +980,8 @@ function renderActivityCalendar() {
   const firstWeekday = (monthDate.getDay() + 6) % 7; // lundi = 0
 
   const sessions = TS.getSessions();
+  const racesByDate = {};
+  TS.getCompetitions().forEach(c => { if (c.date) (racesByDate[c.date] = racesByDate[c.date] || []).push(c); });
   const planSt = TS.planStatuses();
   const plansByDate = {};
   TS.getPlans().forEach(p => { (plansByDate[p.date] = plansByDate[p.date] || []).push(p); });
@@ -1015,13 +1032,42 @@ function renderActivityCalendar() {
     }).join('');
     const allDone = plans.length && plans.every(p => planSt[p.id].state === 'done');
     if (plans.length) tip = (tip ? tip + ' · ' : `${day} ${monthDate.toLocaleDateString('fr-FR',{month:'long'})} — `) + plans.length + ' prévue' + (plans.length > 1 ? 's' : '');
-    html += `<div class="cal-cell cal-cell--click${isToday ? ' cal-cell--today' : ''}" role="button" tabindex="0" onclick="openPlanDay('${dateStr}')" onkeydown="if(event.key==='Enter')openPlanDay('${dateStr}')"${tip ? ` aria-label="${tip.replace(/"/g,'&quot;')}"` : ''}>`
-      + `<span class="cal-cell__num">${day}</span>${allDone ? '<span class="cal-check">✓</span>' : ''}${dot}${marks ? `<span class="cal-plans">${marks}</span>` : ''}</div>`;
+    const races = racesByDate[dateStr] || [];
+    if (races.length) tip = (tip ? tip + ' · ' : `${day} ${monthDate.toLocaleDateString('fr-FR',{month:'long'})} — `) + 'Compétition : ' + races.map(c => c.name).join(', ');
+    const raceStyle = races.length ? ` style="--race-c:${raceColor(races[0])}"` : '';
+    html += `<div class="cal-cell cal-cell--click${isToday ? ' cal-cell--today' : ''}${races.length ? ' cal-cell--race' : ''}"${raceStyle} role="button" tabindex="0" onclick="openPlanDay('${dateStr}')" onkeydown="if(event.key==='Enter')openPlanDay('${dateStr}')"${tip ? ` aria-label="${tip.replace(/"/g,'&quot;')}"` : ''}>`
+      + `<span class="cal-cell__num">${day}</span>${races.length ? `<span class="cal-flag" title="${races.map(c => c.name).join(', ').replace(/"/g, '&quot;')}">${FLAG_SVG}</span>` : ''}${allDone ? '<span class="cal-check">✓</span>' : ''}${dot}${marks ? `<span class="cal-plans">${marks}</span>` : ''}</div>`;
   }
 
   grid.innerHTML = html;
+  document.getElementById('calLegendMuscu').style.display = TS.hasMuscu() ? '' : 'none';
   TS.initTooltips();
   renderPlanList();
+}
+
+// ── Courses dans le calendrier ───────────────────────────────────────────────
+// Drapeau de la couleur de la course : multisport = accent, sinon couleur du sport
+const FLAG_SVG = '<svg viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.5 V9.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M1.6 0.8 H8.4 L6.6 3 L8.4 5.2 H1.6 Z" fill="currentColor"/></svg>';
+const RACE_TYPES = { TRI: ['Triathlon', 'var(--accent)'], DUATH: ['Duathlon', 'var(--accent)'], AQUA: ['Aquathlon', 'var(--accent)'],
+  RUN: ['Course à pied', 'var(--run)'], VELO: ['Vélo', 'var(--velo)'], BIKE: ['Vélo', 'var(--velo)'], NAT: ['Natation', 'var(--nat)'] };
+function raceColor(c) { return (RACE_TYPES[c.type] || [0, 'var(--accent)'])[1]; }
+// Bloc « Course » de la fenêtre du jour : nom, type, distance, objectif, résultat, J-x
+function dayRaceHtml(c, today) {
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const [label] = RACE_TYPES[c.type] || [c.type || 'Course'];
+  const days = Math.round((TS.parseLocalDate(c.date) - TS.parseLocalDate(today)) / 864e5);
+  const when = days > 0 ? 'Dans ' + days + ' jour' + (days > 1 ? 's' : '') : days === 0 ? 'Aujourd’hui' : c.actual_time ? 'Terminée' : 'Passée';
+  const facts = [
+    c.distance ? `<span>Distance <b>${String(c.distance).replace('.', ',')} km</b></span>` : '',
+    c.goal_time ? `<span>Objectif <b>${esc(c.goal_time)}</b></span>` : '',
+    c.actual_time ? `<span>Réalisé <b>${esc(c.actual_time)}</b></span>` : '',
+  ].join('');
+  return `<div class="day-race" style="--race-c:${raceColor(c)}">
+    <div class="day-race__head"><span class="cal-flag" style="position:static">${FLAG_SVG}</span><span class="day-race__name">${esc(c.name || 'Course')}</span>
+      <span class="day-race__chip">${esc(label)}${c.priority ? ' · priorité ' + esc(c.priority) : ''}</span><span class="day-race__when">${when}</span></div>
+    ${facts ? `<div class="day-race__facts">${facts}</div>` : ''}
+    <div style="margin-top:8px"><a class="btn btn--sm" href="competitions.html">Voir dans Compétitions</a></div>
+  </div>`;
 }
 
 // ── Séances prévues ───────────────────────────────────────────────────────────
@@ -1069,6 +1115,8 @@ function openPlanDay(date, focusForm, planId) {
   const nutri = dayNutrition(data.nutrition || {}, date);
   const today = TS.localDateStr();
   let html = '';
+  const races = TS.getCompetitions().filter(c => c.date === date);
+  if (races.length) html += `<div class="day-sec">${races.length > 1 ? races.length + ' compétitions' : 'Compétition'}</div>` + races.map(c => dayRaceHtml(c, today)).join('');
   if (sessions.length) {
     const tot = sessions.reduce((a, s) => a + (s.duration || 0), 0);
     html += `<div class="day-sec">${sessions.length > 1 ? sessions.length + ' séances · <span style="text-transform:none">' + TS.formatHours(tot) + '</span>' : 'Séance du jour'}</div>`
@@ -1085,7 +1133,7 @@ function openPlanDay(date, focusForm, planId) {
   document.getElementById('planDayBody').innerHTML = html;
   fillPlanForm(planId ? plans.find(p => p.id === planId) : null, date);
   // Le formulaire est ouvert d'emblée pour un jour vide à venir, ou pour modifier une séance prévue.
-  showPlanForm(!!(focusForm || planId || (!sessions.length && !plans.length && date >= today)));
+  showPlanForm(!!(focusForm || planId || (!sessions.length && !plans.length && !races.length && date >= today)));
   openModal('planModal');
 }
 function showPlanForm(on) {

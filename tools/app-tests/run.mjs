@@ -1504,6 +1504,33 @@ async function main() {
     assert(!newbie.modal && (newbie.seen || []).includes('muscu'), 'nouveau compte : ' + JSON.stringify(newbie));
   });
 
+  await test('Dashboard : compétitions dans le calendrier (drapeau) et dans la fenêtre du jour', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(async (d) => {
+      const show = (date) => { const x = TS.parseLocalDate(date); calYear = x.getFullYear(); calMonthIdx = x.getMonth(); renderActivityCalendar(); };
+      const cellOf = (date) => [...document.querySelectorAll('#calGrid .cal-cell--click')][TS.parseLocalDate(date).getDate() - 1];
+      show(d.future);
+      const fut = cellOf(d.future), cells = [...document.querySelectorAll('#calGrid .cal-cell--click')];
+      const other = cells[TS.parseLocalDate(d.future).getDate() === 1 ? 1 : 0];
+      const out = { race: fut.classList.contains('cal-cell--race'), flag: !!fut.querySelector('.cal-flag'), label: fut.getAttribute('aria-label'),
+        plain: other.classList.contains('cal-cell--race') };
+      openPlanDay(d.future);
+      out.modal = document.getElementById('planDayBody').textContent;
+      out.formOpen = document.getElementById('planForm').style.display !== 'none';
+      closeModal('planModal');
+      show(d.past);
+      openPlanDay(d.past);
+      out.past = document.getElementById('planDayBody').textContent;
+      return out;
+    }, { future: day(30), past: day(-20) });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.race && r.flag && /Compétition : Triathlon test/.test(r.label) && !r.plain, 'calendrier : ' + JSON.stringify(r));
+    assert(/Triathlon test/.test(r.modal) && /Dans 30 jours/.test(r.modal) && /Objectif 2:30:00/.test(r.modal) && !r.formOpen, 'fenêtre du jour (à venir) : ' + r.modal);
+    assert(/10 km test/.test(r.past) && /Réalisé 0:41:07/.test(r.past) && /Course à pied/.test(r.past), 'fenêtre du jour (passée) : ' + r.past);
+  });
+
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
