@@ -9,7 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #54 (compétitions dans le calendrier) puis recharger le site
+- [ ] 🧑 Fusionner la PR #55 (séries détaillées en musculation) puis recharger le site
+- [ ] 🤖 **Musculation, records** (à compléter ensemble) : utiliser les séries « Max » (record de charge sur 1 répétition, à part du 1RM estimé)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -110,6 +111,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 28/10/2026 | #55 | **Musculation : séries détaillées** : dans un même exercice, une ligne par série avec ses répétitions et sa charge (« Détailler les séries »), série marquée **« Max »** (1 répétition la plus lourde) ; le nombre d'exercices de la séance reste juste ; graphiques, records, kg soulevés et carte du corps prennent chaque série, la charge d'une séance = la série la plus lourde. Tests : date des tests corrigée autour du changement d'heure (le soir après 22 h UTC) |
 | 28/10/2026 | #54 | **Compétitions dans le calendrier du Dashboard** : petit drapeau et contour de la couleur de la course (multisport en citron vert, course à pied, vélo, natation) sur le jour de chaque compétition ; en touchant le jour, bloc « Compétition » (type, priorité, distance, objectif, résultat, « Dans N jours ») avec un lien vers la page Compétitions ; légende « Compétition », et « Musculation » pour ceux qui en font |
 | 28/10/2026 | #53 | **Graphiques de musculation** (Sports → Muscu) : séances et kg soulevés sur les 8 dernières semaines (au lieu de 12) ; légende de « Charge par exercice » plus claire (traits pleins, « 1RM estimé (kg, pointillés) ») |
 | 28/10/2026 | #52 | **Musculation dans Sports, Séances, défis ; eau 1,5 L** : page Sports → Muscu enrichie (charge par exercice, **volume par séance** avec liste déroulante des exercices, heures et séances par mois, effort ressenti, meilleures semaines, objectifs en séances, heures ou kg soulevés) ; Musculation dans « Moyennes par discipline » (Séances) ; **défi bonus de musculation** chaque semaine pour ceux qui en font (séances, kg soulevés, groupes de muscles ou record de charge, ne compte pas pour la série) et 2 badges (10 séances, les 6 groupes de muscles dans la semaine) ; **objectif d'eau 1,5 L par jour**, modifiable (Nutrition → Hydratation → Modifier), utilisé aussi par le défi, le badge et le graphique ; nombres des graphiques au format français |

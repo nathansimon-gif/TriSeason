@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261106a"></script>
+  <script src="theme.js?v=20261107a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261106a"></script>
+  <script src="auth-guard.js?v=20261107a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261106a">
+  <link rel="stylesheet" href="style.css?v=20261107a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -325,7 +325,7 @@
         <div class="muscu-cols" aria-hidden="true"><span>Exercice</span><span>Séries</span><span>Rép.</span><span>kg</span><span></span></div>
         <div id="muscuRows"></div>
         <button type="button" class="btn btn--ghost btn--sm" onclick="addMuscuRow()" style="align-self:flex-start">+ Ajouter un exercice</button>
-        <div class="form-hint">Gainage et exercices tenus : mets les secondes dans « Rép. ». Sans charge (pompes, tractions…) : laisse « kg » vide.</div>
+        <div class="form-hint">Charges différentes d'une série à l'autre, ou une série « Max » : « Détailler les séries » sous l'exercice. Gainage et exercices tenus : les secondes dans « Rép. ». Sans charge (pompes, tractions…) : « kg » vide.</div>
       </div>
       <div class="form-group">
         <label class="form-label" data-tip="Comment vous sentiez-vous pendant et après la séance ?">Sensation</label>
@@ -393,9 +393,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261106a"></script>
-<script src="import.js?v=20261106a"></script>
-<script src="app.js?v=20261106a"></script>
+<script src="fit-parser.js?v=20261107a"></script>
+<script src="import.js?v=20261107a"></script>
+<script src="app.js?v=20261107a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -741,7 +741,7 @@ function renderSportAvgs() {
     if (s === 'muscu') {
       const withEx = sessions.filter(x => (x.exercises || []).length);
       const avg = fn => withEx.length ? withEx.reduce((a, x) => a + fn(x), 0) / withEx.length : 0;
-      const exos = avg(x => x.exercises.length), sets = avg(x => x.exercises.reduce((a, e) => a + (e.sets || 0), 0)), kg = avg(x => TS.muscuVolume(x));
+      const exos = avg(x => x.exercises.length), sets = avg(x => x.exercises.reduce((a, e) => a + TS.exSeries(e).length, 0)), kg = avg(x => TS.muscuVolume(x));
       const withRpe = sessions.filter(x => x.rpe);
       const rpe = withRpe.length ? withRpe.reduce((a, x) => a + x.rpe, 0) / withRpe.length : 0;
       const item = (l, v) => `<span style="font-size:12px;color:var(--text-2)">${l}: <b>${v}</b></span>`;
@@ -832,30 +832,108 @@ function setMuscuPick(btn, name, group) {
   btn.textContent = name || 'Choisir un exercice';
   btn.classList.toggle('muscu-pick--empty', !name);
 }
+// Une ligne = un exercice. Forme simple : séries × rép. × kg. « Détailler les séries »
+// passe à une ligne par série (charges différentes, série « Max ») sans recréer l'exercice.
+const muscuNum = v => (v == null || v === '' ? '' : v);
 function addMuscuRow(ex) {
   const row = document.createElement('div');
   row.className = 'muscu-row';
-  const num = v => (v == null || v === '' ? '' : v);
   row.innerHTML = '<button type="button" class="form-select muscu-pick" data-k="name" aria-label="Exercice" onclick="openMuscuPicker(this)"></button>'
-    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="sets" aria-label="Séries" placeholder="séries" value="' + num(ex && ex.sets) + '">'
-    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="reps" aria-label="Répétitions" placeholder="rép." value="' + num(ex && ex.reps) + '">'
-    + '<input class="form-input" type="number" min="0" step="0.5" inputmode="decimal" data-k="kg" aria-label="Charge en kg" placeholder="kg" value="' + num(ex && ex.kg) + '">'
-    + '<button type="button" class="btn btn--ghost btn--sm btn--icon" onclick="this.parentNode.remove()" title="Retirer cet exercice" aria-label="Retirer cet exercice">✕</button>';
+    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="sets" aria-label="Séries" placeholder="séries" value="' + muscuNum(ex && ex.sets) + '">'
+    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="reps" aria-label="Répétitions" placeholder="rép." value="' + muscuNum(ex && ex.reps) + '">'
+    + '<input class="form-input" type="number" min="0" step="0.5" inputmode="decimal" data-k="kg" aria-label="Charge en kg" placeholder="kg" value="' + muscuNum(ex && ex.kg) + '">'
+    + '<button type="button" class="btn btn--ghost btn--sm btn--icon muscu-del" onclick="this.parentNode.remove()" title="Retirer cet exercice" aria-label="Retirer cet exercice">✕</button>'
+    + '<div class="muscu-detail"></div>';
   setMuscuPick(row.querySelector('.muscu-pick'), ex && ex.name, ex && ex.group);
   document.getElementById('muscuRows').appendChild(row);
+  if (ex && Array.isArray(ex.series) && ex.series.length) setMuscuDetail(row, ex.series);
+  else setMuscuDetail(row, null);
   return row;
+}
+// series = null : forme simple (lien pour détailler) ; sinon une ligne par série
+function setMuscuDetail(row, series) {
+  const box = row.querySelector('.muscu-detail');
+  row.classList.toggle('muscu-row--detail', !!series);
+  if (!series) {
+    box.innerHTML = '<button type="button" class="link-btn muscu-detail__open" onclick="detailMuscuRow(this)">Détailler les séries (charges différentes, max)</button>';
+    return;
+  }
+  box.innerHTML = '<div class="muscu-series"></div>'
+    + '<div class="muscu-series__actions"><button type="button" class="btn btn--ghost btn--sm" onclick="addMuscuSerie(this)">+ Ajouter une série</button>'
+    + '<button type="button" class="link-btn" onclick="simpleMuscuRow(this)">Mêmes valeurs pour toutes les séries</button></div>';
+  series.forEach(x => addMuscuSerie(box, x));
+}
+function addMuscuSerie(el, x) {
+  const list = el.closest('.muscu-detail').querySelector('.muscu-series');
+  if (!x) {   // nouvelle série : reprend les valeurs de la précédente (sans le « Max »)
+    const last = list.lastElementChild;
+    x = last ? { reps: last.querySelector('[data-k="reps"]').value, kg: last.querySelector('[data-k="kg"]').value } : {};
+  }
+  const line = document.createElement('div');
+  line.className = 'muscu-serie';
+  line.innerHTML = '<span class="muscu-serie__n"></span>'
+    + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="reps" aria-label="Répétitions" placeholder="rép." value="' + muscuNum(x.reps) + '">'
+    + '<input class="form-input" type="number" min="0" step="0.5" inputmode="decimal" data-k="kg" aria-label="Charge en kg" placeholder="kg" value="' + muscuNum(x.kg) + '">'
+    + '<button type="button" class="muscu-max" aria-pressed="' + (x.max ? 'true' : 'false') + '" onclick="toggleMuscuMax(this)" title="Série au maximum (une répétition la plus lourde possible)">Max</button>'
+    + '<button type="button" class="btn btn--ghost btn--sm btn--icon" onclick="removeMuscuSerie(this)" title="Retirer cette série" aria-label="Retirer cette série">✕</button>';
+  list.appendChild(line);
+  numberMuscuSeries(list);
+}
+function numberMuscuSeries(list) {
+  [...list.children].forEach((l, i) => { l.querySelector('.muscu-serie__n').textContent = 'S' + (i + 1); });
+}
+function removeMuscuSerie(btn) {
+  const list = btn.closest('.muscu-series');
+  btn.closest('.muscu-serie').remove();
+  numberMuscuSeries(list);
+}
+// « Max » : une seule répétition, la plus lourde possible
+function toggleMuscuMax(btn) {
+  const on = btn.getAttribute('aria-pressed') !== 'true';
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const reps = btn.closest('.muscu-serie').querySelector('[data-k="reps"]');
+  if (on && !reps.value) reps.value = 1;
+}
+// Forme simple → une ligne par série, pré-remplie avec les valeurs déjà tapées
+function detailMuscuRow(btn) {
+  const row = btn.closest('.muscu-row');
+  const get = k => row.querySelector(':scope > [data-k="' + k + '"]').value;
+  const n = Math.max(1, Math.min(20, Math.round(parseFloat(get('sets')) || 1)));
+  setMuscuDetail(row, Array.from({ length: n }, () => ({ reps: get('reps'), kg: get('kg') })));
+}
+// Une ligne par série → forme simple (valeurs de la première série, nombre de séries gardé)
+function simpleMuscuRow(btn) {
+  const row = btn.closest('.muscu-row');
+  const lines = [...row.querySelectorAll('.muscu-serie')];
+  const first = lines[0];
+  const set = (k, v) => { row.querySelector(':scope > [data-k="' + k + '"]').value = v; };
+  set('sets', lines.length || '');
+  set('reps', first ? first.querySelector('[data-k="reps"]').value : '');
+  set('kg', first ? first.querySelector('[data-k="kg"]').value : '');
+  setMuscuDetail(row, null);
 }
 function readMuscuRows() {
   const int = v => { const n = Math.round(parseFloat(v)); return n > 0 ? n : null; };
+  const kgOf = v => { const n = parseFloat(String(v).replace(',', '.')); return n > 0 ? Math.round(n * 10) / 10 : null; };
+  const clean = o => { Object.keys(o).forEach(k => { if (o[k] == null || o[k] === false) delete o[k]; }); return o; };
   return [...document.querySelectorAll('#muscuRows .muscu-row')].map(row => {
-    const get = k => row.querySelector('[data-k="' + k + '"]').value;
     const pick = row.querySelector('.muscu-pick');
     const name = pick.dataset.name;
     if (!name) return null;
-    const kg = parseFloat(String(get('kg')).replace(',', '.'));
-    const ex = { name, group: pick.dataset.group || null, sets: int(get('sets')), reps: int(get('reps')), kg: kg > 0 ? Math.round(kg * 10) / 10 : null };
-    Object.keys(ex).forEach(k => { if (ex[k] == null) delete ex[k]; });
-    return ex;
+    const ex = { name, group: pick.dataset.group || null };
+    if (row.classList.contains('muscu-row--detail')) {
+      const series = [...row.querySelectorAll('.muscu-serie')].map(l => clean({
+        reps: int(l.querySelector('[data-k="reps"]').value), kg: kgOf(l.querySelector('[data-k="kg"]').value),
+        max: l.querySelector('.muscu-max').getAttribute('aria-pressed') === 'true' })).filter(x => x.reps || x.kg);
+      // Toutes pareilles et sans « Max » : forme courte
+      const same = series.length && series.every(x => !x.max && x.reps === series[0].reps && x.kg === series[0].kg);
+      if (same) Object.assign(ex, { sets: series.length, reps: series[0].reps || null, kg: series[0].kg || null });
+      else if (series.length) ex.series = series;
+    } else {
+      const get = k => row.querySelector(':scope > [data-k="' + k + '"]').value;
+      Object.assign(ex, { sets: int(get('sets')), reps: int(get('reps')), kg: kgOf(get('kg')) });
+    }
+    return clean(ex);
   }).filter(Boolean);
 }
 

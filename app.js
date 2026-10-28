@@ -1812,12 +1812,13 @@ function muscuChallenge(weekKey, data, idx, prev, recent) {
   const start = weekDays(weekKey)[0];
   const before = {}, count = {};
   (data.sessions || []).filter(s => s.sport === 'muscu' && s.date < start).forEach(s => (s.exercises || []).forEach(e => {
-    if (!e.kg) return;
-    before[e.name] = Math.max(before[e.name] || 0, e.kg);
+    const kg = exMaxKg(e);
+    if (!kg) return;
+    before[e.name] = Math.max(before[e.name] || 0, kg);
     count[e.name] = (count[e.name] || 0) + 1;
   }));
   if (Object.values(count).some(n => n >= 2)) {
-    const beaten = inWeek.some(s => (s.exercises || []).some(e => e.kg && count[e.name] >= 2 && e.kg > before[e.name]));
+    const beaten = inWeek.some(s => (s.exercises || []).some(e => count[e.name] >= 2 && exMaxKg(e) > before[e.name]));
     options.push({ id: 'muscu_record', label: 'Battre un de tes records de charge', target: 1, value: beaten ? 1 : 0 }); }
   const pick = options[parseInt(weekKey.split('-W')[1], 10) % options.length];
   return Object.assign(pick, { kind: 'muscu', bonus: true });
@@ -2599,9 +2600,30 @@ function sportsShown(data = getData()) { return hasMuscu(data) ? ['nat', 'velo',
 function lastMuscuSession(beforeId) {
   return getSessions({ sport: 'muscu' }).find(s => s.id !== beforeId && (s.exercises || []).length) || null;
 }
+// Séries d'un exercice : [{ reps, kg, max }]. Deux façons de l'enregistrer :
+// - toutes les séries pareilles : { sets, reps, kg } (forme courte) ;
+// - séries différentes (charges qui changent, série « Max ») : { series: [{ reps, kg, max }] }.
+// Tous les calculs passent par exSeries pour lire les deux formes.
+function exSeries(e) {
+  if (Array.isArray(e.series) && e.series.length) return e.series;
+  const n = Math.max(1, Math.round(e.sets || 1));
+  return Array.from({ length: n }, () => ({ reps: e.reps || null, kg: e.kg || null }));
+}
+// Charge la plus lourde de l'exercice (sa meilleure série)
+function exMaxKg(e) { return Math.max(0, ...exSeries(e).map(x => x.kg || 0)) || null; }
+// Texte court : « 4 × 8 × 60 kg » ou « 8 × 60 · 6 × 70 · 1 × 90 kg (max) »
+function muscuSetsText(e) {
+  const hold = isHoldExercise(e.name);
+  const r = v => v ? v + (hold ? ' s' : '') : '';
+  const kgTxt = v => v ? v.toLocaleString('fr-FR') + ' kg' : '';
+  if (!(Array.isArray(e.series) && e.series.length)) {
+    return [e.sets, r(e.reps)].filter(Boolean).join(' × ') + (e.kg ? (e.sets || e.reps ? ' × ' : '') + kgTxt(e.kg) : '');
+  }
+  return e.series.map(x => [r(x.reps), kgTxt(x.kg)].filter(Boolean).join(' × ') + (x.max ? ' (max)' : '')).join(' · ');
+}
 // Tonnage d'une séance (séries × répétitions × kg), exercices sans charge exclus
 function muscuVolume(s) {
-  return Math.round((s.exercises || []).reduce((a, e) => a + (e.sets || 0) * (e.reps || 0) * (e.kg || 0), 0));
+  return Math.round((s.exercises || []).reduce((a, e) => a + exSeries(e).reduce((b, x) => b + (x.reps || 0) * (x.kg || 0), 0), 0));
 }
 
 // Exercices tenus (gainage…) : « reps » contient des secondes
@@ -2619,14 +2641,15 @@ function muscuExerciseHistory(name, { from, to } = {}) {
     const rows = (s.exercises || []).filter(e => e.name === name);
     if (!rows.length) return null;
     const h = { date: s.date, id: s.id, kg: null, reps: null, orm: null, maxReps: null, volume: 0, sets: 0 };
-    rows.forEach(e => {
-      if (e.kg && (h.kg == null || e.kg > h.kg || (e.kg === h.kg && (e.reps || 0) > (h.reps || 0)))) { h.kg = e.kg; h.reps = e.reps || null; }
-      const o = oneRepMax(e.kg, e.reps);
+    // Charge de la séance = la série la plus lourde ; une série « Max » est retenue (max: true)
+    rows.forEach(e => exSeries(e).forEach(x => {
+      if (x.kg && (h.kg == null || x.kg > h.kg || (x.kg === h.kg && (x.reps || 0) > (h.reps || 0)))) { h.kg = x.kg; h.reps = x.reps || null; h.max = !!x.max; }
+      const o = oneRepMax(x.kg, x.reps);
       if (o && (h.orm == null || o > h.orm)) h.orm = o;
-      if (e.reps && (h.maxReps == null || e.reps > h.maxReps)) h.maxReps = e.reps;
-      h.volume += (e.sets || 0) * (e.reps || 0) * (e.kg || 0);
-      h.sets += e.sets || 1;
-    });
+      if (x.reps && (h.maxReps == null || x.reps > h.maxReps)) h.maxReps = x.reps;
+      h.volume += (x.reps || 0) * (x.kg || 0);
+      h.sets += 1;
+    }));
     h.volume = Math.round(h.volume);
     return h;
   }).filter(Boolean);
@@ -2658,9 +2681,11 @@ const MUSCU_LOAD_MODES = { sets: 'séries', reps: 'répétitions', kg: 'kg soule
 function muscuMuscleLoad({ from, to, mode = 'sets' } = {}) {
   const totals = {}, byExercise = {};
   getSessions({ sport: 'muscu', from, to }).forEach(s => (s.exercises || []).forEach(e => {
-    const sets = e.sets || 1;
-    const reps = isHoldExercise(e.name) ? Math.round((e.reps || 0) / 3) : (e.reps || 0);
-    const base = mode === 'sets' ? sets : mode === 'reps' ? sets * reps : sets * reps * (e.kg || 0);
+    const hold = isHoldExercise(e.name);
+    const base = exSeries(e).reduce((a, x) => {
+      const reps = hold ? Math.round((x.reps || 0) / 3) : (x.reps || 0);
+      return a + (mode === 'sets' ? 1 : mode === 'reps' ? reps : reps * (x.kg || 0));
+    }, 0);
     if (!base) return;
     const t = muscuTargets(e);
     Object.keys(t).forEach(m => {
@@ -2972,7 +2997,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   SPORTS, COMP_TYPES,
 };
