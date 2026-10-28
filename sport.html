@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261107a"></script>
+  <script src="theme.js?v=20261108a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261107a"></script>
+  <script src="auth-guard.js?v=20261108a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261107a">
+  <link rel="stylesheet" href="style.css?v=20261108a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -102,11 +102,6 @@
         <div class="card__title">Heures et séances par mois</div>
         <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuMonthly"></canvas></div>
       </div>
-    </div>
-    <div class="card" style="margin-bottom:12px">
-      <div class="card__title">Records par exercice
-        <span class="tip-icon" data-tip="Calculés tout seuls à partir de tes séances (avec le filtre de saison). Touche un exercice pour voir sa progression.">?</span></div>
-      <div id="muscuRecords" class="mr-list"></div>
     </div>
     <div class="card" style="margin-bottom:12px">
       <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -232,7 +227,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261107a"></script>
+<script src="app.js?v=20261108a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -463,6 +458,8 @@ function renderMuscuWeeks(range) {
         y1: { beginAtZero: true, position: 'right', ticks: { color: '#6b7383', stepSize: 1 }, grid: { display: false } } } },
   });
 }
+// Liste des exercices du graphique « Charge par exercice » (les plus pratiqués d'abord).
+// Les records par exercice sont sur la page Records.
 function renderMuscuRecords(range) {
   const recs = TS.muscuRecords(range);
   const sel = document.getElementById('muscuExo');
@@ -470,28 +467,7 @@ function renderMuscuRecords(range) {
   sel.innerHTML = recs.map(r => `<option>${escHtml(r.name)}</option>`).join('');
   if (keep && recs.some(r => r.name === keep)) sel.value = keep;
   muscuExoWanted = null;
-  const el = document.getElementById('muscuRecords');
-  if (!recs.length) { el.innerHTML = '<div class="empty" style="padding:20px"><div class="empty__text">Aucun exercice noté sur cette période.</div></div>'; return; }
-  el.innerHTML = recs.map(r => {
-    const chips = [];
-    if (r.maxKg) chips.push(`<span>Charge max <b>${r.maxKg.kg.toLocaleString('fr-FR')} kg</b>${r.maxKg.reps ? ' × ' + r.maxKg.reps : ''}</span>`);
-    if (r.orm && r.maxKg && r.orm.value !== r.maxKg.kg) chips.push(`<span>1RM estimé <b>${r.orm.value.toLocaleString('fr-FR')} kg</b></span>`);
-    if (r.maxReps && !r.maxKg) chips.push(`<span>${r.hold ? 'Durée max' : 'Rép. max'} <b>${r.maxReps.reps}${r.hold ? ' s' : ''}</b></span>`);
-    if (r.volume) chips.push(`<span>Meilleure séance <b>${fmtKg(r.volume.value)}</b></span>`);
-    const best = r.maxKg || r.maxReps;
-    return `<button type="button" class="mr-row${r.name === sel.value ? ' mr-row--on' : ''}" data-exo="${escHtml(r.name)}">
-      <span class="mr-row__name">${escHtml(r.name)}<small>${r.group ? escHtml(r.group) + ' · ' : ''}${r.sessions} séance${r.sessions > 1 ? 's' : ''}${best ? ' · record le ' + fmtDay(best.date) : ''}</small></span>
-      <span class="mr-row__chips">${chips.join('')}</span></button>`;
-  }).join('');
 }
-document.addEventListener('click', e => {
-  const b = e.target.closest('#muscuRecords [data-exo]');
-  if (!b) return;
-  document.getElementById('muscuExo').value = b.dataset.exo;
-  document.querySelectorAll('#muscuRecords .mr-row').forEach(r => r.classList.toggle('mr-row--on', r === b));
-  renderMuscuProgress();
-  document.getElementById('muscuProgCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
 function renderMuscuProgress() {
   const name = document.getElementById('muscuExo').value;
   const note = document.getElementById('muscuProgNote');

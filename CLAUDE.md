@@ -65,8 +65,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `muscuTargets(ex)` : muscles d'un exercice (exercice libre : ceux de son groupe),
   `hasMuscu` / `sportsShown` : la musculation n'apparaît dans les filtres, graphiques
   et le planning que si l'utilisateur a au moins une séance de musculation ;
-  `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés, rien
-  d'enregistré ; 1RM estimé Epley jusqu'à 12 rép.), `muscuMuscleLoad` + `renderBodyMap`
+  `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés à partir de
+  toutes les séances, rien d'enregistré ; 1RM estimé Epley jusqu'à 12 rép. ; `rm` = meilleure
+  charge pour au moins 1/3/5/8/10/12 rép.), `muscuRecordEvents` (records battus, la 1re
+  séance n'en est pas un) / `muscuSessionRecords` (records d'une séance : annonce, calendrier), `muscuMuscleLoad` + `renderBodyMap`
   (carte du corps SVG de Forme et Sports → Muscu) ;
   **nouveautés** : `NEWS` / `showNews`, message une fois par compte (`data.news_seen`),
   seulement pour les comptes qui avaient déjà des séances).

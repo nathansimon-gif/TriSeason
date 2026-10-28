@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261107a"></script>
+  <script src="theme.js?v=20261108a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261107a"></script>
+  <script src="auth-guard.js?v=20261108a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Records</title>
-  <link rel="stylesheet" href="style.css?v=20261107a">
+  <link rel="stylesheet" href="style.css?v=20261108a">
   <style>
     .record-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -55,6 +55,23 @@
     .record-section--muscu .record-section__title::before { background: var(--muscu); }
     .record-card--muscu::before { background: var(--muscu); }
     .record-card--muscu .record-val { font-size: 22px; }
+    .record-card--muscu { cursor: pointer; text-align: left; width: 100%; font: inherit; color: inherit; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
+    .record-card--muscu:hover { border-color: var(--border2); }
+    .mrec-sub { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+    .mrec-groups { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .mrec-chip { background: var(--surface2); border: 1px solid var(--border); color: var(--text-2); border-radius: 999px; padding: 4px 11px; font-size: 12px; }
+    .mrec-chip[aria-pressed="true"] { border-color: var(--muscu); color: var(--text); background: var(--muscu-dim); }
+    .mrec-events { margin-top: 12px; }
+    .mrec-ev { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .mrec-ev:last-child { border-bottom: 0; }
+    .mrec-ev__date { font-size: 11px; color: var(--text-3); min-width: 74px; }
+    .mrec-ev__gain { margin-left: auto; font-size: 12px; color: var(--green); white-space: nowrap; }
+    .mrec-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 12px; }
+    .mrec-table td { padding: 6px 4px; border-bottom: 1px solid var(--border); }
+    .mrec-table td:nth-child(2) { font-weight: 600; text-align: right; white-space: nowrap; }
+    .mrec-table td:nth-child(3) { color: var(--text-3); font-size: 11.5px; text-align: right; white-space: nowrap; }
+    .mrec-table tr:hover td { background: none; }
+    .mrec-h { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 4px; }
     .record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     .progress-label { font-size: 11px; color: var(--text-2); margin-bottom: 3px; }
     .edit-overlay {
@@ -135,12 +152,17 @@
 
   <!-- Musculation : records calculés à partir des séances (seulement si on en fait) -->
   <div class="record-section record-section--muscu" id="muscuRecordSection" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
       <div class="record-section__title" style="margin-bottom:0">Musculation</div>
-      <a class="btn btn--ghost btn--sm" href="sport.html?sport=muscu" style="font-size:12px">Progression et tous les exercices</a>
+      <a class="btn btn--ghost btn--sm" href="sport.html?sport=muscu" style="font-size:12px">Progression (Sports)</a>
     </div>
-    <div style="font-size:12px;color:var(--text-3);margin:-4px 0 10px">Calculés tout seuls à partir de tes séances : charge la plus lourde de chaque exercice (ou le plus de répétitions sans charge).</div>
+    <div style="font-size:12px;color:var(--text-3);margin:-4px 0 10px">Calculés tout seuls à partir de toutes tes séances, même anciennes : charge la plus lourde de chaque exercice (ou le plus de répétitions sans charge). Touche un exercice pour le détail.</div>
+    <div class="mrec-groups" id="muscuRecGroups"></div>
     <div class="record-grid" id="records-muscu"></div>
+    <div class="card mrec-events">
+      <div class="card__title">Derniers records battus</div>
+      <div id="muscuRecEvents"></div>
+    </div>
   </div>
 
   <!-- Progression card -->
@@ -163,6 +185,17 @@
 </div></div>
 
 <!-- Record modal -->
+<!-- Détail des records d'un exercice de musculation -->
+<div class="modal-overlay" id="muscuRecModal" onclick="if (event.target === this) this.classList.remove('open')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal__header">
+      <div class="modal__title" id="mrecTitle"></div>
+      <button class="modal__close" onclick="document.getElementById('muscuRecModal').classList.remove('open')" aria-label="Fermer">×</button>
+    </div>
+    <div id="mrecBody"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="recordModal">
   <div class="modal" style="max-width:500px">
     <div class="modal__header">
@@ -223,7 +256,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261107a"></script>
+<script src="app.js?v=20261108a"></script>
 <script>
 let editRecordId = null;
 
@@ -303,29 +336,95 @@ function renderAllRecords() {
 }
 
 // Musculation : les 8 exercices les plus pratiqués (filtre de saison respecté)
+let muscuRecGroup = '';
+const mrecEsc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const mrecDay = d => new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+const mrecKg = v => v.toLocaleString('fr-FR') + ' kg';
 function renderMuscuRecords() {
   const section = document.getElementById('muscuRecordSection');
   section.style.display = TS.hasMuscu() ? '' : 'none';
   if (!TS.hasMuscu()) return;
-  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const range = TS.getSeasonRange(TS.getSeasonFilter()) || {};
-  const recs = TS.muscuRecords(range).filter(r => r.maxKg || r.maxReps).slice(0, 8);
+  const all = TS.muscuRecords(range).filter(r => r.maxKg || r.maxReps);
+  // Filtre par groupe de muscles (groupes présents seulement)
+  const groups = [...new Set(all.map(r => r.group).filter(Boolean))];
+  if (muscuRecGroup && !groups.includes(muscuRecGroup)) muscuRecGroup = '';
+  document.getElementById('muscuRecGroups').innerHTML = groups.length > 1 ? ['', ...groups].map(g =>
+    `<button type="button" class="mrec-chip" data-group="${mrecEsc(g)}" aria-pressed="${g === muscuRecGroup}">${g ? mrecEsc(g) : 'Tous'}</button>`).join('') : '';
+  const recs = all.filter(r => !muscuRecGroup || r.group === muscuRecGroup);
+  // Records battus ces 14 derniers jours : pastille « Nouveau »
+  const recent = new Set(TS.muscuRecordEvents({ from: TS.localDateStr(new Date(Date.now() - 13 * 864e5)) }).map(ev => ev.name));
   const el = document.getElementById('records-muscu');
-  if (!recs.length) {
-    el.innerHTML = '<div style="grid-column:1/-1"><div class="empty" style="padding:24px"><div class="empty__text">Aucun exercice noté sur cette saison</div></div></div>';
-    return;
-  }
-  el.innerHTML = recs.map(r => {
+  const showAll = el.dataset.showAll === 'true';
+  const shown = showAll ? recs : recs.slice(0, 8);
+  el.innerHTML = shown.length ? shown.map(r => {
     const best = r.maxKg || r.maxReps;
-    const val = r.maxKg ? r.maxKg.kg.toLocaleString('fr-FR') + ' kg' : r.maxReps.reps + (r.hold ? ' s' : ' rép.');
-    const sub = r.maxKg && r.maxKg.reps ? r.maxKg.reps + ' répétition' + (r.maxKg.reps > 1 ? 's' : '') + (r.orm && r.orm.value !== r.maxKg.kg ? ' · 1RM estimé ' + r.orm.value.toLocaleString('fr-FR') + ' kg' : '') : '';
-    return `<a class="record-card record-card--muscu" href="sport.html?sport=muscu&exo=${encodeURIComponent(r.name)}" style="display:block;color:inherit">
-      <div class="record-label">${esc(r.name)}</div>
+    const val = r.maxKg ? mrecKg(r.maxKg.kg) : r.maxReps.reps + (r.hold ? ' s' : ' rép.');
+    const sub = [];
+    if (r.maxKg && r.maxKg.reps) sub.push(r.maxKg.reps + ' rép.' + (r.maxKg.max ? ' (max)' : ''));
+    if (r.oneRep && r.maxKg && r.oneRep.kg < r.maxKg.kg) sub.push('1 rép. : ' + mrecKg(r.oneRep.kg));
+    if (r.orm && r.maxKg && r.orm.value > r.maxKg.kg) sub.push('1RM estimé ' + mrecKg(r.orm.value));
+    return `<button type="button" class="record-card record-card--muscu" data-exo="${mrecEsc(r.name)}">
+      <div class="record-label">${mrecEsc(r.name)}</div>
       <div class="record-val" style="color:var(--muscu)">${val}</div>
-      ${sub ? `<div style="font-size:12px;color:var(--text-2);margin-top:4px">${sub}</div>` : ''}
-      <div class="record-meta">${new Date(best.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-    </a>`;
-  }).join('');
+      ${sub.length ? `<div class="mrec-sub">${sub.join(' · ')}</div>` : ''}
+      <div class="record-meta">${mrecDay(best.date)}</div>
+      ${recent.has(r.name) ? '<div style="margin-top:8px"><span class="pb-badge">Nouveau record</span></div>' : ''}
+    </button>`;
+  }).join('') : '<div style="grid-column:1/-1"><div class="empty" style="padding:24px"><div class="empty__text">Aucun exercice noté sur cette saison</div></div></div>';
+  const old = document.getElementById('toggle-btn-muscu');
+  if (old) old.remove();
+  if (recs.length > 8) {
+    const btn = document.createElement('div');
+    btn.id = 'toggle-btn-muscu';
+    btn.style.cssText = 'text-align:center;padding:8px 0';
+    btn.innerHTML = `<button class="btn btn--ghost btn--sm" onclick="toggleMuscuAll(${!showAll})">${showAll ? 'Afficher moins ↑' : 'Voir les ' + recs.length + ' exercices ↓'}</button>`;
+    el.insertAdjacentElement('afterend', btn);
+  }
+  // Derniers records battus (saison choisie)
+  const events = TS.muscuRecordEvents(range).filter(ev => !muscuRecGroup || (all.find(r => r.name === ev.name) || {}).group === muscuRecGroup).slice(0, 8);
+  document.getElementById('muscuRecEvents').innerHTML = events.length ? events.map(ev => mrecEventHtml(ev)).join('')
+    : '<div style="font-size:12px;color:var(--text-3);padding:4px 0">Aucun record battu sur cette période. Ils apparaîtront ici dès qu’une séance dépasse ta meilleure charge.</div>';
+}
+function mrecEventHtml(ev, withName = true) {
+  const v = ev.kind === 'kg' ? mrecKg(ev.value) + (ev.reps ? ' × ' + ev.reps : '') + (ev.max ? ' (max)' : '') : ev.value + (ev.hold ? ' s' : ' rép.');
+  const gain = ev.prev ? '+' + (Math.round((ev.value - ev.prev) * 10) / 10).toLocaleString('fr-FR') + (ev.kind === 'kg' ? ' kg' : ev.hold ? ' s' : ' rép.') : '';
+  return `<div class="mrec-ev"><span class="mrec-ev__date">${mrecDay(ev.date)}</span><span>${withName ? '<b>' + mrecEsc(ev.name) + '</b> ' : ''}${v}</span>${gain ? `<span class="mrec-ev__gain">${gain}</span>` : ''}</div>`;
+}
+function toggleMuscuAll(show) {
+  document.getElementById('records-muscu').dataset.showAll = show ? 'true' : 'false';
+  renderMuscuRecords();
+}
+document.addEventListener('click', e => {
+  const chip = e.target.closest('#muscuRecGroups [data-group]');
+  if (chip) { muscuRecGroup = chip.dataset.group; renderMuscuRecords(); return; }
+  const card = e.target.closest('#records-muscu [data-exo]');
+  if (card) openMuscuRecord(card.dataset.exo);
+});
+// Détail d'un exercice : meilleure charge selon le nombre de répétitions, 1RM estimé,
+// meilleure séance, et tous les records battus (tout l'historique)
+function openMuscuRecord(name) {
+  const r = TS.muscuRecords(TS.getSeasonRange(TS.getSeasonFilter()) || {}).find(x => x.name === name);
+  if (!r) return;
+  document.getElementById('mrecTitle').textContent = name;
+  const row = (label, val, date) => `<tr><td>${label}</td><td>${val}</td><td>${date ? mrecDay(date) : ''}</td></tr>`;
+  let html = `<div style="font-size:12px;color:var(--text-3)">${r.group ? mrecEsc(r.group) + ' · ' : ''}${r.sessions} séance${r.sessions > 1 ? 's' : ''}</div>`;
+  if (r.maxKg) {
+    html += '<div class="mrec-h">Meilleure charge selon les répétitions</div><table class="mrec-table">'
+      + TS.MUSCU_RM_REPS.map(n => r.rm[n] ? row(n === 1 ? '1 répétition' : n + ' répétitions ou plus', mrecKg(r.rm[n].kg) + (r.rm[n].reps > n ? ' <span style="font-weight:400;color:var(--text-3)">(' + r.rm[n].reps + ' rép.)</span>' : ''), r.rm[n].date) : '').join('')
+      + (r.orm ? row('1RM estimé <span class="tip-icon" data-tip="Charge que tu pourrais soulever une seule fois, calculée (formule d’Epley) à partir de tes séries de 12 répétitions ou moins. Une estimation, pas un test.">?</span>', '≈ ' + mrecKg(r.orm.value), r.orm.date) : '')
+      + (r.volume ? row('Meilleure séance (kg soulevés)', mrecKg(r.volume.value), r.volume.date) : '')
+      + '</table>';
+  } else if (r.maxReps) {
+    html += '<table class="mrec-table">' + row(r.hold ? 'Durée max' : 'Répétitions max', r.maxReps.reps + (r.hold ? ' s' : ''), r.maxReps.date) + '</table>';
+  }
+  const events = TS.muscuRecordEvents({ name });
+  html += '<div class="mrec-h">Records battus</div>' + (events.length ? events.map(ev => mrecEventHtml(ev, false)).join('')
+    : '<div style="font-size:12px;color:var(--text-3)">Pas encore : la première séance sert de référence.</div>');
+  html += `<div class="form-actions"><a class="btn btn--ghost" href="sport.html?sport=muscu&exo=${encodeURIComponent(name)}">Voir la progression</a></div>`;
+  document.getElementById('mrecBody').innerHTML = html;
+  TS.initTooltips();
+  document.getElementById('muscuRecModal').classList.add('open');
 }
 
 function renderSportRecords(sport) {
