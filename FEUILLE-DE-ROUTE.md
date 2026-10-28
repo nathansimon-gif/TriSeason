@@ -9,8 +9,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #55 (séries détaillées en musculation) puis recharger le site
-- [ ] 🤖 **Musculation, records** (à compléter ensemble) : utiliser les séries « Max » (record de charge sur 1 répétition, à part du 1RM estimé)
+- [ ] 🧑 Fusionner la PR #56 (records de musculation) puis recharger le site
+- [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu, records aussi pour les exercices tenus en charge (gainage lesté)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -111,6 +111,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 29/10/2026 | #56 | **Records de musculation** (page Records) : une carte par exercice, calculée à partir de **toutes les séances, anciennes comprises** (charge la plus lourde, série « Max », 1RM estimé ; répétitions ou durée pour les exercices sans charge), filtre par groupe de muscles, pastille « Nouveau record » (14 jours) ; **détail par exercice** (meilleure charge pour 1, 3, 5, 8, 10, 12 répétitions, meilleure séance, records battus) ; liste **« Derniers records battus »** ; message « Nouveau record ! » à l'enregistrement d'une séance et mention « Record » dans le calendrier. La carte « Records par exercice » de Sports → Muscu est retirée |
 | 28/10/2026 | #55 | **Musculation : séries détaillées** : dans un même exercice, une ligne par série avec ses répétitions et sa charge (« Détailler les séries »), série marquée **« Max »** (1 répétition la plus lourde) ; le nombre d'exercices de la séance reste juste ; graphiques, records, kg soulevés et carte du corps prennent chaque série, la charge d'une séance = la série la plus lourde. Tests : date des tests corrigée autour du changement d'heure (le soir après 22 h UTC) |
 | 28/10/2026 | #54 | **Compétitions dans le calendrier du Dashboard** : petit drapeau et contour de la couleur de la course (multisport en citron vert, course à pied, vélo, natation) sur le jour de chaque compétition ; en touchant le jour, bloc « Compétition » (type, priorité, distance, objectif, résultat, « Dans N jours ») avec un lien vers la page Compétitions ; légende « Compétition », et « Musculation » pour ceux qui en font |
 | 28/10/2026 | #53 | **Graphiques de musculation** (Sports → Muscu) : séances et kg soulevés sur les 8 dernières semaines (au lieu de 12) ; légende de « Charge par exercice » plus claire (traits pleins, « 1RM estimé (kg, pointillés) ») |

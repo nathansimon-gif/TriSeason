@@ -1365,9 +1365,9 @@ async function main() {
     const sport = await v.page.evaluate(() => ({
       tab: getComputedStyle(document.getElementById('tab-muscu')).display, view: getComputedStyle(document.getElementById('muscuView')).display,
       endu: getComputedStyle(document.getElementById('enduranceView')).display, exo: document.getElementById('muscuExo').value,
-      rows: document.querySelectorAll('#muscuRecords .mr-row').length, kpi: document.getElementById('muscuKPIs').textContent,
+      rows: document.querySelectorAll('#muscuExo option').length, oldCard: !!document.getElementById('muscuRecords'), kpi: document.getElementById('muscuKPIs').textContent,
       chart: !!Chart.getChart('chartMuscuProg'), map: document.querySelectorAll('#muscuBodyMap .bm-muscle').length }));
-    await v.page.click('#muscuRecords [data-exo="Squat"]'); await v.page.waitForTimeout(200);
+    await v.page.selectOption('#muscuExo', 'Squat'); await v.page.waitForTimeout(200);
     const note = await v.page.textContent('#muscuProgNote');
     const calc = await v.page.evaluate(() => {
       const r = TS.muscuRecords();
@@ -1399,7 +1399,7 @@ async function main() {
     assert(!w.errors.length, w.errors[0]);
     await w.ctx.close();
 
-    assert(sport.tab !== 'none' && sport.view !== 'none' && sport.endu === 'none' && sport.exo === 'Pompes' && sport.rows === 3 && sport.chart && sport.map > 0,
+    assert(sport.tab !== 'none' && sport.view !== 'none' && sport.endu === 'none' && sport.exo === 'Pompes' && sport.rows === 3 && !sport.oldCard && sport.chart && sport.map > 0,
       'page Sports musculation : ' + JSON.stringify(sport));
     assert(/60 kg → 80 kg \(\+20 kg\)/.test(note), 'progression : ' + note);
     assert(calc.sq.maxKg.kg === 80 && calc.sq.maxKg.reps === 5 && calc.sq.orm.value === 93.5 && calc.sq.sessions === 3 && calc.order[0] === 'Squat', 'records Squat : ' + JSON.stringify(calc.sq));
@@ -1584,6 +1584,54 @@ async function main() {
     assert(r.text === '8 × 60 kg · 6 × 70 kg · 1 × 90 kg (max)' && r.load === 5, 'texte / carte du corps : ' + r.text + ' ' + r.load);
     assert(reopened.detail && reopened.n === 3 && reopened.max === 'false,false,true', 'réouverture : ' + JSON.stringify(reopened));
     assert(simple === '3/8/60:false', 'retour à la forme simple : ' + simple);
+  });
+
+  await test('Musculation : records (anciennes séances comprises), records battus, détail par exercice, annonce à l’enregistrement', async () => {
+    const data = sampleData();
+    const mk = (id, d, ex) => ({ id, date: day(d), sport: 'muscu', duration: 1, exercises: ex });
+    data.sessions.push(
+      mk('r1', -60, [{ name: 'Squat', group: 'Jambes', sets: 4, reps: 8, kg: 80 }, { name: 'Tractions', group: 'Dos', sets: 3, reps: 8 }]),
+      mk('r2', -40, [{ name: 'Squat', group: 'Jambes', series: [{ reps: 5, kg: 90 }, { reps: 3, kg: 95 }] }, { name: 'Tractions', group: 'Dos', sets: 3, reps: 10 }]),
+      mk('r3', -20, [{ name: 'Squat', group: 'Jambes', series: [{ reps: 8, kg: 85 }, { reps: 1, kg: 105, max: true }] }, { name: 'Développé couché (barre)', group: 'Pectoraux', sets: 4, reps: 6, kg: 70 }]),
+      mk('r4', -5, [{ name: 'Squat', group: 'Jambes', sets: 3, reps: 5, kg: 100 }]));
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/records.html`); await v.page.waitForTimeout(800);
+    const page = await v.page.evaluate(() => ({
+      cards: [...document.querySelectorAll('#records-muscu .record-card')].map(c => c.querySelector('.record-label').textContent + '=' + c.querySelector('.record-val').textContent + '|' + (c.querySelector('.mrec-sub') || {}).textContent),
+      chips: [...document.querySelectorAll('#muscuRecGroups .mrec-chip')].map(c => c.textContent),
+      events: [...document.querySelectorAll('#muscuRecEvents .mrec-ev')].map(e => e.textContent.replace(/\s+/g, ' ').trim()),
+      fresh: !!document.querySelector('#records-muscu .pb-badge') }));
+    await v.page.click('#muscuRecGroups [data-group="Dos"]'); await v.page.waitForTimeout(100);
+    const dos = await v.page.$$eval('#records-muscu .record-label', ls => ls.map(l => l.textContent));
+    await v.page.click('#muscuRecGroups [data-group=""]');
+    await v.page.click('#records-muscu [data-exo="Squat"]'); await v.page.waitForTimeout(200);
+    const modal = (await v.page.innerText('#mrecBody')).replace(/\s+/g, ' ');
+    // Nouvelle séance qui bat le record : annonce à l'enregistrement + mention « Record » dans le calendrier
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    const toast = await v.page.evaluate(() => {
+      const shown = []; const orig = TS.toast; TS.toast = (m) => { shown.push(m); return orig(m); };
+      openSessionModal(); document.getElementById('s_sport').value = 'muscu'; toggleElevationField();
+      document.getElementById('s_date').value = TS.localDateStr(); document.getElementById('s_dur').value = '0:50:00';
+      fillMuscuRows([{ name: 'Squat', group: 'Jambes', sets: 2, reps: 2, kg: 107.5 }, { name: 'Tractions', group: 'Dos', sets: 3, reps: 12 }]);
+      saveSessionForm();
+      return shown.join(' / ');
+    });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);
+    const dayHtml = await v.page.evaluate(() => { const s = TS.getSessions({ sport: 'muscu' })[0]; return daySessionHtml(s, null, {}, TS.getData()); });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const sq = page.cards.find(c => c.startsWith('Squat='));
+    assert(sq && /=105 kg\|1 rép\. \(max\)/.test(sq), 'carte Squat (série max comprise) : ' + JSON.stringify(page.cards));
+    assert(page.cards.some(c => /^Tractions=10 rép\./.test(c)) && page.cards.length === 3, 'cartes : ' + JSON.stringify(page.cards));
+    assert(page.chips.join() === 'Tous,Jambes,Dos,Pectoraux' && dos.join() === 'Tractions', 'filtre par groupe : ' + page.chips.join() + ' / ' + dos.join());
+    // Records battus : Squat 95 (après 80), 105 (après 95) ; Tractions 10 (après 8). Pas la 1re séance, pas 100 kg (< 105).
+    assert(page.events.length === 3 && /Squat 105 kg × 1 \(max\).*\+10 kg/.test(page.events[0]) && page.events.some(e => /Tractions 10 rép\..*\+2 rép\./.test(e))
+      && page.events.some(e => /Squat 95 kg × 3.*\+15 kg/.test(e)), 'records battus : ' + JSON.stringify(page.events));
+    assert(!page.fresh, 'pastille « Nouveau » sans record récent');
+    assert(/1 répétition 105 kg/.test(modal) && /3 répétitions ou plus 100 kg \(5 rép\.\)/.test(modal) && /8 répétitions ou plus 85 kg/.test(modal) && /1RM estimé \? ≈ 116,5 kg/.test(modal),
+      'détail Squat : ' + modal.slice(0, 400));
+    assert(/Nouveau record ! Squat : 107,5 kg \(avant 105 kg\) · Tractions : 12 rép\. \(avant 10 rép\.\)/.test(toast), 'annonce : ' + toast);
+    assert((dayHtml.match(/muscu-pr/g) || []).length === 2, 'mention Record dans le calendrier : ' + dayHtml.slice(0, 300));
   });
 
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
