@@ -1792,6 +1792,42 @@ async function main() {
     assert(['TRI', 'RUN', 'BIKE', 'NAT', 'DUATH', 'AQUA'].every(t => comp.includes(t)) && !/triathlon/i.test(nutri), 'courses multisport toujours proposées : ' + comp.join() + ' / ' + nutri);
   });
 
+  await test('Ravitaillements reliés à une séance : moment (min ou km), modification, séance, course, Forme', async () => {
+    const data = sampleData();
+    data.sessions[0].comp_id = 'c1';   // s1 : vélo d'hier, 1h30, reliée à la course c1
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/nutrition.html?ravito=s1`); await v.page.waitForTimeout(800);
+    const opened = await v.page.evaluate(() => ({ open: document.getElementById('fuelModal').classList.contains('open'), day: currentDay,
+      ses: document.getElementById('f_session').value, moment: getComputedStyle(document.getElementById('f_moment')).display }));
+    await v.page.selectOption('#f_type', 'gel'); await v.page.fill('#f_carbs', '25'); await v.page.fill('#f_timing', '45');
+    await v.page.click('#fuelModal .btn--primary'); await v.page.waitForTimeout(200);
+    await v.page.evaluate(() => openFuelModal(null, 's1'));
+    await v.page.selectOption('#f_type', 'banane'); await v.page.fill('#f_km', '30');
+    await v.page.click('#fuelModal .btn--primary'); await v.page.waitForTimeout(200);
+    // Modifier le gel : 2 gels
+    await v.page.click('#fuelList .fuel-row:first-child .fuel-row__label');
+    const edit = await v.page.evaluate(() => ({ title: document.getElementById('f_title').textContent, ses: document.getElementById('f_session').value, t: document.getElementById('f_timing').value }));
+    await v.page.fill('#f_qty', '2'); await v.page.click('#fuelModal .btn--primary'); await v.page.waitForTimeout(300);
+    const r = await v.page.evaluate(() => ({ fuel: TS.getData().nutrition.fuel.map(f => [f.type, f.qty, f.session_id, f.timing, f.km].join('|')),
+      row: document.getElementById('fuelList').textContent.replace(/\s+/g, ' '), sum: TS.sessionFuelSummary(TS.getSessions().find(s => s.id === 's1')),
+      impact: TS.getNutritionImpact().points.find(p => p.id === 's1').factors.fuel_hour }));
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const dayHtml = await v.page.evaluate(() => { const s = TS.getSessions().find(x => x.id === 's1'); return daySessionHtml(s, null, {}, TS.getData()); });
+    await v.page.goto(`${BASE}/sessions.html?seance=s1`); await v.page.waitForTimeout(700);
+    const sesFuel = await v.page.textContent('#s_fuel');
+    await v.page.goto(`${BASE}/competitions.html`); await v.page.waitForTimeout(700);
+    const comp = await v.page.evaluate(() => document.body.textContent.replace(/\s+/g, ' ').match(/Ravitaillement : [^·]+· \d+ g de glucides · \d+ g\/h/));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(opened.open && opened.day === day(-1) && opened.ses === 's1' && opened.moment !== 'none', 'ouverture depuis la séance : ' + JSON.stringify(opened));
+    assert(edit.title === 'Modifier le ravitaillement' && edit.ses === 's1' && edit.t === '45', 'modification : ' + JSON.stringify(edit));
+    assert(r.fuel.length === 2 && r.fuel.includes('gel|2|s1|45|') && r.fuel.includes('banane|1|s1||30'), 'ravitaillements : ' + JSON.stringify(r.fuel));
+    assert(r.sum.carbs === 75 && r.sum.perHour === 50 && r.impact === 50 && /min 45/.test(r.row) && /km 30/.test(r.row), 'résumé : ' + JSON.stringify(r));
+    assert(/75 g de glucides/.test(dayHtml) && /50 g\/h/.test(dayHtml) && dayHtml.indexOf('min 45') < dayHtml.indexOf('km 30'), 'détail du jour : ' + dayHtml.slice(0, 300));
+    assert(/75 g de glucides/.test(sesFuel) && /\+ Ravitaillement/.test(sesFuel), 'fiche séance : ' + sesFuel);
+    assert(comp && /Ravitaillement : 2 × Gel, Banane \/ fruit · 75 g de glucides · 50 g\/h/.test(comp[0]), 'course : ' + (comp && comp[0]));
+  });
+
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);

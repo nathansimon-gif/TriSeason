@@ -1362,6 +1362,7 @@ const NUTRI_FACTORS = {
   carbs_day:  { label: 'Glucides le jour même',   unit: 'g',    short: 'glucides le jour même' },
   kcal_prev:  { label: 'Calories la veille',      unit: 'kcal', short: 'calories la veille' },
   hydration:  { label: 'Hydratation le jour même', unit: 'ml',  short: 'hydratation le jour même' },
+  fuel_hour:  { label: 'Glucides pendant l’effort (par heure)', unit: 'g/h', short: 'glucides par heure pendant l’effort' },
 };
 const NUTRI_OUTCOMES = {
   sensation: { label: 'Ressenti', unit: '/5' },
@@ -1449,6 +1450,8 @@ function getNutritionImpact(filters = {}) {
         carbs_day:  day && day.carbs > 0 ? day.carbs : null,
         kcal_prev:  prev && prev.kcal > 0 ? Math.round(prev.kcal) : null,
         hydration:  hydration[s.date] > 0 ? hydration[s.date] : null,
+        // Ravitaillements reliés à cette séance (séances d'au moins 30 min)
+        fuel_hour:  (() => { const f = sessionFuelSummary(s, data); return f && f.perHour ? f.perHour : null; })(),
       },
       outcomes: {
         sensation: s.sensation >= 1 && s.sensation <= 5 ? s.sensation : null,
@@ -1543,6 +1546,46 @@ function fuelCarbs(f) {
   const per = f.carbs != null && f.carbs !== '' ? Number(f.carbs) : null;
   const unit = per != null && isFinite(per) ? per : (FUEL_DEFAULT_CARBS[f.type] || 20);
   return { carbs: unit * (f.qty || 1), prot: (Number(f.prot) || 0) * (f.qty || 1), estimated: per == null };
+}
+// Ravitaillement relié à une séance : f.session_id, et le moment où il a été pris, en
+// minutes depuis le départ (f.timing) ou au kilomètre (f.km). Une course (compétition)
+// voit les ravitaillements des séances qui lui sont reliées.
+const FUEL_TYPE_LABELS = { gel: 'Gel', barre: 'Barre', banane: 'Banane / fruit', 'boisson-iso': 'Boisson isotonique', flasque: 'Flasque',
+  'pâte-de-fruit': 'Pâte de fruit', compote: 'Compote', autre: 'Autre' };
+// Nom affiché : la marque / le nom saisi, sinon le type (« Gel »)
+function fuelLabel(f) { return f.name || FUEL_TYPE_LABELS[f.type] || f.type || 'Ravitaillement'; }
+function fuelMomentText(f) {
+  if (f.timing != null && f.timing !== '') return 'min ' + f.timing;
+  if (f.km != null && f.km !== '') return 'km ' + String(f.km).replace('.', ',');
+  return '';
+}
+function sessionFuel(sessionId, data = getData()) {
+  const list = ((data.nutrition || {}).fuel || []).filter(f => f.session_id && f.session_id === sessionId);
+  // Ordre de prise : minutes, puis kilomètres, puis sans moment
+  const key = f => f.timing != null && f.timing !== '' ? Number(f.timing) : f.km != null && f.km !== '' ? 1e5 + Number(f.km) : 1e9;
+  return list.sort((a, b) => key(a) - key(b));
+}
+// Bloc HTML des ravitaillements d'une séance (Dashboard, Séances) : liste dans l'ordre
+// de prise, total, glucides par heure, lien pour en ajouter
+function sessionFuelHtml(s, data = getData(), opts = {}) {
+  const sum = sessionFuelSummary(s, data);
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const add = `<a class="btn btn--sm" href="nutrition.html?ravito=${encodeURIComponent(s.id)}">+ Ravitaillement</a>`;
+  if (!sum) return opts.empty ? `<div class="sfuel"><div class="sfuel__head"><span>Ravitaillement</span>${add}</div><div class="sfuel__none">Rien de relié à cette séance.</div></div>` : '';
+  const items = sum.list.map(f => {
+    const c = fuelCarbs(f);
+    const m = fuelMomentText(f);
+    return `<li><span class="sfuel__m">${m || '—'}</span><span>${(f.qty || 1) > 1 ? f.qty + ' × ' : ''}${esc(fuelLabel(f))}</span><span class="sfuel__g">${c.estimated ? '≈ ' : ''}${Math.round(c.carbs)} g</span></li>`;
+  }).join('');
+  return `<div class="sfuel"><div class="sfuel__head"><span>Ravitaillement : <b>${sum.estimated ? '≈ ' : ''}${sum.carbs} g de glucides</b>${sum.perHour ? ' · <b>' + sum.perHour + ' g/h</b>' : ''}</span>${add}</div><ul class="sfuel__list">${items}</ul></div>`;
+}
+// Résumé des ravitaillements d'une séance : glucides, protéines, glucides par heure
+function sessionFuelSummary(s, data = getData()) {
+  const list = sessionFuel(s.id, data);
+  if (!list.length) return null;
+  const tot = list.reduce((a, f) => { const c = fuelCarbs(f); a.carbs += c.carbs; a.prot += c.prot; a.est = a.est || c.estimated; a.n += f.qty || 1; return a; }, { carbs: 0, prot: 0, est: false, n: 0 });
+  return { list, count: tot.n, carbs: Math.round(tot.carbs), prot: Math.round(tot.prot), estimated: tot.est,
+    perHour: s.duration >= 0.5 ? Math.round(tot.carbs / s.duration) : null };
 }
 
 // ── Séances prévues (planification) ────────────────────────────────────────
@@ -3152,7 +3195,7 @@ window.TS = {
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
-  formatHours, FUEL_PRESETS, fuelCarbs, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
+  formatHours, FUEL_PRESETS, fuelCarbs, fuelMomentText, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,

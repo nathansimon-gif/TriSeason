@@ -44,7 +44,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   records automatiques, formats FFTri, helpers de dates et d'allure,
   `getNutritionImpact` : croisement nutrition × séances affiché dans Forme ;
   `FUEL_PRESETS` / `fuelCarbs` : glucides des ravitaillements (valeurs indicatives
-  des fabricants, octobre 2026, à mettre à jour si les formules changent) ;
+  des fabricants, octobre 2026, à mettre à jour si les formules changent) ; ravitaillement relié à une
+  séance : `session_id` + moment `timing` (minutes) ou `km` (`sessionFuel` / `sessionFuelSummary` :
+  glucides par heure, facteur `fuel_hour` de `getNutritionImpact`) ;
   `getPlans` / `savePlan` / `planStatuses` : séances prévues (`data.plans`), reconnues
   toutes seules quand une séance du même sport existe le même jour ;
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261112a"></script>
+  <script src="theme.js?v=20261113a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261112a"></script>
+  <script src="auth-guard.js?v=20261113a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Compétitions</title>
-  <link rel="stylesheet" href="style.css?v=20261112a">
+  <link rel="stylesheet" href="style.css?v=20261113a">
   <script src="vendor/chart.umd.min.js"></script>
 </head>
 <body>
@@ -183,7 +183,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261112a"></script>
+<script src="app.js?v=20261113a"></script>
 <script>
 let editId = null;
 let currentFilter = 'all';
@@ -454,6 +454,7 @@ function renderList() {
           ${ecart ? `<span>Écart : <b style="color:${ecart.positive?'var(--green)':'var(--red)'}">${ecart.label}</b></span>` : ''}
         </div>
         ${c.notes ? `<div style="font-size:11px;color:var(--text-3);margin-top:4px;font-style:italic">${c.notes}</div>` : ''}
+        ${compFuelLine(c)}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
         ${hasDone && c.goal_time ? `<div style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:var(--r-sm);border:1px solid ${goalOk ? 'var(--green)' : 'var(--red)'};color:${goalOk ? 'var(--green)' : 'var(--red)'}">${goalOk ? 'Objectif atteint' : 'Objectif manqué'}</div>` : hasDone ? `<div style="font-size:11px;color:var(--text-2)">Terminée</div>` : `<div style="font-size:11px;color:var(--text-3)">À venir</div>`}
@@ -462,6 +463,20 @@ function renderList() {
       </div>
     </div>`;
   }).join('');
+}
+
+// Ravitaillements des séances reliées à la course : « 3 gels, 1 barre · 95 g de glucides · 48 g/h »
+function compFuelLine(c) {
+  const data = TS.getData();
+  const ses = (data.sessions || []).filter(s => s.comp_id === c.id);
+  const fuel = ses.flatMap(s => TS.sessionFuel(s.id, data));
+  if (!fuel.length) return '';
+  const carbs = Math.round(fuel.reduce((a, f) => a + TS.fuelCarbs(f).carbs, 0));
+  const h = ses.reduce((a, s) => a + (s.duration || 0), 0);
+  const names = {};
+  fuel.forEach(f => { const k = TS.fuelLabel(f); names[k] = (names[k] || 0) + (f.qty || 1); });
+  const list = Object.entries(names).map(([k, n]) => (n > 1 ? n + ' × ' : '') + k).join(', ');
+  return `<div style="font-size:12px;color:var(--text-2);margin-top:6px">Ravitaillement : ${list.replace(/[<>&]/g, '')} · <b style="color:var(--text)">${carbs} g de glucides</b>${h >= 0.5 ? ' · ' + Math.round(carbs / h) + ' g/h' : ''}</div>`;
 }
 
 // ── Pace calc ─────────────────────────────────────────────────────────────────
