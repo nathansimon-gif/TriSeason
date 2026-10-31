@@ -2228,7 +2228,7 @@ function planStravaArchive(acts, { since = null } = {}) {
   const sessions = data.sessions.slice();
   acts.slice().sort((x, y) => y.start - x.start).forEach(a => {   // les plus récentes d'abord
     if (known.has(Number(a.id))) { plan.already++; return; }
-    if (!a.sport || !sportOn(a.sport, data)) { plan.ignored++; return; }
+    if (!a.sport || !sportImported(a.sport, data)) { plan.ignored++; return; }
     const s = archiveToSession(a);
     if (since && s.date < since) { plan.before++; return; }
     const twin = stravaFindSimilar(sessions, s);
@@ -2308,9 +2308,11 @@ async function stravaSyncRun({ force = false, full = false } = {}) {
   const token = await stravaAccessToken();
   // 3 jours de marge : une montre synchronisée en retard envoie parfois une
   // séance plus ancienne que la dernière reçue (les doublons sont écartés).
-  const after = full ? 0 : Math.max(0, (getStrava().after || 0) - 3 * 86400);
+  // Sport recoché : on repart de la date où il avait été décoché (backfill_after)
+  const back = getStrava().backfill_after || 0;
+  const after = full ? 0 : Math.max(0, Math.min(getStrava().after || 0, back || Infinity) - 3 * 86400);
   const acts = [];
-  for (let page = 1; page <= (full ? 30 : 3); page++) {
+  for (let page = 1; page <= (full || back ? 30 : 3); page++) {
     const res = await fetch(STRAVA_API + '/athlete/activities?per_page=100&page=' + page + '&after=' + after,
       { headers: { Authorization: 'Bearer ' + token } });
     if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil → Paramètres.');
@@ -2329,14 +2331,15 @@ async function stravaSyncRun({ force = false, full = false } = {}) {
     if (start > newest) newest = start;
     if (known.has(a.id)) return;
     const s = stravaToSession(a);
-    if (!s || !sportOn(s.sport, data)) { ignored++; return; }   // sport non suivi : ignoré
+    if (!s || !sportImported(s.sport, data)) { ignored++; return; }   // sport non suivi : ignoré
     const twin = stravaFindSimilar(data.sessions, s);
     if (twin) { twin.strava_id = a.id; linked++; }
     else { s.id = newId(); data.sessions.push(s); added++; }
     known.add(a.id);
   });
   await stravaFillCalories(token, data);
-  data.strava.after = newest;
+  data.strava.after = Math.max(newest, data.strava.after || 0);
+  delete data.strava.backfill_after;   // récupération faite
   data.strava.last_sync = Date.now();
   saveData(data);
   return { added, linked, ignored };
@@ -2642,11 +2645,51 @@ function sportsShown(data = getData()) {
 function sportOn(sp, data = getData()) { return sportsShown(data).includes(sp); }
 // Musculation visible (onglets, filtres, records, carte du corps…)
 function muscuOn(data = getData()) { return sportOn('muscu', data); }
+// Imports : sans choix fait, tous les sports reconnus (comme avant) ; sinon les sports cochés
+function sportImported(sp, data = getData()) {
+  const c = sportsChosen(data);
+  return c ? c.includes(sp) : ALL_SPORTS.includes(sp);
+}
+// Liste déroulante limitée aux options « actives » (isOn(valeur)) ; keep = valeur à garder
+// quand même (élément modifié). Les options d'origine sont gardées pour pouvoir revenir.
+function limitOptions(sel, isOn, keep) {
+  if (!sel) return;
+  if (!sel._allOptions) sel._allOptions = [...sel.options].map(o => [o.value, o.textContent]);
+  const cur = keep != null ? keep : sel.value;
+  const list = sel._allOptions.filter(([v]) => !v || isOn(v) || v === keep);
+  sel.innerHTML = list.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+  sel.value = list.some(([v]) => v === cur) ? cur : (list[0] || [''])[0];
+}
+// Triathlon : seulement si natation, vélo et course sont suivis. Sinon l'appli ne parle
+// plus de triathlon (records, compétitions, textes).
+function triOn(data = getData()) { return ['nat', 'velo', 'run'].every(sp => sportOn(sp, data)); }
+// Types de compétition proposés : ceux dont tous les sports sont suivis
+const COMP_TYPE_SPORTS = { TRI: ['nat', 'velo', 'run'], DUATH: ['velo', 'run'], AQUA: ['nat', 'run'], RUN: ['run'], VELO: ['velo'], BIKE: ['velo'], NAT: ['nat'] };
+function compTypeOn(type, data = getData()) { return (COMP_TYPE_SPORTS[type] || []).every(sp => sportOn(sp, data)); }
+// Enregistre le choix. Un sport décoché garde la date (data.profile.sports_off) ; recoché,
+// la prochaine synchro Strava repart de cette date pour récupérer les séances manquées
+// (data.strava.backfill_after, doublons écartés). Renvoie true si une récupération est prévue.
 function setSportsChosen(list) {
   const data = getData();
   data.profile = data.profile || {};
-  data.profile.sports = ALL_SPORTS.filter(sp => list.includes(sp));
+  const before = sportsShown(data);
+  const next = ALL_SPORTS.filter(sp => list.includes(sp));
+  const off = data.profile.sports_off || {};
+  const now = Math.floor(Date.now() / 1000);
+  let backfill = false;
+  before.filter(sp => !next.includes(sp)).forEach(sp => { off[sp] = now; });
+  next.filter(sp => !before.includes(sp)).forEach(sp => {
+    if (off[sp] && data.strava) {
+      data.strava.backfill_after = Math.min(data.strava.backfill_after || off[sp], off[sp]);
+      backfill = true;
+    }
+    delete off[sp];
+  });
+  data.profile.sports_off = off;
+  if (!Object.keys(off).length) delete data.profile.sports_off;
+  data.profile.sports = next;
   saveData(data);
+  return backfill;
 }
 function lastMuscuSession(beforeId) {
   return getSessions({ sport: 'muscu' }).find(s => s.id !== beforeId && (s.exercises || []).length) || null;
@@ -3109,7 +3152,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, compTypeOn, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   SPORTS, COMP_TYPES,
 };

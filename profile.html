@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261110a"></script>
+  <script src="theme.js?v=20261111a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261110a"></script>
+  <script src="auth-guard.js?v=20261111a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261110a">
+  <link rel="stylesheet" href="style.css?v=20261111a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -414,7 +414,7 @@
 </div>
 
 
-<script src="app.js?v=20261110a"></script>
+<script src="app.js?v=20261111a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -484,9 +484,16 @@ document.addEventListener('click', e => {
   const on = TS.sportsShown();
   const next = on.includes(sp) ? on.filter(x => x !== sp) : on.concat(sp);
   if (!next.length) { TS.toast('Garde au moins un sport', 'error'); return; }
-  TS.setSportsChosen(next);
+  const backfill = TS.setSportsChosen(next);
   renderSportChoice();
-  TS.toast(SPORT_CHOICE.find(x => x[0] === sp)[1] + (next.includes(sp) ? ' ajouté à tes sports' : ' retiré : ses séances sont gardées, juste masquées'));
+  const label = SPORT_CHOICE.find(x => x[0] === sp)[1];
+  TS.toast(label + (next.includes(sp) ? ' ajouté à tes sports' + (backfill ? ' : récupération de ses séances Strava…' : '')
+    : ' retiré : ses séances sont gardées, juste masquées'));
+  // Sport recoché : séances Strava faites depuis qu'il avait été décoché (si la connexion
+  // échoue, la récupération se refera à la prochaine synchro automatique)
+  if (backfill) TS.stravaSync({ force: true })
+    .then(r => { renderSportChoice(); TS.toast(r && r.added ? TS.stravaSyncMessage(r) : 'Aucune séance de ' + label.toLowerCase() + ' à récupérer sur Strava.'); })
+    .catch(err => TS.toast('Strava : ' + err.message + ' Nouvel essai à la prochaine ouverture.', 'error'));
 });
 
 // ── Strava ────────────────────────────────────────────────────────────────────
@@ -773,7 +780,7 @@ function renderPBs() {
   let html = '';
 
   for (const [sport, recs] of Object.entries(bySection)) {
-    if (!recs.length) continue;
+    if (!recs.length || (sport === 'tri' ? !TS.triOn() : !TS.sportOn(sport))) continue;
     const color = COLORS[sport];
     html += `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.08em;margin-top:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${EMOJIS[sport]} ${{nat:'Natation',velo:'Vélo',run:'Course',tri:'Triathlon'}[sport]}</div>`;
     recs.sort((a,b) => a.dist.localeCompare(b.dist)).forEach(r => {

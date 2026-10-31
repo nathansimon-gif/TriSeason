@@ -67,7 +67,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   **sports suivis** : `data.profile.sports` (Profil → Paramètres → Mes sports) ; `sportsShown` /
   `sportOn(sp)` / `muscuOn` : l'appli n'affiche que ces sports et les imports (Strava, archive,
   fichiers) ignorent les autres (séances déjà enregistrées gardées) ; sans choix (`sportsChosen` = null) :
-  natation, vélo, course + musculation si `hasMuscu`, et le formulaire de séance propose tout ;
+  natation, vélo, course + musculation si `hasMuscu`, le formulaire de séance propose tout et
+  `sportImported` importe tout ; sport décoché : date dans `data.profile.sports_off`, recoché :
+  `data.strava.backfill_after` (la synchro Strava repart de cette date) ; `triOn` : sans les 3 sports,
+  plus de « triathlon » (records, `compTypeOn` pour les types de compétition, textes) ;
   `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés à partir de
   toutes les séances, rien d'enregistré ; 1RM estimé Epley jusqu'à 12 rép. ; `rm` = meilleure
   charge pour au moins 1/3/5/8/10/12 rép.), `muscuRecordEvents` (records battus, la 1re
