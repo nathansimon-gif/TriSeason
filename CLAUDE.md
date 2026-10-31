@@ -70,7 +70,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   natation, vélo, course + musculation si `hasMuscu`, le formulaire de séance propose tout et
   `sportImported` importe tout ; sport décoché : date dans `data.profile.sports_off`, recoché :
   `data.strava.backfill_after` (la synchro Strava repart de cette date) ; `triOn` : sans les 3 sports,
-  plus de « triathlon » (records, `compTypeOn` pour les types de compétition, textes) ;
+  textes sans « triathlon », mais les courses multisport (triathlon, duathlon, aquathlon) restent
+  toujours proposées et leurs records (créés tout seuls) visibles : `multisportShown` ;
   `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés à partir de
   toutes les séances, rien d'enregistré ; 1RM estimé Epley jusqu'à 12 rép. ; `rm` = meilleure
   charge pour au moins 1/3/5/8/10/12 rép.), `muscuRecordEvents` (records battus, la 1re

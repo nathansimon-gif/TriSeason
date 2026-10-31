@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #58 (Mes sports, onglet Paramètres, plus de triathlon sans les 3 sports) puis recharger le site
+- [ ] 🧑 Fusionner la PR des courses multisport toujours proposées, puis recharger le site
 - [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu, records aussi pour les exercices tenus en charge (gainage lesté)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
@@ -107,6 +107,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 31/10/2026 | à venir | **Courses multisport toujours possibles** : triathlon, duathlon et aquathlon restent proposés dans Compétitions même sans les 3 sports cochés (type par défaut : le sport suivi) ; le record créé automatiquement après la course est affiché (section Triathlon dans Records et Profil dès qu'il y a une course ou un record multisport) ; le formulaire de record propose toujours « Triathlon » |
 | 31/10/2026 | #58 | **Mes sports et onglet Paramètres** : Profil a deux onglets, « Mon profil » et **« Paramètres »** (mes sports, apparence, Strava, option santé, compte, données) ; **Mes sports** : cocher natation, vélo, course à pied, musculation ; l'appli n'affiche plus que ces sports (Dashboard, Sports, Séances, Records, Forme, défis, badges pas encore obtenus) et les **imports** (Strava, archive, fichiers de montre) ignorent les autres ; séances déjà enregistrées gardées (juste masquées) ; message « Choisis tes sports » une fois par compte à l'ouverture ; comptes sans choix : comme avant ; **sport recoché** : la synchro Strava récupère toute seule ses séances faites depuis qu'il avait été décoché (sans doublon) ; **sans les 3 sports, plus de « triathlon »** (records, types de compétition proposés, textes ; décidé le 31/10/2026) |
 | 31/10/2026 | #57 | **Choix d'exercice par zones de travail** : la fenêtre de choix montre d'abord les zones (Pectoraux, Dos, Épaules, Biceps, Triceps, Jambes, Abdos et gainage, et « Mes exercices »), à dérouler pour voir leurs exercices ; un exercice qui travaille plusieurs zones apparaît dans chacune (ex. soulevé de terre : Dos et Jambes) ; la zone de l'exercice déjà choisi s'ouvre d'office ; la recherche reste en haut |
 | 29/10/2026 | #56 | **Records de musculation** (page Records) : une carte par exercice, calculée à partir de **toutes les séances, anciennes comprises** (charge la plus lourde, série « Max », 1RM estimé ; répétitions ou durée pour les exercices sans charge), filtre par groupe de muscles, pastille « Nouveau record » (14 jours) ; **détail par exercice** (meilleure charge pour 1, 3, 5, 8, 10, 12 répétitions, meilleure séance, records battus) ; liste **« Derniers records battus »** ; message « Nouveau record ! » à l'enregistrement d'une séance et mention « Record » dans le calendrier. La carte « Records par exercice » de Sports → Muscu est retirée |

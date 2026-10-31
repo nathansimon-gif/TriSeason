@@ -523,6 +523,27 @@ async function main() {
     assert(!st && !v.calls.some(c => c.includes('code-pirate')), 'le code a été utilisé');
   });
 
+  await test('Mes sports : triathlon toujours possible en compétition, record automatique créé et visible même sans les 3 sports', async () => {
+    const data = sampleData(); data.profile.sports = ['run']; data.competitions = []; data.records = [];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/competitions.html`); await v.page.waitForTimeout(600);
+    const before = await v.page.evaluate(() => { openCompModal(); const sel = document.getElementById('c_type');
+      return { types: [...sel.options].map(o => o.value), def: sel.value, multi: TS.multisportShown() }; });
+    const r = await v.page.evaluate(() => {
+      const c = TS.saveCompetition({ date: TS.localDateStr(new Date(Date.now() - 5 * 864e5)), name: 'Tri test', type: 'TRI', distance: '51.5', actual_time: '2:35:10' });
+      TS.refreshCompetitionRecords(c.id || TS.getCompetitions().find(x => x.name === 'Tri test').id);
+      return { recs: TS.getData().records.map(x => x.sport + ' ' + x.dist + ' ' + x.time + (x.auto ? ' auto' : '')) };
+    });
+    await v.page.goto(`${BASE}/records.html`); await v.page.waitForTimeout(700);
+    const page = await v.page.evaluate(() => ({ tri: getComputedStyle(document.querySelector('[data-rec-sport="tri"]')).display,
+      cards: document.getElementById('records-tri').textContent.replace(/\s+/g, ' '), velo: getComputedStyle(document.querySelector('[data-rec-sport="velo"]')).display }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(['TRI', 'DUATH', 'AQUA'].every(t => before.types.includes(t)) && before.def === 'RUN' && !before.multi, 'types de course : ' + JSON.stringify(before));
+    assert(r.recs.length === 1 && /^tri .* 2:35:10 auto$/.test(r.recs[0]), 'record automatique : ' + JSON.stringify(r.recs));
+    assert(page.tri !== 'none' && /2:35:10/.test(page.cards) && page.velo === 'none', 'records : ' + JSON.stringify(page));
+  });
+
   await test('Mes sports : sans choix fait, tout est importé comme avant (musculation Strava comprise)', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
@@ -1746,8 +1767,9 @@ async function main() {
     assert(ses.filter === ',velo,run' && !ses.badgeNat && !/Natation|Musculation/.test(ses.avgs) && form === 'velo,run', 'Séances : ' + JSON.stringify(ses) + ' ' + form);
     assert(imp.add.join() === 'run' && imp.ignored === 1 && imp.kept === 13, 'import Strava / séances gardées : ' + JSON.stringify(imp));
     assert(imp.earnedSwim && !imp.hiddenIfNotEarned.includes('swim2k') && !imp.hiddenIfNotEarned.includes('tri_week'), 'badges des sports non suivis (obtenus gardés, les autres masqués) : ' + imp.hiddenIfNotEarned.join());
-    assert(rec.nat === 'none' && rec.tri === 'none' && rec.muscu === 'none' && !/triathlon/i.test(rec.intro) && /vélo et course/.test(rec.intro), 'Records : ' + JSON.stringify(rec));
-    assert(comp.join() === 'RUN,BIKE,DUATH' && !/triathlon/i.test(nutri), 'pas de triathlon sans les 3 sports : ' + comp.join() + ' / ' + nutri);
+    // Les données de test ont un triathlon prévu : sa section reste visible ; tous les types de course restent proposés
+    assert(rec.nat === 'none' && rec.tri !== 'none' && rec.muscu === 'none' && /vélo, course et triathlon/.test(rec.intro), 'Records : ' + JSON.stringify(rec));
+    assert(['TRI', 'RUN', 'BIKE', 'NAT', 'DUATH', 'AQUA'].every(t => comp.includes(t)) && !/triathlon/i.test(nutri), 'courses multisport toujours proposées : ' + comp.join() + ' / ' + nutri);
   });
 
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
