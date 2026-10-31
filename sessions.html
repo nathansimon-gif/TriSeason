@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261112a"></script>
+  <script src="theme.js?v=20261113a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261112a"></script>
+  <script src="auth-guard.js?v=20261113a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261112a">
+  <link rel="stylesheet" href="style.css?v=20261113a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -383,6 +383,7 @@
         <label class="form-label">Notes</label>
         <textarea class="form-textarea" id="s_notes" rows="2" placeholder="Conditions, ressenti, équipement..."></textarea>
       </div>
+      <div id="s_fuel"></div>
       <div id="s_calculated" style="font-size:12px;color:var(--text-2);font-family:var(--mono);padding:8px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
       <div class="form-actions">
         <button class="btn btn--ghost" onclick="closeModal()">Annuler</button>
@@ -393,9 +394,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261112a"></script>
-<script src="import.js?v=20261112a"></script>
-<script src="app.js?v=20261112a"></script>
+<script src="fit-parser.js?v=20261113a"></script>
+<script src="import.js?v=20261113a"></script>
+<script src="app.js?v=20261113a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -804,6 +805,8 @@ function openSessionModal(session = null) {
   updatePainField();
   populateCompSelect(session?.comp_id || null);
   fillMuscuRows(session?.exercises);
+  // Ravitaillements reliés (séance déjà enregistrée, hors musculation)
+  document.getElementById('s_fuel').innerHTML = session && session.sport !== 'muscu' ? TS.sessionFuelHtml(session, TS.getData(), { empty: true }) : '';
   toggleElevationField();
   updateCalc();
   document.getElementById('sessionModal').classList.add('open');

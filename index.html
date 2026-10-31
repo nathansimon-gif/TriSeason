@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261112a"></script>
+  <script src="theme.js?v=20261113a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261112a"></script>
+  <script src="auth-guard.js?v=20261113a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261112a">
+  <link rel="stylesheet" href="style.css?v=20261113a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -511,7 +511,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261112a"></script>
+<script src="app.js?v=20261113a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -623,7 +623,9 @@ function renderInsight() {
     last.sensation ? 'ressenti ' + last.sensation + '/5' : ''].filter(Boolean).join(' · ');
   const prev = dayNutrition(nutri, shift(last.date, -1));
   const day = dayNutrition(nutri, last.date);
-  const fuel = (nutri.fuel || []).filter(f => f.date === last.date);
+  // Ravitaillements reliés à la séance ; sinon ceux du jour qui ne sont reliés à aucune séance
+  const linked = TS.sessionFuel(last.id, TS.getData());
+  const fuel = linked.length ? linked : (nutri.fuel || []).filter(f => f.date === last.date && !f.session_id);
   const fuelCarbs = fuel.reduce((a, f) => a + TS.fuelCarbs(f).carbs, 0);
   const fuelApprox = fuel.some(f => TS.fuelCarbs(f).estimated) ? '≈ ' : '';
   const perHour = last.duration >= 0.75 && fuelCarbs ? Math.round(fuelCarbs / last.duration) : null;
@@ -1175,6 +1177,7 @@ function daySessionHtml(s, plan, st, data) {
     ${s.exercises ? (() => { const prs = TS.muscuSessionRecords(s).map(r => r.name);
       return `<ul class="muscu-list">${s.exercises.map(e => `<li><b>${esc(e.name)}</b> ${muscuSets(e)}${prs.includes(e.name) ? ' <span class="muscu-pr">Record</span>' : ''}</li>`).join('')}</ul>`; })() : ''}
     ${s.notes ? `<div class="day-sess__notes">${esc(s.notes)}</div>` : ''}
+    ${s.sport !== 'muscu' ? TS.sessionFuelHtml(s, data, { empty: s.duration >= 0.75 }) : ''}
     ${plan ? `<div class="day-sess__plan">Prévue : ${planTarget(plan)} · ${PLAN_STATE_LABEL[st[plan.id].state]}${st[plan.id].ratio != null ? ' (' + Math.round(st[plan.id].ratio * 100) + ' %)' : ''}</div>` : ''}
   </div>`;
 }

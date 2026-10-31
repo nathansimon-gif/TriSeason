@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261112a"></script>
+  <script src="theme.js?v=20261113a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261112a"></script>
+  <script src="auth-guard.js?v=20261113a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261112a">
+  <link rel="stylesheet" href="style.css?v=20261113a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -78,6 +78,13 @@
       padding:8px 0; border-bottom:1px solid var(--border);
     }
     .fuel-row:last-child { border-bottom:none; }
+    .fuel-row--click { cursor:pointer; }
+    .fuel-row--click:hover .fuel-row__label { text-decoration:underline; text-underline-offset:2px; }
+    .fuel-row__act { display:block; font-size:11px; font-weight:400; color:var(--text-3); margin-top:1px; }
+    .fuel-moment { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--text-2); }
+    .fuel-moment label { display:inline-flex; align-items:center; gap:6px; }
+    .fuel-moment .form-input { width:84px; }
+    .fuel-moment__or { color:var(--text-3); }
     .fuel-row__icon { font-size:18px; flex-shrink:0; }
     .fuel-row__label { flex:1; font-size:12px; font-weight:600; }
     .fuel-row__val   { font-size:12px; color:var(--text-2); }
@@ -408,7 +415,7 @@
 <div class="modal-overlay" id="fuelModal">
   <div class="modal" style="max-width:460px">
     <div class="modal__header">
-      <div class="modal__title">Ravitaillement</div>
+      <div class="modal__title" id="f_title">Ravitaillement</div>
       <button class="modal__close" onclick="closeFuelModal()">×</button>
     </div>
     <div class="stack">
@@ -444,14 +451,21 @@
         </div>
         <div style="font-size:11px;color:var(--text-3);margin-top:4px">Valeurs indicatives des fabricants : le chiffre exact est sur l'emballage.</div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Marque / nom</label>
-          <input class="form-input" type="text" id="f_name" placeholder="ex: SIS Go, Maurten 100...">
-        </div>
-        <div class="form-group">
-          <label class="form-label" data-tip="À quel moment de l'effort ?">Moment (min)</label>
-          <input class="form-input" type="number" id="f_timing" placeholder="ex: 45">
+      <div class="form-group">
+        <label class="form-label">Marque / nom</label>
+        <input class="form-input" type="text" id="f_name" placeholder="ex: SIS Go, Maurten 100...">
+      </div>
+      <!-- Activité pendant laquelle il a été pris, et à quel moment -->
+      <div class="form-group">
+        <label class="form-label" for="f_session" data-tip="Relie le ravitaillement à ta séance ou ta course : tu verras ensuite tes glucides par heure sur la séance, et leur lien avec ton ressenti dans Forme.">Pendant quelle activité ?</label>
+        <select class="form-select" id="f_session" onchange="updateFuelMoment()"></select>
+        <div class="form-hint" id="f_session_hint"></div>
+      </div>
+      <div class="form-group" id="f_moment">
+        <label class="form-label">À quel moment ? <span style="font-weight:400;color:var(--text-3)">(l'un ou l'autre)</span></label>
+        <div class="fuel-moment">
+          <label><input class="form-input" type="number" min="0" step="1" inputmode="numeric" id="f_timing" placeholder="ex. 45"> min après le départ</label>
+          <label><span class="fuel-moment__or">ou</span> au km <input class="form-input" type="number" min="0" step="0.1" inputmode="decimal" id="f_km" placeholder="ex. 12"></label>
         </div>
       </div>
       <div class="form-group">
@@ -459,6 +473,7 @@
         <input class="form-input" type="text" id="f_notes" placeholder="">
       </div>
       <div class="form-actions">
+        <button class="btn btn--ghost" id="f_delete" onclick="deleteFuel(fuelEditId);closeFuelModal()" style="margin-right:auto;color:var(--red);display:none">Supprimer</button>
         <button class="btn btn--ghost" onclick="closeFuelModal()">Annuler</button>
         <button class="btn btn--primary" onclick="saveFuelForm()">Enregistrer</button>
       </div>
@@ -466,7 +481,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261112a"></script>
+<script src="app.js?v=20261113a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -491,10 +506,15 @@ function makeChart(id, config) {
 document.addEventListener('DOMContentLoaded', () => {
   // Small delay to ensure DOM is fully ready
   setTimeout(() => {
+    // Depuis une séance (Dashboard, Séances, Compétitions) : nutrition.html?ravito=<id de séance>
+    const sid = new URLSearchParams(location.search).get('ravito');
+    const ses = sid && TS.getSessions().find(x => x.id === sid);
+    if (ses) { currentDay = ses.date; history.replaceState(null, '', location.pathname); }
     updateDayNav();
     renderAll();
     renderTips();
     TS.initTooltips();
+    if (ses) openFuelModal(null, ses.id);
   }, 0);
   // Auto-calc kcal from macros
   ['m_glucides','m_proteines','m_lipides'].forEach(id =>
@@ -788,13 +808,19 @@ function renderFuelList() {
     el.innerHTML = '<div style="font-size:12px;color:var(--text-3)">Aucun ravitaillement enregistré aujourd\'hui.</div>';
     return;
   }
-  el.innerHTML = fuel.map(f => `
-    <div class="fuel-row">
+  const sessions = TS.getSessions();
+  el.innerHTML = fuel.map(f => {
+    const s = f.session_id && sessions.find(x => x.id === f.session_id);
+    const moment = TS.fuelMomentText(f);
+    const act = s ? fuelSessionLabel(s) + (moment ? ' · ' + moment : '') : (moment ? moment : '');
+    return `
+    <div class="fuel-row fuel-row--click" onclick="if (!event.target.closest('button')) openFuelModal('${f.id}')" title="Modifier">
       <div class="fuel-row__icon">${FUEL_ICONS[f.type]||'📦'}</div>
-      <div class="fuel-row__label">${f.qty > 1 ? f.qty+'× ' : ''}${f.name||f.type}</div>
-      <div class="fuel-row__val">${(() => { const c = TS.fuelCarbs(f); return (c.estimated ? '≈ ' : '') + Math.round(c.carbs) + ' g gluc.' + (c.prot ? ' · ' + Math.round(c.prot) + ' g prot.' : ''); })()}${f.timing ? ' · min '+f.timing : ''}</div>
-      <button class="btn btn--danger btn--sm btn--icon" onclick="deleteFuel('${f.id}')">×</button>
-    </div>`).join('');
+      <div class="fuel-row__label">${f.qty > 1 ? f.qty+'× ' : ''}${escHtml(TS.fuelLabel(f))}${act ? `<span class="fuel-row__act">${escHtml(act)}</span>` : ''}</div>
+      <div class="fuel-row__val">${(() => { const c = TS.fuelCarbs(f); return (c.estimated ? '≈ ' : '') + Math.round(c.carbs) + ' g gluc.' + (c.prot ? ' · ' + Math.round(c.prot) + ' g prot.' : ''); })()}</div>
+      <button class="btn btn--danger btn--sm btn--icon" onclick="deleteFuel('${f.id}')" aria-label="Supprimer">×</button>
+    </div>`;
+  }).join('');
 }
 
 function renderHydration() {
@@ -1851,10 +1877,44 @@ function deleteCurrentMeal() {
 }
 
 // ── Fuel ──────────────────────────────────────────────────────────────────────
-function openFuelModal()  {
-  document.getElementById('f_carbs').value = ''; document.getElementById('f_prot').value = '';
+// « Course à pied · 10 km · 0:45:00 · 10 km de Lyon »
+function fuelSessionLabel(s) {
+  const comp = s.comp_id && TS.getCompetitions().find(c => c.id === s.comp_id);
+  const sec = s.duration ? Math.round(s.duration * 3600) : 0;
+  const hms = sec ? Math.floor(sec / 3600) + ':' + String(Math.floor(sec % 3600 / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') : '';
+  return [(TS.SPORTS[s.sport] || {}).label || s.sport, s.distance ? String(s.distance).replace('.', ',') + ' km' : '', hms, comp ? comp.name : ''].filter(Boolean).join(' · ');
+}
+// Liste des séances du jour affiché ; une séance déjà reliée reste proposée
+function fillFuelSessions(selected) {
+  const list = TS.getSessions().filter(s => s.date === currentDay || s.id === selected);
+  const sel = document.getElementById('f_session');
+  sel.innerHTML = '<option value="">— Aucune —</option>' + list.map(s => `<option value="${s.id}">${escHtml(fuelSessionLabel(s))}</option>`).join('');
+  sel.value = selected && list.some(s => s.id === selected) ? selected : '';
+  document.getElementById('f_session_hint').textContent = list.length ? ''
+    : 'Aucune séance ce jour-là : ajoute-la (ou importe-la), puis touche ce ravitaillement pour le relier.';
+  return list;
+}
+function updateFuelMoment() {
+  document.getElementById('f_moment').style.display = document.getElementById('f_session').value ? '' : 'none';
+}
+// Nouveau ravitaillement (sessionId : déjà relié, ex. depuis une séance) ou modification (id)
+let fuelEditId = null;
+function openFuelModal(id, sessionId)  {
+  const f = id ? (getNutrition().fuel || []).find(x => x.id === id) : null;
+  fuelEditId = f ? f.id : null;
+  document.getElementById('f_title').textContent = f ? 'Modifier le ravitaillement' : 'Ravitaillement';
+  document.getElementById('f_delete').style.display = f ? '' : 'none';
+  if (f) document.getElementById('f_type').value = f.type || 'autre';
   fuelPresetPicked = null; fuelAutoName = '';
   renderFuelPresets();
+  const set = (k, v) => { document.getElementById(k).value = v == null ? '' : v; };
+  set('f_carbs', f ? f.carbs : ''); set('f_prot', f ? f.prot : '');
+  set('f_qty', f ? f.qty || 1 : 1); set('f_name', f ? f.name : ''); set('f_notes', f ? f.notes : '');
+  set('f_timing', f ? f.timing : ''); set('f_km', f ? f.km : '');
+  const list = fillFuelSessions(f ? f.session_id : sessionId);
+  // Une seule séance ce jour-là : proposée d'office pour un nouveau ravitaillement
+  if (!f && !sessionId && list.length === 1) document.getElementById('f_session').value = list[0].id;
+  updateFuelMoment();
   document.getElementById('fuelModal').classList.add('open');
 }
 
@@ -1894,27 +1954,34 @@ function markFuelPreset() {
 function closeFuelModal() { document.getElementById('fuelModal').classList.remove('open'); }
 
 function saveFuelForm() {
+  const sessionId = document.getElementById('f_session').value || null;
+  const timing = parseInt(document.getElementById('f_timing').value);
+  const km = parseFloat(String(document.getElementById('f_km').value).replace(',', '.'));
+  const old = fuelEditId ? (getNutrition().fuel || []).find(x => x.id === fuelEditId) : null;
   const fuel = {
-    id:     TS.newId(),
-    date:   currentDay,
+    id:     fuelEditId || TS.newId(),
+    date:   old ? old.date : currentDay,
     type:   document.getElementById('f_type').value,
     qty:    parseInt(document.getElementById('f_qty').value)||1,
     name:   document.getElementById('f_name').value,
-    timing: parseInt(document.getElementById('f_timing').value)||null,
+    session_id: sessionId,
+    // Moment : minutes OU kilomètre (si les deux sont remplis, les minutes comptent)
+    timing: sessionId && timing >= 0 ? timing : null,
+    km:     sessionId && !(timing >= 0) && km >= 0 ? Math.round(km * 10) / 10 : null,
     notes:  document.getElementById('f_notes').value,
   };
+  Object.keys(fuel).forEach(k => { if (fuel[k] == null || fuel[k] === '') delete fuel[k]; });
   const carbs = parseFloat(document.getElementById('f_carbs').value);
   const prot = parseFloat(document.getElementById('f_prot').value);
   if (isFinite(carbs) && carbs >= 0) fuel.carbs = carbs;  // g par unité
   if (isFinite(prot) && prot > 0) fuel.prot = prot;
   const nutri = getNutrition();
-  nutri.fuel.push(fuel);
+  const i = nutri.fuel.findIndex(x => x.id === fuel.id);
+  if (i >= 0) nutri.fuel[i] = fuel; else nutri.fuel.push(fuel);
   saveNutrition(nutri);
   closeFuelModal();
   renderFuelList();
-  TS.toast('Ravitaillement ajouté');
-  // Reset form
-  document.getElementById('f_name').value='';document.getElementById('f_timing').value='';document.getElementById('f_notes').value='';document.getElementById('f_qty').value='1';
+  TS.toast(i >= 0 ? 'Ravitaillement modifié' : 'Ravitaillement ajouté' + (sessionId ? ' à ta séance' : ''));
 }
 
 function deleteFuel(id) {

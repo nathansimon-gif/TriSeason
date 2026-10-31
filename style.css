@@ -396,6 +396,14 @@ input, select, textarea { font-family: var(--font); }
 .muscu-list { margin: 4px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--text-2); }
 .muscu-list li { padding: 2px 0; }
 .muscu-list b { color: var(--text); font-weight: 500; }
+.sfuel { margin-top: 8px; padding: 8px 10px; background: var(--surface2); border-radius: var(--r-sm); font-size: 12.5px; color: var(--text-2); }
+.sfuel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.sfuel__head b { color: var(--text); font-weight: 600; }
+.sfuel__none { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.sfuel__list { list-style: none; margin: 6px 0 0; padding: 0; }
+.sfuel__list li { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; padding: 3px 0; border-top: 1px solid var(--border); }
+.sfuel__m { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.sfuel__g { color: var(--text); font-variant-numeric: tabular-nums; }
 .muscu-pr { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--yellow); background: rgba(240,185,65,.15); padding: 1px 6px; border-radius: 999px; }
 /* Icône calendrier / horloge des champs date et heure : en clair sur le fond sombre */
 input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .85; cursor: pointer; }
