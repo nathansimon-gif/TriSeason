@@ -45,7 +45,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `getNutritionImpact` : croisement nutrition × séances affiché dans Forme ;
   `FUEL_PRESETS` / `fuelCarbs` : glucides des ravitaillements (valeurs indicatives
   des fabricants, octobre 2026, à mettre à jour si les formules changent) ; ravitaillement relié à une
-  séance : `session_id` + moment `timing` (minutes) ou `km` (`sessionFuel` / `sessionFuelSummary` :
+  séance : `session_id` + moment `timing` (minutes, saisi et affiché en « 1h15 » : `parseFuelTime` /
+  `fuelTimeText`) ou `km` (`sessionFuel` / `sessionFuelSummary` :
   glucides par heure, facteur `fuel_hour` de `getNutritionImpact`) ;
   `getPlans` / `savePlan` / `planStatuses` : séances prévues (`data.plans`), reconnues
   toutes seules quand une séance du même sport existe le même jour ;
@@ -207,6 +208,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
    citron vert plus vif `#93c932` avec encre sombre.
 5. **Records automatiques** : créés depuis les compétitions (`compRefreshRecordsInData`),
    marqués `auto` + `comp_id`. Ne jamais toucher aux records saisis à la main.
+   Course à pied (`compRunRecord`) : sur route, distance de course la plus proche (5 km → marathon)
+   avec le temps estimé à l'allure moyenne (note sur le record) ; au-delà de 30 km, distance réelle
+   (sauf à 3 % de 35/40 km/marathon) ; compétition `trail: true` : « Trail 23 km », distance réelle.
 
 ## RGPD et données personnelles
 

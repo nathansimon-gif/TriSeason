@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261113a"></script>
+  <script src="theme.js?v=20261114a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261113a"></script>
+  <script src="auth-guard.js?v=20261114a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261113a">
+  <link rel="stylesheet" href="style.css?v=20261114a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -462,9 +462,9 @@
         <div class="form-hint" id="f_session_hint"></div>
       </div>
       <div class="form-group" id="f_moment">
-        <label class="form-label">À quel moment ? <span style="font-weight:400;color:var(--text-3)">(l'un ou l'autre)</span></label>
+        <label class="form-label">À quel moment ? <span style="font-weight:400;color:var(--text-3)">(temps en heures et minutes, ou kilomètre)</span></label>
         <div class="fuel-moment">
-          <label><input class="form-input" type="number" min="0" step="1" inputmode="numeric" id="f_timing" placeholder="ex. 45"> min après le départ</label>
+          <label><input class="form-input" type="text" inputmode="text" id="f_timing" placeholder="ex. 1h15"> après le départ</label>
           <label><span class="fuel-moment__or">ou</span> au km <input class="form-input" type="number" min="0" step="0.1" inputmode="decimal" id="f_km" placeholder="ex. 12"></label>
         </div>
       </div>
@@ -481,7 +481,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261113a"></script>
+<script src="app.js?v=20261114a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -1910,7 +1910,7 @@ function openFuelModal(id, sessionId)  {
   const set = (k, v) => { document.getElementById(k).value = v == null ? '' : v; };
   set('f_carbs', f ? f.carbs : ''); set('f_prot', f ? f.prot : '');
   set('f_qty', f ? f.qty || 1 : 1); set('f_name', f ? f.name : ''); set('f_notes', f ? f.notes : '');
-  set('f_timing', f ? f.timing : ''); set('f_km', f ? f.km : '');
+  set('f_timing', f && f.timing != null ? TS.fuelTimeText(f.timing).replace(' min', 'min') : ''); set('f_km', f ? f.km : '');
   const list = fillFuelSessions(f ? f.session_id : sessionId);
   // Une seule séance ce jour-là : proposée d'office pour un nouveau ravitaillement
   if (!f && !sessionId && list.length === 1) document.getElementById('f_session').value = list[0].id;
@@ -1955,7 +1955,10 @@ function closeFuelModal() { document.getElementById('fuelModal').classList.remov
 
 function saveFuelForm() {
   const sessionId = document.getElementById('f_session').value || null;
-  const timing = parseInt(document.getElementById('f_timing').value);
+  // Temps : « 1h15 », « 1:15 », « 45min » ou « 45 » (minutes) ; enregistré en minutes
+  const timingTxt = document.getElementById('f_timing').value;
+  const timing = TS.parseFuelTime(timingTxt);
+  if (timingTxt.trim() && timing == null) { TS.toast('Moment non compris : écris par exemple 1h15, 1:15 ou 45min', 'error'); return; }
   const km = parseFloat(String(document.getElementById('f_km').value).replace(',', '.'));
   const old = fuelEditId ? (getNutrition().fuel || []).find(x => x.id === fuelEditId) : null;
   const fuel = {
@@ -1966,8 +1969,8 @@ function saveFuelForm() {
     name:   document.getElementById('f_name').value,
     session_id: sessionId,
     // Moment : minutes OU kilomètre (si les deux sont remplis, les minutes comptent)
-    timing: sessionId && timing >= 0 ? timing : null,
-    km:     sessionId && !(timing >= 0) && km >= 0 ? Math.round(km * 10) / 10 : null,
+    timing: sessionId && timing != null && timing >= 0 ? timing : null,
+    km:     sessionId && timing == null && km >= 0 ? Math.round(km * 10) / 10 : null,
     notes:  document.getElementById('f_notes').value,
   };
   Object.keys(fuel).forEach(k => { if (fuel[k] == null || fuel[k] === '') delete fuel[k]; });
