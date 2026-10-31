@@ -1290,6 +1290,26 @@ async function main() {
     assert(r.phase === 'reprise' && r.ids.includes('regular') && !r.ids.includes('sport') && !r.ids.includes('sessions'), 'défis non adaptés : ' + JSON.stringify(r));
   });
 
+  await test('Blessures : compétitions et séances dures sur le graphique de douleur, douleur comparée juste après', async () => {
+    const data = sampleData();
+    const mk = (id, d, extra) => Object.assign({ id, date: day(d), sport: 'run', duration: 0.75, distance: 8 }, extra);
+    data.sessions = [mk('a', -10, { rpe: 9, pain: 6 }), mk('b', -9, { rpe: 5, pain: 5 }), mk('c', -5, { rpe: 5, pain: 2 }), mk('d', -4, { rpe: 4, sensation: 4, pain: 3 }),
+      mk('e', -14, { rpe: 5, sensation: 1 })];
+    data.competitions = [{ id: 'c1', date: day(-20), name: '10 km test', type: 'RUN', distance: '10', actual_time: '0:41:07' }];
+    data.health = { consent: { version: 1, at: 1 }, periods: [{ id: 'h1', type: 'blessure', zone: 'Genou', sports: ['run'], start: day(-30), end: day(-12), status: 'reprise' }] };
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => {
+      const ch = Chart.getChart('chartHealth');
+      return { labels: ch.data.datasets.map(d => d.label), comp: ch.data.datasets.find(d => d.mark === 'comp').data.filter(x => x != null).length,
+        hard: ch.data.datasets.find(d => d.mark === 'hard').data.filter(x => x != null).length, note: document.getElementById('painHardNote').textContent.replace(/\s+/g, ' ') };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.labels.includes('Compétition') && r.labels.some(l => /Séance dure/.test(l)) && r.comp === 1 && r.hard === 2, 'repères : ' + JSON.stringify(r));
+    assert(/5,5\/10 en moyenne \(2 séances\), contre 2,5\/10 le reste du temps \(2 séances\)/.test(r.note) && /pas une preuve/.test(r.note), 'comparaison : ' + r.note);
+  });
+
   await test('Blessures : une semaine d’arrêt ratée ne casse pas la série de défis', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);

@@ -603,7 +603,7 @@ function renderHealth() {
 
   const p = current[0];
   if (p) html += hpSummaryHtml(p, today);
-  if (p) html += `<div style="position:relative;height:200px;margin-top:6px"><canvas id="chartHealth"></canvas></div>`;
+  if (p) html += `<div style="position:relative;height:220px;margin-top:6px"><canvas id="chartHealth"></canvas></div><div id="painHardNote"></div>`;
   if (current.some(x => x.type === 'grossesse' || x.type === 'post_partum')) {
     html += `<div class="hp-note">Pour la reprise après une grossesse, demande l'avis d'un professionnel de santé (sage-femme, médecin, kiné).</div>`;
   }
@@ -656,13 +656,19 @@ function hpSummaryHtml(p, today) {
     ${miles ? `<div class="hp-milestones">${miles}</div>` : ''}</div>`;
 }
 
-// Volume par semaine (barres) et douleur moyenne notée (ligne), depuis 4 semaines avant le début.
+// Séance « dure » : effort ressenti 8/10 ou plus, ressenti difficile (1 ou 2 sur 5), ou
+// séance reliée à une compétition. Sert à voir si la douleur suit ces séances.
+const isHardSession = s => (s.rpe || 0) >= 8 || (s.sensation && s.sensation <= 2) || !!s.comp_id;
+
+// Volume par semaine (barres), douleur moyenne notée (ligne), et repères : compétitions
+// (triangles) et séances dures (losanges), depuis 4 semaines avant le début.
 function renderHealthChart(p, today) {
   const startWk = TS.getISOWeek(new Date(TS.parseLocalDate(p.start).getTime() - 28 * 86400000));
   const weeks = [];
   for (let d = TS.getWeekMonday(startWk); TS.localDateStr(d) <= today; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)) weeks.push(TS.getISOWeek(d));
   const shown = weeks.slice(-26);
-  const hours = [], pain = [];
+  const comps = TS.getCompetitions().filter(c => c.date && c.date <= today);
+  const hours = [], pain = [], compsW = [], hardW = [];
   shown.forEach(wk => {
     const from = TS.localDateStr(TS.getWeekMonday(wk));
     const to = TS.localDateStr(new Date(TS.getWeekMonday(wk).getTime() + 6 * 86400000 + 3600000));
@@ -670,23 +676,69 @@ function renderHealthChart(p, today) {
     hours.push(Math.round(ss.reduce((a, s) => a + (s.duration || 0), 0) * 10) / 10);
     const ps = ss.filter(s => s.pain != null);
     pain.push(ps.length ? Math.round(ps.reduce((a, s) => a + s.pain, 0) / ps.length * 10) / 10 : null);
+    compsW.push(comps.filter(c => c.date >= from && c.date <= to));
+    hardW.push(ss.filter(s => isHardSession(s) && !s.comp_id));
   });
   const hasPain = pain.some(v => v != null);
-  const datasets = [{ type: 'bar', label: 'Heures par semaine', data: hours, backgroundColor: 'rgba(163,171,185,.35)', yAxisID: 'y', borderRadius: 2 }];
-  if (hasPain) datasets.push({ type: 'line', label: 'Douleur moyenne (0 à 10)', data: pain, borderColor: '#ef5350', backgroundColor: '#ef5350', yAxisID: 'y2', spanGaps: true, pointRadius: 3, borderWidth: 2, tension: .2 });
+  const hasMarks = compsW.some(l => l.length) || hardW.some(l => l.length);
+  const accent = niCss('--accent') || '#b9ec4a', yellow = niCss('--yellow') || '#f0b941';
+  const datasets = [{ type: 'bar', label: 'Heures par semaine', data: hours, backgroundColor: 'rgba(163,171,185,.35)', yAxisID: 'y', borderRadius: 2, order: 3 }];
+  if (hasPain) datasets.push({ type: 'line', label: 'Douleur moyenne (0 à 10)', data: pain, borderColor: '#ef5350', backgroundColor: '#ef5350', yAxisID: 'y2', spanGaps: true, pointRadius: 3, borderWidth: 2, tension: .2, order: 1 });
+  // Repères en haut du graphique (pas une valeur : seulement « il y en a eu cette semaine »)
+  if (compsW.some(l => l.length)) datasets.push({ type: 'line', label: 'Compétition', mark: 'comp', data: compsW.map(l => l.length ? 10.6 : null),
+    showLine: false, pointStyle: 'triangle', pointRadius: 7, pointHoverRadius: 9, borderColor: accent, backgroundColor: accent, yAxisID: 'y2', order: 0 });
+  if (hardW.some(l => l.length)) datasets.push({ type: 'line', label: 'Séance dure (RPE 8+ ou ressenti difficile)', mark: 'hard', data: hardW.map(l => l.length ? 9.6 : null),
+    showLine: false, pointStyle: 'rectRot', pointRadius: 6, pointHoverRadius: 8, borderColor: yellow, backgroundColor: yellow, yAxisID: 'y2', order: 0 });
+  const day = d => TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   makeChart('chartHealth', {
     type: 'bar',
     data: { labels: shown.map(wk => TS.getWeekMonday(wk).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })), datasets },
     options: {
-      plugins: { legend: { labels: { color: '#a3abb9', font: { size: 11 }, boxWidth: 8 } },
-        tooltip: { callbacks: { label: it => it.dataset.yAxisID === 'y' ? 'Volume : ' + TS.formatHours(it.raw) : 'Douleur moyenne : ' + String(it.raw).replace('.', ',') + '/10' } } },
+      plugins: { legend: { labels: { color: '#a3abb9', font: { size: 11 }, boxWidth: 8, boxHeight: 7, usePointStyle: true, pointStyleWidth: 10 } },
+        tooltip: { callbacks: { label: it => {
+          const ds = it.dataset;
+          if (ds.mark === 'comp') return compsW[it.dataIndex].map(c => 'Compétition : ' + c.name + ' (' + day(c.date) + ')');
+          if (ds.mark === 'hard') return hardW[it.dataIndex].map(s => 'Séance dure : ' + (TS.SPORTS[s.sport] || {}).label + ' le ' + day(s.date)
+            + (s.rpe ? ' · RPE ' + s.rpe : '') + (s.sensation ? ' · ressenti ' + s.sensation + '/5' : '') + (s.pain != null ? ' · douleur ' + s.pain + '/10' : ''));
+          return ds.yAxisID === 'y' ? 'Volume : ' + TS.formatHours(it.raw) : 'Douleur moyenne : ' + String(it.raw).replace('.', ',') + '/10';
+        } } } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 9 }, maxRotation: 0 } },
         y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 10 }, callback: v => TS.formatHours(v) } },
-        ...(hasPain ? { y2: { position: 'right', min: 0, max: 10, grid: { display: false }, ticks: { color: '#ef5350', font: { size: 10 }, stepSize: 2 } } } : {}),
+        ...(hasPain || hasMarks ? { y2: { position: 'right', min: 0, max: 11, display: hasPain, grid: { display: false },
+          ticks: { color: '#ef5350', font: { size: 10 }, stepSize: 2, callback: v => v <= 10 ? v : '' } } } : {}),
       },
     },
   });
+  renderPainHardNote(p, today);
+}
+
+// Douleur notée juste après une séance dure ou une compétition (le jour même ou les 3
+// jours suivants) comparée au reste du temps, depuis le début de la période. Des faits,
+// pas une cause : seulement à partir de 2 séances avec douleur de chaque côté.
+function painAfterHard(p, today) {
+  const all = TS.getSessions({ to: today });
+  const compDates = TS.getCompetitions().filter(c => c.date).map(c => c.date);
+  const hardDates = new Set(all.filter(isHardSession).map(s => s.date).concat(compDates));
+  const back = (d, n) => { const x = TS.parseLocalDate(d); x.setDate(x.getDate() - n); return TS.localDateStr(x); };
+  const near = d => [0, 1, 2, 3].some(n => hardDates.has(back(d, n)));
+  const withPain = all.filter(s => s.pain != null && s.date >= p.start);
+  const after = withPain.filter(s => near(s.date)), other = withPain.filter(s => !near(s.date));
+  const avg = l => l.length ? l.reduce((a, s) => a + s.pain, 0) / l.length : null;
+  return { after: after.length, other: other.length, avgAfter: avg(after), avgOther: avg(other) };
+}
+function renderPainHardNote(p, today) {
+  const el = document.getElementById('painHardNote');
+  if (!el) return;
+  const r = painAfterHard(p, today);
+  const f = v => (Math.round(v * 10) / 10).toLocaleString('fr-FR');
+  if (!r.after && !r.other) { el.innerHTML = ''; return; }
+  el.innerHTML = r.after >= 2 && r.other >= 2
+    ? `<div class="hp-summary">Douleur notée <b>juste après une séance dure ou une compétition</b> (le jour même ou les 3 jours suivants) :
+        <b>${f(r.avgAfter)}/10</b> en moyenne (${r.after} séances), contre <b>${f(r.avgOther)}/10</b> le reste du temps (${r.other} séances).
+        <div class="hp-note" style="margin-top:4px">Une comparaison sur tes données, pas une preuve de cause à effet : d'autres choses jouent (sommeil, terrain, type de séance).</div></div>`
+    : `<div class="hp-note">Repères sur le graphique : triangles = compétitions, losanges = séances dures (RPE 8 ou plus, ou ressenti difficile).
+        Avec au moins 2 séances avec douleur juste après une séance dure et 2 autres, la douleur moyenne de chaque cas sera comparée ici.</div>`;
 }
 function destroyHealthChart() { if (charts.chartHealth) { charts.chartHealth.destroy(); charts.chartHealth = null; } }
 
