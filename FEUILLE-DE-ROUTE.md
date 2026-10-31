@@ -9,7 +9,6 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #59 (courses multisport toujours proposées) puis recharger le site
 - [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu, records aussi pour les exercices tenus en charge (gainage lesté)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
@@ -38,6 +37,13 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [x] 🧑🤖 **Écrans de chargement** : fait (PR #50)
 - [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
+- [ ] 🧑🤖 **Petit questionnaire de bienvenue** (à discuter ensemble avant de commencer) : juste après la création du compte, quelques questions courtes pour adapter l'appli dès le départ. Pistes :
+  - **sports pratiqués** (remplit directement « Mes sports ») et **niveau** dans chacun (débutant, régulier, compétiteur…)
+  - **objectif** : finir une première course, progresser, préparer une compétition précise (date, distance → crée la compétition), garder la forme
+  - **volume habituel** (séances ou heures par semaine) : sert de départ aux défis de la semaine
+  - **infos utiles aux calculs** : poids, FC max ou âge (W/kg, zones, besoins caloriques), suivi nutritionnel souhaité ou non
+  - **montre / Strava** : proposer tout de suite la connexion Strava ou l'import des fichiers
+  - court (2 à 3 écrans), chaque question **facultative** avec « Passer », tout modifiable ensuite dans Profil ; à écrire dans *Confidentialité* (poids et FC = données de santé, déjà couvertes par l'accord)
 - [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries, séries détaillées (charges différentes à chaque série)
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
@@ -85,12 +91,22 @@ Les cases cochées passent dans « Fait » en bas de page.
   - Conditions : fournisseur **payant qui ne réutilise pas les données** (ex. Mistral, hébergé en Europe), petit serveur intermédiaire (Cloudflare Workers gratuit ou Firebase Functions), limite d'usage par utilisateur, **accord de l'utilisateur** avant d'envoyer ses données, mise à jour de la politique de confidentialité
 - [ ] 🤖🧑 **Espace pro (coachs et nutritionnistes)** — le plus gros levier pour les abonnements d'après les simulations (environ 7 fois plus que les sportifs, et des centaines de clients amenés dans l'appli). **Après** le rangement des données en tiroirs :
   - **Ce que le pro voit** de chaque client qui l'a accepté : séances, nutrition et hydratation, forme ; les compétitions en option (pas forcément). Jamais sans l'accord du client, qui peut le retirer à tout moment
-  - **Son interface**, deux pistes à choisir : (a) l'appli normale, avec un sélecteur pour passer d'un client à l'autre ; (b) une **interface pro** à part, avec un Dashboard différent : liste de ses clients, et pour chacun ses séances, sa nutrition, son hydratation, sa forme
+  - **Son interface** (décidé le 01/11/2026) : **un seul compte, deux modes**. Le nutritionniste se connecte avec son compte habituel, marqué « pro » (activé par Nathan au début, par le paiement plus tard : jamais par la personne elle-même) :
+    - bouton **« Espace pro »** dans le menu (comptes pro seulement) ; bouton **« Mon espace »** pour revenir à son appli normale (ses propres séances, sa nutrition, sa forme), sans se déconnecter
+    - **Espace pro = liste de ses clients**, avec des repères pour chacun (dernière séance, jours de repas notés cette semaine, eau en moyenne, alerte s'il ne note plus rien) ; un clic ouvre la **fiche du client** : séances, repas jour par jour, hydratation, forme, compétitions, avec les graphiques de l'appli
+    - fiche client **en lecture seule** pour les données du client, lues sans jamais être gardées sur l'appareil du pro ni mélangées à son propre compte (page à part qui réutilise les graphiques, pas les pages normales)
+    - lien client ↔ pro par **code d'invitation** saisi par le client (Profil → Paramètres), qui coche ce qu'il partage ; santé et blessures jamais partagées par défaut ; arrêt du partage en un clic
   - **Pour lui-même** : le suivi des séances offert avec tout forfait pro (pour découvrir l'appli comme ses clients), et une **option d'environ 1 à 2 €/mois** pour avoir aussi la nutrition et la forme pour lui (ou incluse dans « Pro + IA ») — à tester dans le simulateur
   - **Comptes clients offerts** : les clients d'un pro utilisent l'appli sans payer (inclus dans le forfait du pro)
   - **IA pour le pro seulement** au début (résumé de la semaine de chaque client, jamais de conseil : c'est le pro qui conseille) ; coût environ 0,30 € par client et par mois, d'où le supplément par client
-  - Ce qui fait le plus hésiter les coachs : ne pas pouvoir **créer des séances pour leurs athlètes** (outil du coach, pas un conseil de TriSeason) — à envisager ensuite
-  - À prévoir : accord explicite du client, nouvelles règles Firestore (le pro ne lit que les tiroirs autorisés), contrat entre l'éditeur et le pro, mise à jour de la politique de confidentialité
+  - **Planifier pour ses clients** (demandé le 01/11/2026 ; c'est aussi ce qui fait le plus hésiter les coachs) : depuis la fiche client, le pro peut
+    - **prévoir des séances** (sport, jour, durée ou distance, consignes) qui arrivent dans le calendrier du client comme les séances prévues actuelles, marquées « proposée par ton nutritionniste », puis reconnues toutes seules quand la séance est faite
+    - fixer des **objectifs de nutrition** : pendant une séance (ex. 60 g de glucides et 500 ml par heure), la veille ou le jour même d'une séance importante, ou par jour (eau, glucides, protéines) ; le client voit l'objectif et l'appli compare avec ce qu'il a noté (ravitaillements, repas, eau)
+    - autres pistes : notes privées du pro sur chaque client, objectifs de compétition, message court joint à une séance prévue
+    - c'est un **outil du pro** (ses consignes à lui), pas un conseil de TriSeason ; le client garde la main : il voit qui a proposé quoi, peut ignorer ou supprimer, et le pro n'écrit jamais dans les données du client (ses propositions sont rangées à part, chez le client)
+  - À prévoir : accord explicite du client, nouvelles règles Firestore (le pro ne lit que les tiroirs autorisés et n'écrit que dans ses propositions), contrat entre l'éditeur et le pro, mise à jour de la politique de confidentialité
+  - **Avant de commencer** : ranger l'option santé à part du document principal du compte (le pro ne doit jamais pouvoir la lire) ; **vérifier si l'hébergement doit être certifié HDS** (données de santé gérées pour des professionnels de santé), si possible avec un conseil juridique
+  - **Ordre proposé** : 1) option santé rangée à part ; 2) vérification HDS ; 3) prototype gratuit avec 1 ou 2 nutritionnistes testeurs (compte pro, code d'invitation, liste et fiche client en lecture seule) ; 4) séances et objectifs de nutrition proposés par le pro ; 5) notes, puis paiement
 
 ## Idées écartées (et pourquoi)
 
@@ -107,6 +123,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 01/11/2026 | #60 | **Blessures : douleur et séances dures** (Forme) : sur le graphique de reprise, repères des **compétitions** (triangles) et des **séances dures** (RPE 8 ou plus, ou ressenti difficile ; losanges), avec le détail au toucher ; en dessous, la douleur moyenne notée **juste après** une séance dure ou une compétition (le jour même ou les 3 jours suivants) comparée au reste du temps, dès 2 séances de chaque côté (des faits, pas une cause) |
+| 01/11/2026 | #60 | Feuille de route : **espace pro** précisé (un compte, deux modes « Espace pro » / « Mon espace », liste des clients puis fiche client en lecture seule ; séances et objectifs de nutrition proposés par le pro ; travail préalable et vérification HDS) ; « Petit questionnaire de bienvenue » ajouté (niveau, sports pratiqués, objectif, volume habituel, infos pour les calculs, connexion Strava ; à discuter avant de commencer) |
 | 31/10/2026 | #59 | **Courses multisport toujours possibles** : triathlon, duathlon et aquathlon restent proposés dans Compétitions même sans les 3 sports cochés (type par défaut : le sport suivi) ; le record créé automatiquement après la course est affiché (section Triathlon dans Records et Profil dès qu'il y a une course ou un record multisport) ; le formulaire de record propose toujours « Triathlon » |
 | 31/10/2026 | #58 | **Mes sports et onglet Paramètres** : Profil a deux onglets, « Mon profil » et **« Paramètres »** (mes sports, apparence, Strava, option santé, compte, données) ; **Mes sports** : cocher natation, vélo, course à pied, musculation ; l'appli n'affiche plus que ces sports (Dashboard, Sports, Séances, Records, Forme, défis, badges pas encore obtenus) et les **imports** (Strava, archive, fichiers de montre) ignorent les autres ; séances déjà enregistrées gardées (juste masquées) ; message « Choisis tes sports » une fois par compte à l'ouverture ; comptes sans choix : comme avant ; **sport recoché** : la synchro Strava récupère toute seule ses séances faites depuis qu'il avait été décoché (sans doublon) ; **sans les 3 sports, plus de « triathlon »** (records, types de compétition proposés, textes ; décidé le 31/10/2026) |
 | 31/10/2026 | #57 | **Choix d'exercice par zones de travail** : la fenêtre de choix montre d'abord les zones (Pectoraux, Dos, Épaules, Biceps, Triceps, Jambes, Abdos et gainage, et « Mes exercices »), à dérouler pour voir leurs exercices ; un exercice qui travaille plusieurs zones apparaît dans chacune (ex. soulevé de terre : Dos et Jambes) ; la zone de l'exercice déjà choisi s'ouvre d'office ; la recherche reste en haut |
