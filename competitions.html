@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261113a"></script>
+  <script src="theme.js?v=20261114a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261113a"></script>
+  <script src="auth-guard.js?v=20261114a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Compétitions</title>
-  <link rel="stylesheet" href="style.css?v=20261113a">
+  <link rel="stylesheet" href="style.css?v=20261114a">
   <script src="vendor/chart.umd.min.js"></script>
 </head>
 <body>
@@ -110,7 +110,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Type</label>
-          <select class="form-select" id="c_type">
+          <select class="form-select" id="c_type" onchange="toggleTrailField()">
             <option value="TRI">Triathlon</option>
             <option value="RUN">Course à pied</option>
             <option value="BIKE">Cyclisme</option>
@@ -120,6 +120,10 @@
           </select>
         </div>
       </div>
+      <label class="trail-check" id="c_trail_group">
+        <input type="checkbox" id="c_trail">
+        <span><b>Trail</b> : le record garde la distance réelle de la course (« Trail 23 km »), sans la rapprocher d'une distance de route (10 km, semi…).</span>
+      </label>
       <div class="form-group">
         <label class="form-label">Nom de la course</label>
         <input class="form-input" type="text" id="c_name" placeholder="ex: Ironman Nice, 10km de Rennes...">
@@ -183,7 +187,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261113a"></script>
+<script src="app.js?v=20261114a"></script>
 <script>
 let editId = null;
 let currentFilter = 'all';
@@ -441,7 +445,7 @@ function renderList() {
       <div style="padding-left:8px;flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
           <span style="font-size:10px;font-weight:700;color:${prioColor};letter-spacing:.08em">${c.priority||'B'}</span>
-          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(${typeColor})">${c.type}${fmtKey ? ' ' + fmtKey : ''}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(${typeColor})">${c.type}${fmtKey ? ' ' + fmtKey : ''}</span>${c.trail ? '<span class="trail-tag">Trail</span>' : ''}
           <span style="font-size:12px;color:var(--text-2)">${new Date(c.date+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</span>
           ${!isPast ? `<span style="font-size:11px;color:var(--accent-light);background:rgba(125,138,160,0.12);padding:2px 8px;border-radius:20px">J-${daysLeft}</span>` : ''}
         </div>
@@ -477,6 +481,11 @@ function compFuelLine(c) {
   fuel.forEach(f => { const k = TS.fuelLabel(f); names[k] = (names[k] || 0) + (f.qty || 1); });
   const list = Object.entries(names).map(([k, n]) => (n > 1 ? n + ' × ' : '') + k).join(', ');
   return `<div style="font-size:12px;color:var(--text-2);margin-top:6px">Ravitaillement : ${list.replace(/[<>&]/g, '')} · <b style="color:var(--text)">${carbs} g de glucides</b>${h >= 0.5 ? ' · ' + Math.round(carbs / h) + ' g/h' : ''}</div>`;
+}
+
+// Case « Trail » : seulement pour la course à pied
+function toggleTrailField() {
+  document.getElementById('c_trail_group').style.display = document.getElementById('c_type').value === 'RUN' ? '' : 'none';
 }
 
 // ── Pace calc ─────────────────────────────────────────────────────────────────
@@ -567,6 +576,8 @@ function openCompModal(comp=null) {
   document.getElementById('c_name').value     = comp?.name     || '';
   document.getElementById('c_dist').value     = comp?.distance || '';
   document.getElementById('c_priority').value = comp?.priority || 'A';
+  document.getElementById('c_trail').checked = !!comp?.trail;
+  toggleTrailField();
   document.getElementById('c_goal').value     = comp?.goal_time   || '';
   document.getElementById('c_actual').value   = comp?.actual_time || '';
   document.getElementById('c_notes').value    = comp?.notes    || '';
@@ -597,10 +608,12 @@ function saveCompForm() {
     name:        document.getElementById('c_name').value,
     distance:    parseFloat(document.getElementById('c_dist').value)||null,
     priority:    document.getElementById('c_priority').value,
+    trail:       document.getElementById('c_type').value === 'RUN' && document.getElementById('c_trail').checked,
     goal_time:   document.getElementById('c_goal').value   || null,
     actual_time: document.getElementById('c_actual').value || null,
     notes:       document.getElementById('c_notes').value,
   };
+  if (!comp.trail) delete comp.trail;
   if (!comp.date || !comp.name) { TS.toast('Date et nom obligatoires', 'error'); return; }
   const wasNew = !editId;
   const saved  = TS.saveCompetition(comp);

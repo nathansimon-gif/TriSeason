@@ -862,7 +862,8 @@ const COMP_MULTI_NAMES  = { TRI: 'Triathlon', AQUA: 'Aquathlon', DUATH: 'Duathlo
 const COMP_STD_DISTANCES = {
   nat:  [['50m', 0.05], ['100m', 0.1], ['200m', 0.2], ['400m', 0.4], ['800m', 0.8], ['1500m', 1.5], ['1km', 1], ['3,8km (Ironman)', 3.8]],
   velo: [['10km', 10], ['20km', 20], ['40km', 40], ['50km', 50], ['100km', 100], ['180km (Ironman)', 180]],
-  run:  [['1km', 1], ['1 mile', 1.609], ['3km', 3], ['5km', 5], ['10km', 10], ['Semi-marathon (21,1km)', 21.1], ['Marathon (42,2km)', 42.195]],
+  run:  [['1km', 1], ['1 mile', 1.609], ['3km', 3], ['5km', 5], ['10km', 10], ['15km', 15], ['20km', 20], ['Semi-marathon (21,1km)', 21.1],
+         ['30km', 30], ['35km', 35], ['40km', 40], ['Marathon (42,2km)', 42.195]],
   tri:  [['Sprint (750m/20km/5km)', 25.75], ['Olympique (1,5km/40km/10km)', 51.5], ['70.3 / Half (1,9km/90km/21km)', 113], ['Ironman (3,8km/180km/42km)', 226]],
 };
 
@@ -980,6 +981,32 @@ function compDistanceLabel(kind, km, multiType) {
   return rounded + ' km';
 }
 
+// Course à pied : distance du record et temps.
+// - Trail (comp.trail) : la distance réelle (« Trail 23 km »), on ne cherche pas un temps sur une distance de route.
+// - Route jusqu'à ~30 km : la distance de course la plus proche (5, 10, 15, 20 km, semi, 30 km) ;
+//   le temps est estimé à l'allure moyenne (10,8 km en 45:00 → passage aux 10 km en 41:40).
+//   À moins de 3 % d'une distance : celle-là ; sinon la distance juste en dessous (temps de passage),
+//   ou juste au-dessus si la course est à peine plus courte (5 % au plus).
+// - Au-delà de 30 km : 35, 40 km ou marathon à 3 % près, sinon la distance réelle.
+// Renvoie { dist, sec, note } (note quand le temps est estimé).
+function compRunRecord(km, sec, trail) {
+  var r1 = function (v) { return String(Math.round(v * 10) / 10).replace('.', ','); };
+  if (trail) return { dist: 'Trail ' + r1(km) + ' km', sec: sec, note: '' };
+  var list = COMP_STD_DISTANCES.run.filter(function (it) { return it[1] >= 5; });
+  var pick = null;
+  list.forEach(function (it) { if (Math.abs(km - it[1]) / it[1] <= 0.03 && (!pick || Math.abs(km - it[1]) < Math.abs(km - pick[1]))) pick = it; });
+  if (!pick && km <= 31) {
+    var below = list.filter(function (it) { return it[1] <= km && km / it[1] <= 1.3; }).pop();
+    var above = list.filter(function (it) { return it[1] > km && it[1] / km <= 1.05; })[0];
+    pick = below || above || null;
+  }
+  if (!pick) return { dist: r1(km) + ' km', sec: sec, note: '' };
+  var est = Math.round(sec * pick[1] / km);
+  var exact = Math.abs(km - pick[1]) < 0.05;
+  return { dist: pick[0], sec: exact ? sec : est,
+    note: exact ? '' : 'temps estimé à l’allure moyenne (' + r1(km) + ' km en ' + compSecToTime(sec) + ')' };
+}
+
 // Vérifie que les séances reliées couvrent toutes les disciplines requises.
 function compCheckLegs(linked, needs) {
   var counts = {};
@@ -1035,12 +1062,20 @@ function compBuildRecordCandidates(comp, linked) {
       var sec = Math.round((s.duration || 0) * 3600);
       if (!COMP_LEG_LABELS[s.sport] || sec <= 0) return;
       if (!(s.distance > 0)) { noDist.push(COMP_LEG_LABELS[s.sport]); return; }
+      if (s.sport === 'run') {
+        var rr = compRunRecord(s.distance, sec, false);
+        out.push({ sport: 'run', label: COMP_LEG_LABELS.run, dist: rr.dist, sec: rr.sec, note: rr.note });
+        return;
+      }
       out.push({ sport: s.sport, label: COMP_LEG_LABELS[s.sport], dist: compDistanceLabel(s.sport, s.distance), sec: sec });
     });
     if (noDist.length) notes.push('Distance manquante (pas de record) : ' + compUnique(noDist).join(', ') + '.');
   } else if (COMP_SINGLE_SPORT[comp.type] && compSec > 0) {
     var sport = COMP_SINGLE_SPORT[comp.type];
-    if (compKm > 0) out.push({ sport: sport, label: COMP_LEG_LABELS[sport], dist: compDistanceLabel(sport, compKm), sec: compSec });
+    if (compKm > 0 && sport === 'run') {
+      var run = compRunRecord(compKm, compSec, !!comp.trail);
+      out.push({ sport: 'run', label: comp.trail ? 'Trail' : COMP_LEG_LABELS.run, dist: run.dist, sec: run.sec, note: run.note });
+    } else if (compKm > 0) out.push({ sport: sport, label: COMP_LEG_LABELS[sport], dist: compDistanceLabel(sport, compKm), sec: compSec });
     else notes.push('Renseigne la distance de la course pour créer son record.');
   }
   return { candidates: out, notes: notes };
@@ -1080,7 +1115,7 @@ function compRefreshRecordsInData(data, comp, linked) {
         time: compSecToTime(c.sec),
         date: comp.date,
         location: comp.name || '',
-        notes: (isPB ? 'Nouveau record personnel (PB)' : 'Record de la saison') + ' · ajouté automatiquement depuis la course',
+        notes: (isPB ? 'Nouveau record personnel (PB)' : 'Record de la saison') + ' · ajouté automatiquement depuis la course' + (c.note ? ' · ' + c.note : ''),
         auto: true,
         comp_id: comp.id,
       });
@@ -1554,8 +1589,21 @@ const FUEL_TYPE_LABELS = { gel: 'Gel', barre: 'Barre', banane: 'Banane / fruit',
   'pâte-de-fruit': 'Pâte de fruit', compote: 'Compote', autre: 'Autre' };
 // Nom affiché : la marque / le nom saisi, sinon le type (« Gel »)
 function fuelLabel(f) { return f.name || FUEL_TYPE_LABELS[f.type] || f.type || 'Ravitaillement'; }
+// Moment en minutes (f.timing) affiché « 45 min » ou « 1h15 »
+function fuelTimeText(min) {
+  const m = Math.round(Number(min) || 0);
+  return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + ' min';
+}
+// Saisie « 1h15 », « 1:15 », « 75 » (minutes) ou « 45min » → minutes (null si illisible)
+function parseFuelTime(v) {
+  const t = String(v || '').trim().replace(',', '.');
+  if (!t) return null;
+  if (/^\d+(\.\d+)?$/.test(t)) return Math.round(parseFloat(t));
+  const h = parseDuration(t);
+  return h != null ? Math.round(h * 60) : null;
+}
 function fuelMomentText(f) {
-  if (f.timing != null && f.timing !== '') return 'min ' + f.timing;
+  if (f.timing != null && f.timing !== '') return fuelTimeText(f.timing);
   if (f.km != null && f.km !== '') return 'km ' + String(f.km).replace('.', ',');
   return '';
 }
@@ -3182,7 +3230,7 @@ window.TS = {
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,
   getSessions, saveSession, saveSessions, deleteSession, compactSession,
   getCompetitions, saveCompetition, deleteCompetition,
-  syncCompetition, refreshCompetitionRecords, linkSessionsToCompetition,
+  syncCompetition, refreshCompetitionRecords, compRunRecord, linkSessionsToCompetition,
   checkCompetitionLegs, describeCompSync, describeCompRecords, compClosestFormat, COMP_FORMATS,
   getSeasonsAvailable, getSeasonFilter, setSeasonFilter, getSeasonRange,
   getWeight, saveWeight, deleteWeight, getLatestWeight,
@@ -3195,7 +3243,7 @@ window.TS = {
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
-  formatHours, FUEL_PRESETS, fuelCarbs, fuelMomentText, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
+  formatHours, FUEL_PRESETS, fuelCarbs, fuelMomentText, fuelTimeText, parseFuelTime, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
