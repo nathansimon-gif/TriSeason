@@ -9,7 +9,6 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #59 (courses multisport toujours proposées) puis recharger le site
 - [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu, records aussi pour les exercices tenus en charge (gainage lesté)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
@@ -38,6 +37,13 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [x] 🧑🤖 **Écrans de chargement** : fait (PR #50)
 - [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
+- [ ] 🧑🤖 **Petit questionnaire de bienvenue** (à discuter ensemble avant de commencer) : juste après la création du compte, quelques questions courtes pour adapter l'appli dès le départ. Pistes :
+  - **sports pratiqués** (remplit directement « Mes sports ») et **niveau** dans chacun (débutant, régulier, compétiteur…)
+  - **objectif** : finir une première course, progresser, préparer une compétition précise (date, distance → crée la compétition), garder la forme
+  - **volume habituel** (séances ou heures par semaine) : sert de départ aux défis de la semaine
+  - **infos utiles aux calculs** : poids, FC max ou âge (W/kg, zones, besoins caloriques), suivi nutritionnel souhaité ou non
+  - **montre / Strava** : proposer tout de suite la connexion Strava ou l'import des fichiers
+  - court (2 à 3 écrans), chaque question **facultative** avec « Passer », tout modifiable ensuite dans Profil ; à écrire dans *Confidentialité* (poids et FC = données de santé, déjà couvertes par l'accord)
 - [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries, séries détaillées (charges différentes à chaque série)
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
@@ -107,6 +113,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 01/11/2026 | à venir | Feuille de route : « Petit questionnaire de bienvenue » ajouté (niveau, sports pratiqués, objectif, volume habituel, infos pour les calculs, connexion Strava ; à discuter avant de commencer) |
 | 31/10/2026 | #59 | **Courses multisport toujours possibles** : triathlon, duathlon et aquathlon restent proposés dans Compétitions même sans les 3 sports cochés (type par défaut : le sport suivi) ; le record créé automatiquement après la course est affiché (section Triathlon dans Records et Profil dès qu'il y a une course ou un record multisport) ; le formulaire de record propose toujours « Triathlon » |
 | 31/10/2026 | #58 | **Mes sports et onglet Paramètres** : Profil a deux onglets, « Mon profil » et **« Paramètres »** (mes sports, apparence, Strava, option santé, compte, données) ; **Mes sports** : cocher natation, vélo, course à pied, musculation ; l'appli n'affiche plus que ces sports (Dashboard, Sports, Séances, Records, Forme, défis, badges pas encore obtenus) et les **imports** (Strava, archive, fichiers de montre) ignorent les autres ; séances déjà enregistrées gardées (juste masquées) ; message « Choisis tes sports » une fois par compte à l'ouverture ; comptes sans choix : comme avant ; **sport recoché** : la synchro Strava récupère toute seule ses séances faites depuis qu'il avait été décoché (sans doublon) ; **sans les 3 sports, plus de « triathlon »** (records, types de compétition proposés, textes ; décidé le 31/10/2026) |
 | 31/10/2026 | #57 | **Choix d'exercice par zones de travail** : la fenêtre de choix montre d'abord les zones (Pectoraux, Dos, Épaules, Biceps, Triceps, Jambes, Abdos et gainage, et « Mes exercices »), à dérouler pour voir leurs exercices ; un exercice qui travaille plusieurs zones apparaît dans chacune (ex. soulevé de terre : Dos et Jambes) ; la zone de l'exercice déjà choisi s'ouvre d'office ; la recherche reste en haut |
