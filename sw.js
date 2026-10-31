@@ -1,5 +1,5 @@
 // TriSeason Tracker — Service Worker
-const CACHE = 'triseason-v20';
+const CACHE = 'triseason-v21';
 // Adresses relatives au service worker : le site est servi dans un sous-dossier
 // (nathansimon-gif.github.io/TriSeason/), un « / » au début viserait la racine.
 const ASSETS = [

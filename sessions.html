@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261109a"></script>
+  <script src="theme.js?v=20261111a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261109a"></script>
+  <script src="auth-guard.js?v=20261111a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261109a">
+  <link rel="stylesheet" href="style.css?v=20261111a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -393,9 +393,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261109a"></script>
-<script src="import.js?v=20261109a"></script>
-<script src="app.js?v=20261109a"></script>
+<script src="fit-parser.js?v=20261111a"></script>
+<script src="import.js?v=20261111a"></script>
+<script src="app.js?v=20261111a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -493,12 +493,22 @@ function toggleAdvancedFilters() {
 
 // Musculation dans le filtre seulement si au moins une séance existe
 // (option ajoutée / retirée : Safari ignore « hidden » sur une option)
-function syncMuscuFilter() {
-  const sel = document.getElementById('filterSport');
-  const opt = sel.querySelector('option[value="muscu"]');
-  if (TS.hasMuscu() && !opt) sel.add(new Option('Musculation', 'muscu'));
-  if (!TS.hasMuscu() && opt && sel.value !== 'muscu') opt.remove();
+// Listes de sports (filtre, formulaire) : seulement les sports suivis. Les options sont
+// recréées (Safari ignore « hidden » sur une option). keep = sport d'une séance à modifier.
+const SPORT_LABELS = { nat: 'Natation', velo: 'Vélo', run: 'Course', muscu: 'Musculation' };
+function fillSportOptions(sel, keep, withAll) {
+  // Formulaire, sans choix fait dans Paramètres : tous les sports (pour pouvoir en commencer un)
+  const all = !withAll && !TS.sportsChosen();
+  const want = TS.ALL_SPORTS.filter(sp => all || TS.sportOn(sp) || sp === keep);
+  const cur = sel.value;
+  const sig = (withAll ? '*' : '') + want.join();
+  if (sel.dataset.sig !== sig) {
+    sel.innerHTML = (withAll ? '<option value="">Tous les sports</option>' : '') + want.map(sp => `<option value="${sp}">${SPORT_LABELS[sp]}</option>`).join('');
+    sel.dataset.sig = sig;
+  }
+  sel.value = want.includes(cur) || (withAll && cur === '') ? cur : (withAll ? '' : want[0]);
 }
+function syncMuscuFilter() { fillSportOptions(document.getElementById('filterSport'), null, true); }
 
 function renderSessions() {
   renderFeelingNudge();
@@ -506,7 +516,8 @@ function renderSessions() {
   const sport = document.getElementById('filterSport').value;
   const from  = document.getElementById('filterFrom').value;
   const to    = document.getElementById('filterTo').value;
-  let sessions = TS.getSessions({ sport: sport||undefined, from: from||undefined, to: to||undefined });
+  // Sports suivis seulement (les séances d'un sport décoché restent enregistrées)
+  let sessions = TS.getSessions({ sport: sport||undefined, from: from||undefined, to: to||undefined }).filter(s => TS.sportOn(s.sport));
 
   // Advanced filters (distance, durée, dénivelé, RPE)
   const distMin = parseFloat(document.getElementById('filterDistMin')?.value);
@@ -769,7 +780,8 @@ function openSessionModal(session = null) {
   document.getElementById('modalTitle').textContent = session ? 'Modifier la séance' : 'Nouvelle séance';
   document.getElementById('deleteBtn').style.display = session ? 'inline-flex' : 'none';
   document.getElementById('s_date').value     = session?.date     || TS.localDateStr();
-  document.getElementById('s_sport').value    = session?.sport    || 'velo';
+  fillSportOptions(document.getElementById('s_sport'), session?.sport, false);
+  document.getElementById('s_sport').value    = session?.sport    || (TS.sportOn('velo') ? 'velo' : TS.sportsShown()[0]);
   if (session?.duration) {
     document.getElementById('s_dur').value = formatHMS(session.duration);
   } else {
@@ -1240,6 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (new URLSearchParams(location.search).get('nouvelle') === 'muscu') {
     history.replaceState(null, '', location.pathname);
     openSessionModal();
+    fillSportOptions(document.getElementById('s_sport'), 'muscu', false);
     document.getElementById('s_sport').value = 'muscu';
     toggleElevationField();
   }
@@ -1275,7 +1288,7 @@ function renderArchivePlan() {
     plan.add.length ? '<b style="color:var(--text)">' + plan.add.length + ' séance' + (plan.add.length > 1 ? 's' : '') + ' à ajouter</b> : '
       + ['nat', 'velo', 'run', 'muscu'].filter(k => by[k]).map(k => by[k] + ' ' + TS.SPORTS[k].label.toLowerCase()).join(', ') + '.' : 'Aucune nouvelle séance à ajouter.',
     plan.already + plan.link.length ? (plan.already + plan.link.length) + ' déjà dans TriSeason (pas de doublon).' : '',
-    plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, autres sports).' : '',
+    plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, autres sports, sports que tu ne suis pas).' : '',
     plan.before ? plan.before + ' plus ancienne' + (plan.before > 1 ? 's' : '') + ' que la période choisie.' : '',
     plan.dropped ? '<span style="color:var(--velo)">' + plan.dropped + ' séance' + (plan.dropped > 1 ? 's' : '') + ' plus ancienne' + (plan.dropped > 1 ? 's' : '')
       + ' que le ' + TS.formatDate(plan.oldestKept) + ' ne rentre' + (plan.dropped > 1 ? 'nt' : '') + ' pas : ' + (TS.cloudLayoutNow() === 2 ? 'la place est limitée sur cet appareil' : 'la place par compte est limitée pour l’instant') + '.</span>' : '',
@@ -1334,7 +1347,7 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-var IGNORED_LABELS = { marche: 'marche / randonn\u00e9e', fitness: 'fitness / cardio en salle' };
+var IGNORED_LABELS = { marche: 'marche / randonn\u00e9e', fitness: 'fitness / cardio en salle', nonsuivi: 'sport que tu ne suis pas (Profil \u2192 Param\u00e8tres \u2192 Mes sports)' };
 
 function buildImportSummary(imported, similar, ignored) {
   const parts = [];
@@ -1383,8 +1396,8 @@ async function processImportFiles(files) {
     await new Promise(r => setTimeout(r, 0)); // laisse la page respirer entre deux fichiers
     try {
       const session = await window.TriImport.parseActivityFile(file);
-      if (session._skip) {           // marche, fitness : jamais importés
-        ignored.push({ name: file.name, reason: session._skip, date: session.date, distance: session.distance });
+      if (session._skip || (session.sport && !TS.sportImported(session.sport))) {   // marche, fitness, sport non suivi
+        ignored.push({ name: file.name, reason: session._skip || 'nonsuivi', date: session.date, distance: session.distance });
         continue;
       }
       const match = findSimilarSession(session);

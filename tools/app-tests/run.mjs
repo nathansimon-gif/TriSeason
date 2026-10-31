@@ -117,7 +117,7 @@ function sampleData() {
   }
   const meals = [];
   for (let i = 1; i <= 30; i++) meals.push({ id: 'm' + i, date: day(-i), type: 'déjeuner', desc: 'riz + poulet', glucides: 150 + (i % 5) * 40, proteines: 40, lipides: 20 });
-  return { profile: { name: 'Test', fcmax: 190 }, weeks: {}, _migrated: true, news_seen: ['muscu'], weight: [{ date: day(-10), value: 70 }], records: [],
+  return { profile: { name: 'Test', fcmax: 190 }, weeks: {}, _migrated: true, news_seen: ['muscu', 'sports'], weight: [{ date: day(-10), value: 70 }], records: [],
     competitions: [{ id: 'c1', date: day(-20), name: '10 km test', type: 'RUN', distance: '10', goal_time: '0:42:00', actual_time: '0:41:07' },
                    { id: 'c2', date: day(30), name: 'Triathlon test', type: 'TRI', distance: '51.5', goal_time: '2:30:00' }],
     sessions, nutrition: { meals, hydration: { [day(-1)]: 2000 }, fuel: [] } };
@@ -140,6 +140,8 @@ async function main() {
 
   // Ouvre un contexte « utilisateur connecté » avec des données de test.
   async function newUser({ uid = 'testeur', data = sampleData(), consent = true, external, ctxOpts = {} } = {}) {
+    // Messages de nouveauté déjà vus, sauf si le test le précise (news_seen: [] pour les voir)
+    if (data && !('news_seen' in data)) data = { ...data, news_seen: ['muscu', 'sports'] };
     const ctx = await browser.newContext({ serviceWorkers: 'block', timezoneId: TZ, viewport: { width: 1280, height: 900 }, ...ctxOpts });
     let currentUid = uid;
     await ctx.route(/gstatic\.com/, r => r.request().url().includes('app-compat')
@@ -521,9 +523,52 @@ async function main() {
     assert(!st && !v.calls.some(c => c.includes('code-pirate')), 'le code a été utilisé');
   });
 
+  await test('Mes sports : sans choix fait, tout est importé comme avant (musculation Strava comprise)', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    const r = await v.page.evaluate(() => ({ chosen: TS.sportsChosen(), muscuShown: TS.muscuOn(), imported: TS.ALL_SPORTS.filter(sp => TS.sportImported(sp)).join(),
+      plan: TS.planStravaArchive([{ id: 991, start: new Date(), localDate: TS.localDateStr(), sport: 'muscu', elapsed: 3000 }]).add.length }));
+    await v.ctx.close();
+    assert(r.chosen === null && !r.muscuShown && r.imported === 'nat,velo,run,muscu' && r.plan === 1, 'import sans choix : ' + JSON.stringify(r));
+  });
+
+  await test('Mes sports : un sport recoché récupère sur Strava les séances faites depuis qu’il avait été décoché', async () => {
+    const v = await stravaUser();
+    const afters = [];
+    await v.ctx.route(/strava\.com\/api\/v3\/athlete\/activities/, r => {
+      afters.push(+new URL(r.request().url()).searchParams.get('after'));
+      r.fulfill({ body: JSON.stringify([
+        { id: 777, sport_type: 'Run', start_date: day(-20) + 'T06:00:00Z', start_date_local: day(-20) + 'T08:00:00Z', elapsed_time: 2400, distance: 8000 },
+        { id: 778, sport_type: 'Yoga', start_date: day(-19) + 'T06:00:00Z', start_date_local: day(-19) + 'T08:00:00Z', elapsed_time: 2400 },
+      ]), contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' } });
+    });
+    await v.page.goto(`${BASE}/profile.html#mes-sports`); await v.page.waitForTimeout(800);
+    const offAt = await v.page.evaluate(() => {
+      const d = TS.getData(), now = Math.floor(Date.now() / 1000);
+      d.strava = { access_token: 'acces-1', refresh_token: 'r', expires_at: now + 9999, after: now - 3600 };
+      d.profile.sports = ['nat', 'velo', 'run']; TS.saveData(d);
+      TS.setSportsChosen(['nat', 'velo']);   // course décochée maintenant…
+      const d2 = TS.getData(); d2.profile.sports_off.run = now - 30 * 86400; TS.saveData(d2);   // …il y a 30 jours
+      renderSportChoice();
+      return d2.profile.sports_off.run;
+    });
+    await v.page.click('[data-sport-choice="run"]'); await v.page.waitForTimeout(1200);
+    const r = await v.page.evaluate(() => { const d = TS.getData();
+      return { got: d.sessions.filter(s => s.strava_id === 777).map(s => s.sport + ' ' + s.date), yoga: d.sessions.some(s => s.strava_id === 778),
+        off: d.profile.sports_off, back: d.strava.backfill_after, after: d.strava.after, chosen: d.profile.sports }; });
+    // Synchro suivante : de nouveau à partir de la dernière séance reçue (plus de récupération)
+    await v.page.evaluate(() => TS.stravaSync({ force: true })); await v.page.waitForTimeout(300);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(afters.length >= 1 && Math.abs(afters[0] - (offAt - 3 * 86400)) < 5, 'Strava interrogé depuis la décoche : ' + JSON.stringify({ afters, offAt }));
+    assert(r.got.length === 1 && r.got[0].startsWith('run ') && !r.yoga, 'séance récupérée : ' + JSON.stringify(r));
+    assert(!r.off && !r.back && r.after > offAt + 20 * 86400 && r.chosen.join() === 'nat,velo,run', 'état après récupération : ' + JSON.stringify(r));
+    assert(afters[afters.length - 1] > offAt + 20 * 86400, 'synchro suivante normale : ' + afters.join());
+  });
+
   await test('Strava : déconnexion (séances gardées ou supprimées au choix)', async () => {
     const v = await stravaUser();
-    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(800);
     const r = await v.page.evaluate(async () => {
       const seed = (d) => { d.strava = { access_token: 'a', refresh_token: 'r', expires_at: Date.now() / 1000 + 9999, after: 0 };
         d.sessions[0].strava_id = 1; d.sessions[1].strava_id = 2; TS.saveData(d); };
@@ -663,7 +708,7 @@ async function main() {
 
   await test('Strava : « Récupérer tout l’historique » montre un aperçu avant d’importer', async () => {
     const v = await stravaUser();
-    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(600);
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(600);
     await v.page.evaluate(() => { const d = TS.getData();
       d.strava = { access_token: 'acces-1', refresh_token: 'r', expires_at: Date.now() / 1000 + 9999, after: Date.now() / 1000 }; TS.saveData(d); });
     await v.page.waitForTimeout(200);
@@ -740,7 +785,7 @@ async function main() {
   // 5. Données personnelles
   await test('RGPD : déconnexion → plus aucune donnée dans le navigateur', async () => {
     // Sans news_seen : le message de nouveauté arrive juste après la déconnexion (bug corrigé)
-    const data = sampleData(); delete data.news_seen;
+    const data = sampleData(); data.news_seen = [];
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(500);
     v.setUid(null);
@@ -1057,7 +1102,7 @@ async function main() {
 
   await test('Apparence : mode clair choisi dans Profil, gardé sur toutes les pages, graphiques convertis ; sombre inchangé', async () => {
     const v = await newUser();
-    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    await v.page.goto(`${BASE}/profile.html#apparence`); await v.page.waitForTimeout(700);
     const dark = await v.page.evaluate(() => ({ t: document.documentElement.dataset.theme, bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() }));
     await Promise.all([v.page.waitForNavigation(), v.page.click('[data-theme-pick="light"]')]);
     await v.page.waitForTimeout(500);
@@ -1244,7 +1289,7 @@ async function main() {
     data.health = { consent: { version: 1, at: 1 }, periods: [{ id: 'h1', type: 'blessure', zone: 'Dos', start: day(-10), end: null, status: 'en_cours' }] };
     data.sessions[0].pain = 3;
     const v = await newUser({ data });
-    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(700);
     await v.page.click('text=Retirer mon accord et tout effacer'); await v.page.waitForTimeout(300);
     const r = await v.page.evaluate(() => { const c = window.__cloud('testeur');
       return { on: TS.healthEnabled(), health: c.health, pain: c.sessions.some(s => 'pain' in s), n: c.sessions.length }; });
@@ -1495,7 +1540,7 @@ async function main() {
   });
 
   await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {
-    const data = sampleData(); delete data.news_seen;
+    const data = sampleData(); data.news_seen = ['sports'];
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
     const first = await v.page.evaluate(() => { const m = document.getElementById('newsModal'); return m && m.classList.contains('open') && m.textContent; });
@@ -1508,15 +1553,16 @@ async function main() {
     const form = await v.page.evaluate(() => ({ open: document.getElementById('sessionModal').classList.contains('open'), sport: document.getElementById('s_sport').value }));
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
-    const fresh = sampleData(); delete fresh.news_seen; fresh.sessions = [];
+    const fresh = sampleData(); fresh.news_seen = []; fresh.sessions = [];
     const w = await newUser({ data: fresh });
     await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(1500);
-    const newbie = await w.page.evaluate(() => ({ modal: !!document.getElementById('newsModal'), seen: TS.getData().news_seen }));
+    const newbie = await w.page.evaluate(() => ({ modal: (document.getElementById('newsModal') || {}).textContent || '', seen: TS.getData().news_seen }));
     await w.ctx.close();
     assert(first && /Nouveau : la musculation/.test(first), 'message absent à la première ouverture');
     assert(cloud && cloud.includes('muscu') && !again, 'message réaffiché : ' + JSON.stringify({ cloud, again }));
     assert(form.open && form.sport === 'muscu', 'lien vers une séance de musculation : ' + JSON.stringify(form));
-    assert(!newbie.modal && (newbie.seen || []).includes('muscu'), 'nouveau compte : ' + JSON.stringify(newbie));
+    // Nouveau compte : pas d'annonce musculation (marquée vue), mais « Choisis tes sports »
+    assert(/Choisis tes sports/.test(newbie.modal) && !/musculation/i.test(newbie.modal.split('Choisis')[0]) && (newbie.seen || []).includes('muscu') && newbie.seen.includes('sports'), 'nouveau compte : ' + JSON.stringify(newbie).slice(0, 300));
   });
 
   await test('Dashboard : compétitions dans le calendrier (drapeau) et dans la fenêtre du jour', async () => {
@@ -1644,6 +1690,64 @@ async function main() {
       'détail Squat : ' + modal.slice(0, 400));
     assert(/Nouveau record ! Squat : 107,5 kg \(avant 105 kg\) · Tractions : 12 rép\. \(avant 10 rép\.\)/.test(toast), 'annonce : ' + toast);
     assert((dayHtml.match(/muscu-pr/g) || []).length === 2, 'mention Record dans le calendrier : ' + dayHtml.slice(0, 300));
+  });
+
+  await test('Mes sports : message d’ouverture, choix dans Profil → Paramètres, appli et imports limités aux sports choisis', async () => {
+    const data = sampleData(); data.news_seen = ['muscu'];
+    data.sessions.push({ id: 'mu1', date: day(-2), sport: 'muscu', duration: 1, exercises: [{ name: 'Squat', group: 'Jambes', sets: 3, reps: 5, kg: 80 }] });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
+    const news = await v.page.evaluate(() => (document.getElementById('newsModal') || {}).textContent || '');
+    await Promise.all([v.page.waitForNavigation(), v.page.click('#newsModal a.btn--primary')]);
+    await v.page.waitForTimeout(700);
+    const prof = await v.page.evaluate(() => ({ params: !document.querySelector('[data-ptab-panel="parametres"]').hidden, profil: document.querySelector('[data-ptab-panel="profil"]').hidden,
+      checked: [...document.querySelectorAll('[data-sport-choice]')].filter(b => b.getAttribute('aria-checked') === 'true').map(b => b.dataset.sportChoice) }));
+    await v.page.click('[data-sport-choice="nat"]'); await v.page.click('[data-sport-choice="muscu"]'); await v.page.waitForTimeout(300);
+    const after = await v.page.evaluate(() => ({ chosen: window.__cloud('testeur').profile.sports,
+      note: document.querySelector('[data-sport-choice="nat"]').textContent.replace(/\s+/g, ' ') }));
+    // Dernier sport : on ne peut pas tout décocher
+    await v.page.click('[data-sport-choice="velo"]'); await v.page.click('[data-sport-choice="run"]'); await v.page.waitForTimeout(200);
+    const last = await v.page.evaluate(() => TS.sportsShown());
+    await v.page.click('[data-sport-choice="velo"]'); await v.page.waitForTimeout(200);
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
+    const dash = await v.page.evaluate(() => ({ hero: document.getElementById('heroStrip').textContent, legendNat: getComputedStyle(document.querySelector('[data-legend-sport="nat"]')).display,
+      freq: Chart.getChart('chartFrequency').data.datasets.map(d => d.label), modal: !!document.getElementById('newsModal') }));
+    await v.page.goto(`${BASE}/sport.html?sport=nat`); await v.page.waitForTimeout(700);
+    const sport = await v.page.evaluate(() => ({ nat: getComputedStyle(document.getElementById('tab-nat')).display, muscu: getComputedStyle(document.getElementById('tab-muscu')).display, cur: currentSport }));
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
+    const ses = await v.page.evaluate(() => ({ filter: [...document.querySelectorAll('#filterSport option')].map(o => o.value).join(), rows: document.querySelectorAll('#sessionTable tr').length,
+      badgeNat: !!document.querySelector('#sessionTable .badge-sport--nat'), avgs: document.getElementById('sportAvgs').textContent }));
+    await v.page.click('text=+ Nouvelle séance');
+    const form = await v.page.$$eval('#s_sport option', os => os.map(o => o.value).join());
+    const imp = await v.page.evaluate(() => {
+      const now = new Date();
+      const plan = TS.planStravaArchive([{ id: 901, start: now, localDate: TS.localDateStr(), sport: 'nat', elapsed: 1800, distance_m: 1500 },
+        { id: 902, start: now, localDate: TS.localDateStr(), sport: 'run', elapsed: 1800, distance_m: 5000 }]);
+      return { add: plan.add.map(s => s.sport), ignored: plan.ignored, kept: TS.getSessions({ sport: 'nat' }).length,
+        badges: TS.getAchievements().filter(b => !b.earned).map(b => b.id),
+        earnedSwim: TS.getAchievements().some(b => b.id === 'swim2k' && b.earned),
+        hiddenIfNotEarned: (() => { const d = TS.getData(); d.sessions = d.sessions.filter(x => x.sport !== 'nat'); return TS.getAchievements(d).map(b => b.id); })() };
+    });
+    await v.page.goto(`${BASE}/records.html`); await v.page.waitForTimeout(600);
+    const rec = await v.page.evaluate(() => ({ nat: getComputedStyle(document.querySelector('[data-rec-sport="nat"]')).display, tri: getComputedStyle(document.querySelector('[data-rec-sport="tri"]')).display,
+      muscu: getComputedStyle(document.getElementById('muscuRecordSection')).display, intro: document.getElementById('recIntro').textContent }));
+    await v.page.goto(`${BASE}/competitions.html`); await v.page.waitForTimeout(600);
+    const comp = await v.page.evaluate(() => { openCompModal(); return [...document.querySelectorAll('#c_type option')].map(o => o.value); });
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(600);
+    const nutri = await v.page.textContent('#nutriTipsTitle');
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/Choisis tes sports/.test(news), 'message d’ouverture : ' + news.slice(0, 120));
+    assert(prof.params && prof.profil && prof.checked.join() === 'nat,velo,run,muscu', 'Profil → Paramètres : ' + JSON.stringify(prof));
+    assert(after.chosen.join() === 'velo,run' && /gardées, masquées/.test(after.note), 'choix enregistré : ' + JSON.stringify(after));
+    assert(last.join() === 'run', 'au moins un sport : ' + last.join());
+    assert(!/Natation/.test(dash.hero) && dash.legendNat === 'none' && dash.freq.join() === 'Vélo,Course' && !dash.modal, 'Dashboard : ' + JSON.stringify(dash));
+    assert(sport.nat === 'none' && sport.muscu === 'none' && sport.cur === 'velo', 'Sports : ' + JSON.stringify(sport));
+    assert(ses.filter === ',velo,run' && !ses.badgeNat && !/Natation|Musculation/.test(ses.avgs) && form === 'velo,run', 'Séances : ' + JSON.stringify(ses) + ' ' + form);
+    assert(imp.add.join() === 'run' && imp.ignored === 1 && imp.kept === 13, 'import Strava / séances gardées : ' + JSON.stringify(imp));
+    assert(imp.earnedSwim && !imp.hiddenIfNotEarned.includes('swim2k') && !imp.hiddenIfNotEarned.includes('tri_week'), 'badges des sports non suivis (obtenus gardés, les autres masqués) : ' + imp.hiddenIfNotEarned.join());
+    assert(rec.nat === 'none' && rec.tri === 'none' && rec.muscu === 'none' && !/triathlon/i.test(rec.intro) && /vélo et course/.test(rec.intro), 'Records : ' + JSON.stringify(rec));
+    assert(comp.join() === 'RUN,BIKE,DUATH' && !/triathlon/i.test(nutri), 'pas de triathlon sans les 3 sports : ' + comp.join() + ' / ' + nutri);
   });
 
   await test('Musculation : séance Strava « WeightTraining » et fichier .fit de musculation importés', async () => {
