@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261108a"></script>
+  <script src="theme.js?v=20261109a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261108a"></script>
+  <script src="auth-guard.js?v=20261109a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261108a">
+  <link rel="stylesheet" href="style.css?v=20261109a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -393,9 +393,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261108a"></script>
-<script src="import.js?v=20261108a"></script>
-<script src="app.js?v=20261108a"></script>
+<script src="fit-parser.js?v=20261109a"></script>
+<script src="import.js?v=20261109a"></script>
+<script src="app.js?v=20261109a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -946,6 +946,8 @@ function openMuscuPicker(btn) {
   muscuPickBtn = btn;
   const q = document.getElementById('mpSearch');
   q.value = '';
+  const cur = btn.dataset.name;
+  mpOpen = new Set(cur ? (TS.MUSCU_GROUP_OF[cur] ? TS.muscuZones({ name: cur }).slice(0, 1) : ['Mes exercices']) : []);
   renderMuscuPicker();
   document.getElementById('muscuPicker').classList.add('open');
   document.getElementById('mpList').scrollTop = 0;
@@ -970,6 +972,7 @@ function renderMuscuPicker() {
   const hay = (name, group, targets) => { const main = Object.keys(targets).filter(k => targets[k] === 1);
     return mpNorm([name, group || ''].concat(main, main.map(k => TS.MUSCLES[k])).join(' ')); };
   const match = (name, group, targets) => words.every(w => hay(name, group, targets).includes(w));
+  if (!raw) { renderMuscuZones(); return; }
   let html = '', exact = false;
   const mine = TS.muscuCustomExercises().filter(e => match(e.name, e.group, TS.muscuTargets(e)));
   if (mine.length) html += '<div class="mp-group">Mes exercices</div>' + mine.map(e => muscuPickerItem(e.name, e.group, TS.muscuTargets(e))).join('');
@@ -989,6 +992,34 @@ function renderMuscuPicker() {
   if (!html) html = '<div class="mp-empty">Écris le nom d’un exercice ou d’un muscle.</div>';
   document.getElementById('mpList').innerHTML = html;
 }
+// Sans recherche : les zones de travail (Pectoraux, Dos, Biceps…), à dérouler une à une.
+// La zone de l'exercice déjà choisi est ouverte d'office.
+let mpOpen = new Set();
+function renderMuscuZones() {
+  const zones = [];
+  const mine = TS.muscuCustomExercises();
+  if (mine.length) zones.push(['Mes exercices', mine.map(e => [e.name, e.group])]);
+  TS.MUSCU_ZONES.forEach(([z]) => {
+    const list = [];
+    TS.MUSCU_CATALOG.forEach(([g, ex]) => ex.forEach(([n]) => { if (TS.muscuZones({ name: n }).includes(z)) list.push([n, g]); }));
+    zones.push([z, list]);
+  });
+  document.getElementById('mpList').innerHTML = zones.map(([z, list]) => {
+    const open = mpOpen.has(z);
+    return '<button type="button" class="mp-zone" data-zone="' + escHtml(z) + '" aria-expanded="' + open + '">'
+      + '<span>' + escHtml(z) + '</span><span class="mp-zone__n">' + list.length + '</span><span class="mp-zone__chev" aria-hidden="true">›</span></button>'
+      + (open ? '<div class="mp-zone__list">' + list.map(([n, g]) => muscuPickerItem(n, g, TS.muscuTargets({ name: n, group: g }))).join('') + '</div>' : '');
+  }).join('');
+}
+document.addEventListener('click', e => {
+  const z = e.target.closest('#mpList [data-zone]');
+  if (!z) return;
+  const name = z.dataset.zone;
+  if (mpOpen.has(name)) mpOpen.delete(name); else mpOpen.add(name);
+  const list = document.getElementById('mpList'), top = list.scrollTop;
+  renderMuscuZones();
+  list.scrollTop = top;
+});
 document.addEventListener('click', e => {
   const b = e.target.closest('#mpList [data-name]');
   if (!b || !muscuPickBtn) return;
@@ -1676,7 +1707,7 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
       <div class="modal__title">Choisir un exercice</div>
       <button class="modal__close" type="button" onclick="closeMuscuPicker()" aria-label="Fermer">×</button>
     </div>
-    <input class="form-input" type="search" id="mpSearch" placeholder="Rechercher : pec fly, triceps…" oninput="renderMuscuPicker()" autocomplete="off" aria-label="Rechercher un exercice">
+    <input class="form-input" type="search" id="mpSearch" placeholder="Rechercher un exercice ou un muscle" oninput="renderMuscuPicker()" autocomplete="off" aria-label="Rechercher un exercice">
     <div id="mpList" class="mp-list"></div>
   </div>
 </div>

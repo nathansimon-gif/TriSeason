@@ -63,6 +63,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   (gainage : secondes dans `reps`), catalogue `MUSCU_CATALOG` par groupe : `[nom, muscles]`
   (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un),
   `muscuTargets(ex)` : muscles d'un exercice (exercice libre : ceux de son groupe),
+  `MUSCU_ZONES` / `muscuZones(ex)` : zones de travail du choix d'exercice (d'après les muscles principaux),
   `hasMuscu` / `sportsShown` : la musculation n'apparaît dans les filtres, graphiques
   et le planning que si l'utilisateur a au moins une séance de musculation ;
   `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés à partir de

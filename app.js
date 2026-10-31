@@ -2587,6 +2587,18 @@ function muscuTargets(ex) {
   if (MUSCU_TARGETS[ex.name]) return MUSCU_TARGETS[ex.name];
   return ex.group && MUSCU_GROUP_TARGETS[ex.group] ? parseTargets(MUSCU_GROUP_TARGETS[ex.group]) : {};
 }
+// Zones de travail du choix d'exercice : un exercice apparaît dans chaque zone d'un de
+// ses muscles principaux (ex. soulevé de terre : Dos et Jambes)
+const MUSCU_ZONES = [
+  ['Pectoraux', ['pecs']], ['Dos', ['dorsaux', 'trapezes', 'lombaires']], ['Épaules', ['epaules']],
+  ['Biceps', ['biceps', 'avantbras']], ['Triceps', ['triceps']],
+  ['Jambes', ['quadriceps', 'ischios', 'fessiers', 'adducteurs', 'mollets']], ['Abdos et gainage', ['abdos', 'obliques']],
+];
+function muscuZones(ex) {
+  const t = muscuTargets(ex);
+  const main = Object.keys(t).filter(k => t[k] === 1);
+  return MUSCU_ZONES.filter(([, ms]) => ms.some(m => main.includes(m))).map(([z]) => z);
+}
 // Exercices libres déjà utilisés (pas dans le catalogue), avec leur groupe, du plus récent au plus ancien
 function muscuCustomExercises(data = getData()) {
   const seen = new Map();
@@ -3058,7 +3070,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   SPORTS, COMP_TYPES,
 };
