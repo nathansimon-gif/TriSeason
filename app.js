@@ -2663,9 +2663,14 @@ function limitOptions(sel, isOn, keep) {
 // Triathlon : seulement si natation, vélo et course sont suivis. Sinon l'appli ne parle
 // plus de triathlon (records, compétitions, textes).
 function triOn(data = getData()) { return ['nat', 'velo', 'run'].every(sp => sportOn(sp, data)); }
-// Types de compétition proposés : ceux dont tous les sports sont suivis
-const COMP_TYPE_SPORTS = { TRI: ['nat', 'velo', 'run'], DUATH: ['velo', 'run'], AQUA: ['nat', 'run'], RUN: ['run'], VELO: ['velo'], BIKE: ['velo'], NAT: ['nat'] };
-function compTypeOn(type, data = getData()) { return (COMP_TYPE_SPORTS[type] || []).every(sp => sportOn(sp, data)); }
+// Records multisport (triathlon, duathlon, aquathlon) visibles si les 3 sports sont suivis,
+// ou dès qu'il y a une course multisport ou un record de ce type (créé tout seul depuis
+// une compétition) : les courses multisport restent toujours possibles.
+const MULTI_COMP_TYPES = ['TRI', 'DUATH', 'AQUA'];
+function multisportShown(data = getData()) {
+  return triOn(data) || (data.records || []).some(r => r.sport === 'tri')
+    || (data.competitions || []).some(c => MULTI_COMP_TYPES.includes(c.type));
+}
 // Enregistre le choix. Un sport décoché garde la date (data.profile.sports_off) ; recoché,
 // la prochaine synchro Strava repart de cette date pour récupérer les séances manquées
 // (data.strava.backfill_after, doublons écartés). Renvoie true si une récupération est prévue.
@@ -3152,7 +3157,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, compTypeOn, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   SPORTS, COMP_TYPES,
 };
