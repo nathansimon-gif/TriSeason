@@ -1309,6 +1309,15 @@ async function main() {
     await v.page.click('text=+ Nouvelle séance');
     await v.page.selectOption('#s_sport', 'muscu');
     await v.page.click('#muscuRows .muscu-pick');
+    // Sans recherche : zones de travail fermées, à dérouler
+    const zones = await v.page.evaluate(() => ({ labels: [...document.querySelectorAll('#mpList .mp-zone > span:first-child')].map(e => e.textContent),
+      items: document.querySelectorAll('#mpList .mp-item').length }));
+    await v.page.click('#mpList [data-zone="Triceps"]');
+    const triZone = await v.page.$$eval('#mpList .mp-item', els => els.map(e => e.dataset.name));
+    await v.page.click('#mpList [data-zone="Dos"]'); await v.page.click('#mpList [data-zone="Jambes"]');
+    const deadlift = await v.page.$$eval('#mpList .mp-item[data-name="Soulevé de terre"]', els => els.length);
+    await v.page.click('#mpList [data-zone="Triceps"]');
+    const closed = await v.page.$$eval('#mpList .mp-item[data-name="Dips"]', els => els.length);
     const names = async q => { await v.page.fill('#mpSearch', q); return v.page.$$eval('#mpList .mp-item', els => els.map(e => e.dataset.name)); };
     const fly = await names('pec fly');
     const tri = await names('triceps');
@@ -1325,9 +1334,12 @@ async function main() {
     // Rouvrir : l'exercice libre est proposé dans « Mes exercices »
     await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
     await v.page.click('#muscuRows .muscu-pick');
-    const mine = await v.page.$$eval('#mpList .mp-group', els => els.map(e => e.textContent));
+    const mine = await v.page.$$eval('#mpList .mp-zone > span:first-child', els => els.map(e => e.textContent));
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
+    assert(zones.labels.join() === 'Pectoraux,Dos,Épaules,Biceps,Triceps,Jambes,Abdos et gainage' && zones.items === 0, 'zones : ' + JSON.stringify(zones));
+    assert(triZone.includes('Dips') && triZone.includes('Barre au front') && triZone.every(n => !/Développé couché/.test(n)), 'zone Triceps : ' + triZone.join());
+    assert(deadlift === 2 && closed === 0, 'soulevé de terre dans Dos et Jambes / zone refermée : ' + deadlift + ' ' + closed);
     assert(fly[0] === 'Pec fly (machine)', 'pec fly : ' + fly.join());
     assert(tri.includes('Dips') && tri.includes('Tirage triceps (poulie)') && !tri.includes('Développé couché (barre)'), 'triceps : ' + tri.join());
     assert(machine.length >= 15 && machine.every(n => /machine/i.test(n)), 'machine : ' + machine.join());
