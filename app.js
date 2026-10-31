@@ -1739,7 +1739,7 @@ function activityIndex(data) {
 function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) {
   const prev = [1, 2, 3, 4].map(n => prevWeekKey(weekKey, n));
   const recent = [].concat(...[1, 2, 3, 4, 5, 6, 7, 8].map(n => idx.byWeek[prevWeekKey(weekKey, n)] || []));
-  const practiced = ['nat', 'velo', 'run'].filter(sp => recent.some(s => s.sport === sp));
+  const practiced = ['nat', 'velo', 'run'].filter(sp => sportOn(sp, data) && recent.some(s => s.sport === sp));
   const avg = (fn) => prev.reduce((a, wk) => a + fn(wk), 0) / prev.length;
   const days = weekDays(weekKey);
   const inWeek = idx.byWeek[weekKey] || [];
@@ -1790,7 +1790,7 @@ function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) 
 // plus difficile à ceux qui font de la musculation. Un seul par semaine, choisi en
 // alternance parmi ceux qui ont du sens d'après les 4 semaines précédentes.
 function muscuChallenge(weekKey, data, idx, prev, recent) {
-  if (!recent.some(s => s.sport === 'muscu')) return null;
+  if (!muscuOn(data) || !recent.some(s => s.sport === 'muscu')) return null;
   const mu = wk => (idx.byWeek[wk] || []).filter(s => s.sport === 'muscu');
   const avg = fn => prev.reduce((a, wk) => a + fn(mu(wk)), 0) / prev.length;
   const groupsOf = list => new Set([].concat(...list.map(s => (s.exercises || []).map(e => e.group || MUSCU_GROUP_OF[e.name]).filter(Boolean)))).size;
@@ -1932,7 +1932,7 @@ function getAchievements(data = getData()) {
   add('feel10', 'À l’écoute', 'Ressenti noté sur 10 séances d’affilée', 'nutri', fDate, fBest, 10);
 
   // Musculation : seulement pour ceux qui en font (sinon rien ne change)
-  if (hasMuscu(data)) {
+  if (hasMuscu(data) && muscuOn(data)) {
     const mus = sessions.filter(s => s.sport === 'muscu');
     add('muscu10', 'Assidu en salle', '10 séances de musculation', 'muscu', mus[9] && mus[9].date, mus.length, 10);
     let fullDate = null, bestG = 0;
@@ -1960,7 +1960,9 @@ function getAchievements(data = getData()) {
   const weekEnd = (wk) => { const ds = weekDays(wk); return ds[6] > today ? today : ds[6]; };
   add('challenge1', 'Défi relevé', 'Les deux défis d’une semaine réussis', 'all', w[0] && weekEnd(w[0]), w.length, 1);
   add('challenge4', 'Série de 4', 'Défis réussis 4 semaines d’affilée', 'all', hist.best >= 4 ? weekEnd(w[w.length - 1]) : null, hist.best, 4);
-  return badges;
+  // Sports non suivis : leurs badges pas encore obtenus sont masqués (ceux obtenus restent)
+  const need = { tri_week: ['nat', 'velo', 'run'], velo100: ['velo'], brick: ['velo', 'run'], swim2k: ['nat'], half: ['run'] };
+  return badges.filter(b => b.earned || (need[b.id] || []).every(sp => sportOn(sp, data)));
 }
 
 // Affichage d'un badge (Dashboard et Profil) : médaille avec un repère court, pas d'emoji.
@@ -1999,6 +2001,18 @@ function takeNewAchievements() {
 // Seulement pour les comptes qui avaient déjà des séances : un nouveau compte
 // découvre tout avec le guide de démarrage, l'annonce est marquée vue sans s'afficher.
 const NEWS = [{
+  id: 'sports',
+  everyone: true,                             // aussi pour un nouveau compte
+  skip: data => !!sportsChosen(data),         // déjà choisi : rien à annoncer
+  dot: false,
+  title: 'Choisis tes sports',
+  html: '<p>Tu peux maintenant choisir les sports que tu pratiques : <b>natation, vélo, course à pied, musculation</b>.</p>'
+    + '<ul><li>L’appli n’affiche plus que ces sports (Dashboard, Sports, Séances, Records, Forme).</li>'
+    + '<li>Les imports (Strava, montre, fichiers) ne prennent que ces sports.</li>'
+    + '<li>Tes séances déjà enregistrées sont gardées, même d’un sport que tu décoches.</li></ul>'
+    + '<p class="news__note">Tu peux changer ce choix quand tu veux : Profil → Paramètres → Mes sports.</p>',
+  action: { label: 'Choisir mes sports', href: 'profile.html#mes-sports' },
+}, {
   id: 'muscu',
   skip: data => hasMuscu(data),   // déjà adopté : rien à annoncer
   title: 'Nouveau : la musculation',
@@ -2016,15 +2030,18 @@ function showNews() {
   const seen = data.news_seen || [];
   const todo = NEWS.filter(n => !seen.includes(n.id));
   if (!todo.length) return;
-  data.news_seen = seen.concat(todo.map(n => n.id));
+  // Un seul message par ouverture : le premier à montrer ; ceux qui ne concernent pas
+  // ce compte sont marqués vus sans s'afficher, les autres attendent la prochaine ouverture.
+  const shows = x => ((data.sessions || []).length || x.everyone) && !x.skip(data);
+  const n = todo.find(shows);
+  data.news_seen = seen.concat(todo.filter(x => x === n || !shows(x)).map(x => x.id));
   saveData(data);
-  const n = todo.find(x => (data.sessions || []).length && !x.skip(data));
   if (!n) return;
   const box = document.createElement('div');
   box.className = 'modal-overlay';
   box.id = 'newsModal';
   box.innerHTML = `<div class="modal news" role="dialog" aria-modal="true" aria-labelledby="newsTitle" style="max-width:460px">
-    <div class="modal__header"><div class="modal__title" id="newsTitle"><span class="sport-dot sport-dot--muscu"></span>${n.title}</div>
+    <div class="modal__header"><div class="modal__title" id="newsTitle">${n.dot === false ? '' : '<span class="sport-dot sport-dot--muscu"></span>'}${n.title}</div>
       <button class="modal__close" type="button" data-close aria-label="Fermer">×</button></div>
     <div class="news__body">${n.html}</div>
     <div class="form-actions"><button class="btn btn--ghost" type="button" data-close>Plus tard</button>
@@ -2211,7 +2228,7 @@ function planStravaArchive(acts, { since = null } = {}) {
   const sessions = data.sessions.slice();
   acts.slice().sort((x, y) => y.start - x.start).forEach(a => {   // les plus récentes d'abord
     if (known.has(Number(a.id))) { plan.already++; return; }
-    if (!a.sport) { plan.ignored++; return; }
+    if (!a.sport || !sportOn(a.sport, data)) { plan.ignored++; return; }
     const s = archiveToSession(a);
     if (since && s.date < since) { plan.before++; return; }
     const twin = stravaFindSimilar(sessions, s);
@@ -2243,7 +2260,7 @@ async function stravaFetchHistory(onProgress) {
   for (let page = 1; page <= 40; page++) {
     if (onProgress) onProgress(list.length);
     const res = await fetch(STRAVA_API + '/athlete/activities?per_page=200&page=' + page, { headers: { Authorization: 'Bearer ' + token } });
-    if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil.');
+    if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil → Paramètres.');
     if (res.status === 429) throw new Error('Strava est très sollicité : réessaie dans un quart d’heure.');
     if (!res.ok) throw new Error('Strava ne répond pas (erreur ' + res.status + ').');
     const batch = await res.json();
@@ -2296,7 +2313,7 @@ async function stravaSyncRun({ force = false, full = false } = {}) {
   for (let page = 1; page <= (full ? 30 : 3); page++) {
     const res = await fetch(STRAVA_API + '/athlete/activities?per_page=100&page=' + page + '&after=' + after,
       { headers: { Authorization: 'Bearer ' + token } });
-    if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil.');
+    if (res.status === 401) throw new Error('Strava a refusé l’accès : déconnecte puis reconnecte Strava dans Profil → Paramètres.');
     if (res.status === 429) throw new Error('Strava est très sollicité : nouvel essai automatique plus tard.');
     if (!res.ok) throw new Error('Strava ne répond pas (erreur ' + res.status + ').');
     const list = await res.json();
@@ -2312,7 +2329,7 @@ async function stravaSyncRun({ force = false, full = false } = {}) {
     if (start > newest) newest = start;
     if (known.has(a.id)) return;
     const s = stravaToSession(a);
-    if (!s) { ignored++; return; }
+    if (!s || !sportOn(s.sport, data)) { ignored++; return; }   // sport non suivi : ignoré
     const twin = stravaFindSimilar(data.sessions, s);
     if (twin) { twin.strava_id = a.id; linked++; }
     else { s.id = newId(); data.sessions.push(s); added++; }
@@ -2608,7 +2625,29 @@ function muscuCustomExercises(data = getData()) {
 }
 function hasMuscu(data = getData()) { return (data.sessions || []).some(s => s.sport === 'muscu'); }
 // Sports à afficher : les 3 sports, plus la musculation si l'utilisateur en fait
-function sportsShown(data = getData()) { return hasMuscu(data) ? ['nat', 'velo', 'run', 'muscu'] : ['nat', 'velo', 'run']; }
+// Sports suivis : ceux cochés dans Profil → Paramètres (data.profile.sports). Sans choix
+// (comptes existants) : natation, vélo, course, et musculation si l'utilisateur en a fait.
+// L'appli n'affiche que ces sports et les imports (Strava, fichiers) ignorent les autres ;
+// les séances déjà enregistrées d'un sport décoché sont gardées (juste masquées).
+const ALL_SPORTS = ['nat', 'velo', 'run', 'muscu'];
+function sportsChosen(data = getData()) {
+  const c = (data.profile || {}).sports;
+  return Array.isArray(c) ? ALL_SPORTS.filter(sp => c.includes(sp)) : null;
+}
+function sportsShown(data = getData()) {
+  const c = sportsChosen(data);
+  if (c && c.length) return c;
+  return hasMuscu(data) ? ['nat', 'velo', 'run', 'muscu'] : ['nat', 'velo', 'run'];
+}
+function sportOn(sp, data = getData()) { return sportsShown(data).includes(sp); }
+// Musculation visible (onglets, filtres, records, carte du corps…)
+function muscuOn(data = getData()) { return sportOn('muscu', data); }
+function setSportsChosen(list) {
+  const data = getData();
+  data.profile = data.profile || {};
+  data.profile.sports = ALL_SPORTS.filter(sp => list.includes(sp));
+  saveData(data);
+}
 function lastMuscuSession(beforeId) {
   return getSessions({ sport: 'muscu' }).find(s => s.id !== beforeId && (s.exercises || []).length) || null;
 }
@@ -3070,7 +3109,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   SPORTS, COMP_TYPES,
 };

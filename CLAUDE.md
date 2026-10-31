@@ -64,8 +64,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un),
   `muscuTargets(ex)` : muscles d'un exercice (exercice libre : ceux de son groupe),
   `MUSCU_ZONES` / `muscuZones(ex)` : zones de travail du choix d'exercice (d'après les muscles principaux),
-  `hasMuscu` / `sportsShown` : la musculation n'apparaît dans les filtres, graphiques
-  et le planning que si l'utilisateur a au moins une séance de musculation ;
+  **sports suivis** : `data.profile.sports` (Profil → Paramètres → Mes sports) ; `sportsShown` /
+  `sportOn(sp)` / `muscuOn` : l'appli n'affiche que ces sports et les imports (Strava, archive,
+  fichiers) ignorent les autres (séances déjà enregistrées gardées) ; sans choix (`sportsChosen` = null) :
+  natation, vélo, course + musculation si `hasMuscu`, et le formulaire de séance propose tout ;
   `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés à partir de
   toutes les séances, rien d'enregistré ; 1RM estimé Epley jusqu'à 12 rép. ; `rm` = meilleure
   charge pour au moins 1/3/5/8/10/12 rép.), `muscuRecordEvents` (records battus, la 1re
@@ -113,6 +115,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - **Tirer pour actualiser** (`initPullToRefresh`, app.js) : seulement dans l'appli
   installée (`navigator.standalone` ou `display-mode: standalone`) ; en haut de
   page, hors fenêtre ouverte : synchro Strava forcée (10 s max) puis rechargement.
+- **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
+  `#mes-sports`, `#apparence`… ouvre l'onglet Paramètres) ; réglages, Strava et données sont dans Paramètres.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
   `competitions.html`, `nutrition.html`, `records.html`, `forme.html`,
   `profile.html`, `login.html`, et deux pages publiques sans connexion :

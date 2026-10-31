@@ -9,7 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 Fusionner la PR #57 (choix d'exercice par zones) puis recharger le site
+- [ ] 🧑 Fusionner la PR « Mes sports » et onglet Paramètres, puis recharger le site
 - [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu, records aussi pour les exercices tenus en charge (gainage lesté)
 - [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
@@ -38,10 +38,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [x] 🧑🤖 **Écrans de chargement** : fait (PR #50)
 - [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
-- [ ] 🧑🤖 **Choisir ses sports** (à discuter ensemble avant de commencer) : à la création du compte, une page s'ouvre pour cocher les sports qu'on veut suivre (course, vélo, natation, et musculation si on l'ajoute). L'appli n'affiche ensuite que ces sports : Dashboard, Sports, filtres, records, défis, graphiques. Pistes :
-  - choix modifiable à tout moment dans Profil ; les comptes existants gardent les 3 sports par défaut
-  - rien n'est supprimé : une séance d'un sport non coché (import Strava, montre) reste enregistrée, on demande simplement « Ajouter ce sport à tes sports ? »
-  - à décider : un seul sport choisi = l'appli parle de « course à pied » et plus de « triathlon » (textes, compétitions, formats FFTri cachés)
+- [ ] 🧑🤖 **Un seul sport choisi** (à décider) : l'appli parle alors de « course à pied » plutôt que de « triathlon » (textes, compétitions, formats FFTri cachés)
 - [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries, séries détaillées (charges différentes à chaque série)
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
@@ -111,6 +108,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 31/10/2026 | à venir | **Mes sports et onglet Paramètres** : Profil a deux onglets, « Mon profil » et **« Paramètres »** (mes sports, apparence, Strava, option santé, compte, données) ; **Mes sports** : cocher natation, vélo, course à pied, musculation ; l'appli n'affiche plus que ces sports (Dashboard, Sports, Séances, Records, Forme, défis, badges pas encore obtenus) et les **imports** (Strava, archive, fichiers de montre) ignorent les autres ; séances déjà enregistrées gardées (juste masquées) ; message « Choisis tes sports » une fois par compte à l'ouverture ; comptes sans choix : comme avant |
 | 31/10/2026 | #57 | **Choix d'exercice par zones de travail** : la fenêtre de choix montre d'abord les zones (Pectoraux, Dos, Épaules, Biceps, Triceps, Jambes, Abdos et gainage, et « Mes exercices »), à dérouler pour voir leurs exercices ; un exercice qui travaille plusieurs zones apparaît dans chacune (ex. soulevé de terre : Dos et Jambes) ; la zone de l'exercice déjà choisi s'ouvre d'office ; la recherche reste en haut |
 | 29/10/2026 | #56 | **Records de musculation** (page Records) : une carte par exercice, calculée à partir de **toutes les séances, anciennes comprises** (charge la plus lourde, série « Max », 1RM estimé ; répétitions ou durée pour les exercices sans charge), filtre par groupe de muscles, pastille « Nouveau record » (14 jours) ; **détail par exercice** (meilleure charge pour 1, 3, 5, 8, 10, 12 répétitions, meilleure séance, records battus) ; liste **« Derniers records battus »** ; message « Nouveau record ! » à l'enregistrement d'une séance et mention « Record » dans le calendrier. La carte « Records par exercice » de Sports → Muscu est retirée |
 | 28/10/2026 | #55 | **Musculation : séries détaillées** : dans un même exercice, une ligne par série avec ses répétitions et sa charge (« Détailler les séries »), série marquée **« Max »** (1 répétition la plus lourde) ; le nombre d'exercices de la séance reste juste ; graphiques, records, kg soulevés et carte du corps prennent chaque série, la charge d'une séance = la série la plus lourde. Tests : date des tests corrigée autour du changement d'heure (le soir après 22 h UTC) |

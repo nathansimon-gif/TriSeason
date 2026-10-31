@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261109a"></script>
+  <script src="theme.js?v=20261110a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261109a"></script>
+  <script src="auth-guard.js?v=20261110a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261109a">
+  <link rel="stylesheet" href="style.css?v=20261110a">
   <style>
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
@@ -73,6 +73,16 @@
     .gear-state--near { background:rgba(240,185,65,.14); color:var(--yellow); border-color:transparent; }
     .gear-state--over { background:var(--red-dim); color:var(--red); border-color:transparent; }
     .theme-pick { display:flex; gap:6px; flex-wrap:wrap; }
+    .ptabs { display:flex; gap:6px; margin-bottom:12px; }
+    .ptab { flex:1; background:var(--surface); border:1px solid var(--border); color:var(--text-2); border-radius:var(--r-sm); padding:10px; font-size:13.5px; font-weight:600; }
+    .ptab[aria-selected="true"] { color:var(--text); border-color:var(--accent); box-shadow:inset 0 -2px 0 var(--accent); }
+    .sport-choice { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+    .sport-choice__item { display:flex; align-items:center; gap:10px; text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px; color:var(--text); }
+    .sport-choice__item[aria-checked="true"] { border-color:var(--sc); background:var(--sc-dim); }
+    .sport-choice__box { width:18px; height:18px; border-radius:4px; border:1.5px solid var(--border2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; }
+    .sport-choice__item[aria-checked="true"] .sport-choice__box { background:var(--sc); border-color:var(--sc); }
+    .sport-choice__label { font-size:13.5px; font-weight:600; }
+    .sport-choice__n { display:block; font-size:11.5px; font-weight:400; color:var(--text-3); margin-top:1px; }
     .theme-pick .btn[aria-checked="true"] { background:var(--accent-dim); color:var(--text); border-color:var(--accent); }
     .zone-chip {
       display: inline-flex; align-items: center; gap: 6px;
@@ -101,6 +111,12 @@
 
 <div class="page"><div class="container">
 
+  <div class="ptabs" role="tablist" aria-label="Profil">
+    <button type="button" class="ptab" role="tab" id="ptab-profil" data-ptab="profil" aria-selected="true">Mon profil</button>
+    <button type="button" class="ptab" role="tab" id="ptab-parametres" data-ptab="parametres" aria-selected="false">Paramètres</button>
+  </div>
+
+  <div data-ptab-panel="profil">
   <!-- ── Header profil ── -->
   <div class="section-card" style="margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap">
@@ -150,12 +166,6 @@
     <div id="fcZones"></div>
   </div>
 
-  <!-- ── Strava ── -->
-  <div class="section-card" id="stravaCard" hidden>
-    <div class="section-card__title">Strava</div>
-    <div id="stravaBody"></div>
-  </div>
-
   <!-- ── Équipement ── -->
   <div class="section-card" id="equipement">
     <div class="section-card__title" style="justify-content:space-between">
@@ -165,10 +175,15 @@
     <div id="gearList"></div>
   </div>
 
-  <!-- ── Option santé : blessures et reprise ── -->
-  <div class="section-card" id="healthCard">
-    <div class="section-card__title">Blessures, maladie et reprise</div>
-    <div id="healthBody" class="strava-note"></div>
+  </div><!-- /profil -->
+
+  <!-- ── Paramètres : sports, apparence, Strava, option santé, compte, données ── -->
+  <div data-ptab-panel="parametres" hidden>
+  <!-- ── Mes sports ── -->
+  <div class="section-card" id="mes-sports">
+    <div class="section-card__title">Mes sports</div>
+    <div class="strava-note" style="margin-bottom:12px">Coche les sports que tu pratiques : l'appli n'affiche que ceux-là, et les imports (Strava, montre, fichiers) ne prennent que ces sports. Tes séances déjà enregistrées sont toujours gardées, même d'un sport décoché.</div>
+    <div class="sport-choice" id="sportChoice" role="group" aria-label="Mes sports"></div>
   </div>
 
   <!-- ── Apparence (préférence de cet appareil) ── -->
@@ -180,6 +195,18 @@
       <button type="button" class="btn btn--sm" data-theme-pick="auto" role="radio">Comme le téléphone</button>
     </div>
     <div class="strava-note" style="margin-top:8px">Réglage de cet appareil : sur un autre téléphone ou ordinateur, choisis-le aussi.</div>
+  </div>
+
+  <!-- ── Strava ── -->
+  <div class="section-card" id="stravaCard" hidden>
+    <div class="section-card__title">Strava</div>
+    <div id="stravaBody"></div>
+  </div>
+
+  <!-- ── Option santé : blessures et reprise ── -->
+  <div class="section-card" id="healthCard">
+    <div class="section-card__title">Blessures, maladie et reprise</div>
+    <div id="healthBody" class="strava-note"></div>
   </div>
 
   <!-- ── Compte ── -->
@@ -233,6 +260,8 @@
       <a href="confidentialite.html" style="font-size:12px;color:var(--text-2);text-decoration:underline;text-underline-offset:2px">Politique de confidentialité et mentions légales</a>
     </div>
   </div>
+
+  </div><!-- /parametres -->
 
   <div style="text-align:center;font-size:11px;color:var(--text-3);padding:16px 0">
     TriSeason Tracker · Données stockées localement sur cet appareil
@@ -385,7 +414,7 @@
 </div>
 
 
-<script src="app.js?v=20261109a"></script>
+<script src="app.js?v=20261110a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -395,6 +424,8 @@ document.addEventListener('triseason:auth-ready', (e) => showAccountEmail(e.deta
 if (window.TS_USER) showAccountEmail(window.TS_USER); // au cas où l'événement serait déjà passé
 
 document.addEventListener('DOMContentLoaded', () => {
+  openProfileTab();
+  renderSportChoice();
   renderProfile();
   renderPBs();
   renderSeasonStats();
@@ -407,6 +438,55 @@ document.addEventListener('DOMContentLoaded', () => {
   handleStravaReturn();
   loadEditForm();
   TS.initTooltips();
+});
+
+// ── Onglets « Mon profil » / « Paramètres » ──────────────────────────────────
+// profile.html#parametres (ou une section des paramètres : #mes-sports, #apparence…)
+// ouvre directement l'onglet Paramètres et descend à la section.
+function showProfileTab(name) {
+  document.querySelectorAll('[data-ptab]').forEach(b => b.setAttribute('aria-selected', b.dataset.ptab === name ? 'true' : 'false'));
+  document.querySelectorAll('[data-ptab-panel]').forEach(p => { p.hidden = p.dataset.ptabPanel !== name; });
+}
+function openProfileTab() {
+  const id = location.hash.slice(1);
+  const target = id && document.getElementById(id);
+  const inParams = id === 'parametres' || (target && target.closest('[data-ptab-panel="parametres"]'));
+  showProfileTab(inParams ? 'parametres' : 'profil');
+  if (target && id !== 'parametres') setTimeout(() => target.scrollIntoView({ block: 'start' }), 50);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ptab]');
+  if (!b) return;
+  showProfileTab(b.dataset.ptab);
+  history.replaceState(null, '', b.dataset.ptab === 'parametres' ? '#parametres' : location.pathname);
+});
+window.addEventListener('hashchange', openProfileTab);
+
+// ── Mes sports ──────────────────────────────────────────────────────────────
+const SPORT_CHOICE = [['nat', 'Natation'], ['velo', 'Vélo'], ['run', 'Course à pied'], ['muscu', 'Musculation']];
+function renderSportChoice() {
+  const on = TS.sportsShown();
+  const counts = {};
+  TS.getSessions().forEach(s => { counts[s.sport] = (counts[s.sport] || 0) + 1; });
+  document.getElementById('sportChoice').innerHTML = SPORT_CHOICE.map(([sp, label]) => {
+    const checked = on.includes(sp);
+    const n = counts[sp] || 0;
+    return `<button type="button" class="sport-choice__item" role="checkbox" aria-checked="${checked}" data-sport-choice="${sp}" style="--sc:var(--${sp});--sc-dim:var(--${sp}-dim)">
+      <span class="sport-choice__box" aria-hidden="true">${checked ? '✓' : ''}</span>
+      <span><span class="sport-choice__label">${label}</span><span class="sport-choice__n">${n ? n + ' séance' + (n > 1 ? 's' : '') + (checked ? '' : ' gardée' + (n > 1 ? 's' : '') + ', masquée' + (n > 1 ? 's' : '')) : 'Aucune séance'}</span></span>
+    </button>`;
+  }).join('');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-sport-choice]');
+  if (!b) return;
+  const sp = b.dataset.sportChoice;
+  const on = TS.sportsShown();
+  const next = on.includes(sp) ? on.filter(x => x !== sp) : on.concat(sp);
+  if (!next.length) { TS.toast('Garde au moins un sport', 'error'); return; }
+  TS.setSportsChosen(next);
+  renderSportChoice();
+  TS.toast(SPORT_CHOICE.find(x => x[0] === sp)[1] + (next.includes(sp) ? ' ajouté à tes sports' : ' retiré : ses séances sont gardées, juste masquées'));
 });
 
 // ── Strava ────────────────────────────────────────────────────────────────────
@@ -442,6 +522,7 @@ function renderStrava() {
 
 async function handleStravaReturn() {
   if (!/[?&](code|error)=/.test(location.search)) return;
+  showProfileTab('parametres');   // retour de Strava : la carte Strava est dans Paramètres
   stravaBusy = 'Connexion à Strava…'; renderStrava();
   try {
     const r = await TS.stravaHandleRedirect();

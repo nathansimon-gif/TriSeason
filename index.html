@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261109a"></script>
+  <script src="theme.js?v=20261110a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261109a"></script>
+  <script src="auth-guard.js?v=20261110a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,12 +15,12 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261109a">
+  <link rel="stylesheet" href="style.css?v=20261110a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(var(--hero-n, 3), minmax(0, 1fr));   /* --hero-n : nombre de sports suivis */
       gap: 10px;
       margin-bottom: 16px;
     }
@@ -344,10 +344,10 @@
     <div class="cal-nav"><div class="cal-nav__label" id="calMonthLabel"></div></div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="cal-legend">
-      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--nat);display:inline-block"></span> Natation</span>
-      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--velo);display:inline-block"></span> Vélo</span>
-      <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--run);display:inline-block"></span> Course</span>
-      <span class="cal-legend__dot" id="calLegendMuscu" style="display:none"><span style="width:8px;height:8px;border-radius:50%;background:var(--muscu);display:inline-block"></span> Musculation</span>
+      <span class="cal-legend__dot" data-legend-sport="nat"><span style="width:8px;height:8px;border-radius:50%;background:var(--nat);display:inline-block"></span> Natation</span>
+      <span class="cal-legend__dot" data-legend-sport="velo"><span style="width:8px;height:8px;border-radius:50%;background:var(--velo);display:inline-block"></span> Vélo</span>
+      <span class="cal-legend__dot" data-legend-sport="run"><span style="width:8px;height:8px;border-radius:50%;background:var(--run);display:inline-block"></span> Course</span>
+      <span class="cal-legend__dot" data-legend-sport="muscu" style="display:none"><span style="width:8px;height:8px;border-radius:50%;background:var(--muscu);display:inline-block"></span> Musculation</span>
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2);display:inline-block"></span> Plusieurs sports</span>
       <span class="cal-legend__dot"><span class="cal-plan" style="color:var(--text-2)"></span> Séance prévue</span>
       <span class="cal-legend__dot"><span class="cal-flag" style="position:static;color:var(--accent)"><svg viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.5 V9.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M1.6 0.8 H8.4 L6.6 3 L8.4 5.2 H1.6 Z" fill="currentColor"/></svg></span> Compétition</span>
@@ -511,7 +511,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261109a"></script>
+<script src="app.js?v=20261110a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -861,7 +861,10 @@ function aggregateSessions(sessions) {
 
 function renderHeroStrip() {
   const strip = document.getElementById('heroStrip');
-  strip.innerHTML = ['nat','velo','run'].map(s => {
+  const heroSports = ['nat','velo','run'].filter(s => TS.sportOn(s));
+  strip.style.setProperty('--hero-n', Math.max(1, heroSports.length));
+  strip.style.display = heroSports.length ? '' : 'none';   // musculation seule : pas de km à montrer
+  strip.innerHTML = heroSports.map(s => {
     const sp   = TS.SPORTS[s];
     const d    = aggregateSessions(getSessionsForPeriod(s));
     const pace = (d.dur && d.dist) ? TS.calcPace(d.dur, d.dist, s) : '—';
@@ -979,7 +982,7 @@ function renderActivityCalendar() {
   const daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
   const firstWeekday = (monthDate.getDay() + 6) % 7; // lundi = 0
 
-  const sessions = TS.getSessions();
+  const sessions = TS.getSessions().filter(s => TS.sportOn(s.sport));   // sports suivis seulement
   const racesByDate = {};
   TS.getCompetitions().forEach(c => { if (c.date) (racesByDate[c.date] = racesByDate[c.date] || []).push(c); });
   const planSt = TS.planStatuses();
@@ -1040,7 +1043,8 @@ function renderActivityCalendar() {
   }
 
   grid.innerHTML = html;
-  document.getElementById('calLegendMuscu').style.display = TS.hasMuscu() ? '' : 'none';
+  // Légende : seulement les sports suivis (« Plusieurs sports » s'il y en a au moins deux)
+  document.querySelectorAll('[data-legend-sport]').forEach(el => { el.style.display = TS.sportOn(el.dataset.legendSport) ? '' : 'none'; });
   TS.initTooltips();
   renderPlanList();
 }
@@ -1110,7 +1114,7 @@ function openPlanDay(date, focusForm, planId) {
   const plans = TS.getPlans().filter(p => p.date === date);
   const planOf = {};
   plans.forEach(p => { if (st[p.id].session) planOf[st[p.id].session.id] = p; });
-  const sessions = TS.getSessions().filter(s => s.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+  const sessions = TS.getSessions().filter(s => s.date === date && TS.sportOn(s.sport)).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
   const data = TS.getData();
   const nutri = dayNutrition(data.nutrition || {}, date);
   const today = TS.localDateStr();
@@ -1177,7 +1181,9 @@ function daySessionHtml(s, plan, st, data) {
 function fillPlanForm(p, date) {
   planEditId = p ? p.id : null;
   planSport = p ? p.sport : planSport;
-  document.querySelector('#pl_sport [data-sport="muscu"]').style.display = TS.hasMuscu() || planSport === 'muscu' ? '' : 'none';
+  // Boutons des sports suivis (et celui de la séance prévue modifiée)
+  if (!TS.sportOn(planSport) && !p) planSport = TS.sportsShown()[0];
+  document.querySelectorAll('#pl_sport [data-sport]').forEach(b => { b.style.display = TS.sportOn(b.dataset.sport) || b.dataset.sport === planSport ? '' : 'none'; });
   document.getElementById('planFormTitle').textContent = p ? 'Modifier la séance prévue' : 'Planifier une séance';
   document.getElementById('pl_date').value = p ? p.date : date;
   document.getElementById('pl_dist').value = p && p.distance ? p.distance : '';
@@ -1255,11 +1261,11 @@ function renderWeeklyChart() {
   charts['chartWeekly'] = makeChart('chartWeekly', {
     type:'line',
     data:{ labels, datasets:[
-      { label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#2f95e6', backgroundColor:'rgba(47,149,230,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#d8791a', backgroundColor:'rgba(216,121,26,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-      { label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#dc3d6a', backgroundColor:'rgba(220,61,106,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
-    ]},
-    options:{ ...CO, onClick:(e,el)=>{ if(el.length){ const ds=['nat','velo','run'][el[0].datasetIndex]; goToSport(ds); } } }
+      { sport:'nat', label:'Natation', data:weeks.map(w=>TS.getWeek(w).nat?.dist||0),  borderColor:'#2f95e6', backgroundColor:'rgba(47,149,230,.08)', tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { sport:'velo', label:'Vélo',     data:weeks.map(w=>TS.getWeek(w).velo?.dist||0), borderColor:'#d8791a', backgroundColor:'rgba(216,121,26,.08)',  tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+      { sport:'run', label:'Course',   data:weeks.map(w=>TS.getWeek(w).run?.dist||0),  borderColor:'#dc3d6a', backgroundColor:'rgba(220,61,106,.08)',   tension:.4, fill:true, pointRadius:2, pointHoverRadius:5 },
+    ].filter(d => TS.sportOn(d.sport))},
+    options:{ ...CO, onClick:(e,el,ch)=>{ if(el.length) goToSport(ch.data.datasets[el[0].datasetIndex].sport); } }
   });
 }
 
@@ -1269,14 +1275,15 @@ function renderFrequencyChart() {
   charts['chartFrequency'] = makeChart('chartFrequency', {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#2f95e6' },
-      { label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#d8791a' },
-      { label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#dc3d6a' },
-    ].concat(TS.hasMuscu() ? [{ label: 'Musculation', data: weeks.map(w => TS.getWeek(w).muscu?.sessions || 0), backgroundColor: '#9256fb' }] : []) },
+      { sport: 'nat',   label: 'Natation', data: weeks.map(w => TS.getWeek(w).nat?.sessions  || 0), backgroundColor: '#2f95e6' },
+      { sport: 'velo',  label: 'Vélo',     data: weeks.map(w => TS.getWeek(w).velo?.sessions || 0), backgroundColor: '#d8791a' },
+      { sport: 'run',   label: 'Course',   data: weeks.map(w => TS.getWeek(w).run?.sessions  || 0), backgroundColor: '#dc3d6a' },
+      { sport: 'muscu', label: 'Musculation', data: weeks.map(w => TS.getWeek(w).muscu?.sessions || 0), backgroundColor: '#9256fb' },
+    ].filter(d => TS.sportOn(d.sport)) },
     options: {
       ...CO,
       scales: { ...CO.scales, x: { ...CO.scales.x, stacked: true }, y: { ...CO.scales.y, stacked: true, ticks: { ...CO.scales.y.ticks, stepSize: 1 } } },
-      onClick: (e, el) => { if (el.length) { const ds = ['nat','velo','run','muscu'][el[0].datasetIndex]; goToSport(ds); } }
+      onClick: (e, el, ch) => { if (el.length) goToSport(ch.data.datasets[el[0].datasetIndex].sport); }
     }
   });
 }
@@ -1296,10 +1303,10 @@ function renderMonthlyChart() {
   charts['chartMonthly'] = makeChart('chartMonthly', {
     type:'bar',
     data:{ labels, datasets:[
-      {label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(47,149,230,.75)',  borderRadius:4},
-      {label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(216,121,26,.75)', borderRadius:4},
-      {label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(220,61,106,.75)',  borderRadius:4},
-    ]},
+      {sport:'nat', label:'Natation',data:sorted.map(k=>+months[k].nat.toFixed(1)), backgroundColor:'rgba(47,149,230,.75)',  borderRadius:4},
+      {sport:'velo',label:'Vélo',    data:sorted.map(k=>+months[k].velo.toFixed(1)),backgroundColor:'rgba(216,121,26,.75)', borderRadius:4},
+      {sport:'run', label:'Course',  data:sorted.map(k=>+months[k].run.toFixed(1)), backgroundColor:'rgba(220,61,106,.75)',  borderRadius:4},
+    ].filter(d => TS.sportOn(d.sport))},
     options:CO
   });
 }

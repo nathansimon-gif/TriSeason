@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261109a"></script>
+  <script src="theme.js?v=20261110a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261109a"></script>
+  <script src="auth-guard.js?v=20261110a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Records</title>
-  <link rel="stylesheet" href="style.css?v=20261109a">
+  <link rel="stylesheet" href="style.css?v=20261110a">
   <style>
     .record-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -115,7 +115,7 @@
   </div>
 
   <!-- Natation -->
-  <div class="record-section record-section--nat">
+  <div class="record-section record-section--nat" data-rec-sport="nat">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="record-section__title" style="margin-bottom:0">Natation</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'nat')" style="font-size:12px">+ Ajouter</button>
@@ -124,7 +124,7 @@
   </div>
 
   <!-- Vélo -->
-  <div class="record-section record-section--velo">
+  <div class="record-section record-section--velo" data-rec-sport="velo">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="record-section__title" style="margin-bottom:0">Vélo</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'velo')" style="font-size:12px">+ Ajouter</button>
@@ -133,7 +133,7 @@
   </div>
 
   <!-- Course -->
-  <div class="record-section record-section--run">
+  <div class="record-section record-section--run" data-rec-sport="run">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="record-section__title" style="margin-bottom:0">Course à pied</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'run')" style="font-size:12px">+ Ajouter</button>
@@ -142,7 +142,7 @@
   </div>
 
   <!-- Triathlon -->
-  <div class="record-section record-section--tri">
+  <div class="record-section record-section--tri" data-rec-sport="tri">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="record-section__title" style="margin-bottom:0">Triathlon</div>
       <button class="btn btn--ghost btn--sm" onclick="openRecordModal(null,'tri')" style="font-size:12px">+ Ajouter</button>
@@ -256,7 +256,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261109a"></script>
+<script src="app.js?v=20261110a"></script>
 <script>
 let editRecordId = null;
 
@@ -329,7 +329,13 @@ function saveRecordData(records) {
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
+// Sports suivis seulement ; Triathlon s'il y en a au moins deux parmi natation, vélo, course
+function recSportOn(sp) {
+  return sp === 'tri' ? ['nat', 'velo', 'run'].filter(x => TS.sportOn(x)).length >= 2 : TS.sportOn(sp);
+}
 function renderAllRecords() {
+  document.querySelectorAll('[data-rec-sport]').forEach(el => { el.style.display = recSportOn(el.dataset.recSport) ? '' : 'none'; });
+  ['nat', 'velo', 'run', 'tri'].forEach(sp => { const b = document.getElementById('tl-' + sp); if (b) b.style.display = recSportOn(sp) ? '' : 'none'; });
   ['nat','velo','run','tri'].forEach(renderSportRecords);
   renderMuscuRecords();
   renderTimeline();
@@ -342,8 +348,8 @@ const mrecDay = d => new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day
 const mrecKg = v => v.toLocaleString('fr-FR') + ' kg';
 function renderMuscuRecords() {
   const section = document.getElementById('muscuRecordSection');
-  section.style.display = TS.hasMuscu() ? '' : 'none';
-  if (!TS.hasMuscu()) return;
+  section.style.display = TS.muscuOn() ? '' : 'none';
+  if (!TS.muscuOn()) return;
   const range = TS.getSeasonRange(TS.getSeasonFilter()) || {};
   const all = TS.muscuRecords(range).filter(r => r.maxKg || r.maxReps);
   // Filtre par groupe de muscles (groupes présents seulement)
