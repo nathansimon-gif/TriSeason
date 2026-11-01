@@ -150,6 +150,9 @@ input, select, textarea { font-family: var(--font); }
 .nav__logo-icon > i     { height: 14px; background: var(--velo); }
 .nav__logo-icon::after  { height: 11px; background: var(--run); }
 .nav__links { display: flex; gap: 2px; flex: 1; }
+/* Lien « Profil » seulement dans le menu ☰ du téléphone (l'icône suffit sur ordinateur) */
+.nav__link--menu { display: none; }
+.nav__links.open .nav__link--menu { display: block; }
 .nav__link {
   padding: 6px 11px; border-radius: var(--r-sm);
   font-size: 13px; font-weight: 500; color: var(--text-2);
@@ -624,6 +627,9 @@ tbody tr:hover td { background: var(--surface2); }
 .mobile-nav { display: none; }
 @media (max-width: 768px) {
   .nav__actions .btn--ghost:not(.nav__menu-btn) { display: none; }
+  /* Profil : icône toujours visible en haut sur téléphone (et aussi dans le menu ☰) */
+  .nav__actions .btn--ghost.nav__profile { display: inline-flex; }
+  .nav__profile--on { border-color: var(--accent); color: var(--accent2); }
 
   /* Bottom tab bar */
   .mobile-nav {
