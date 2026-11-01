@@ -1434,6 +1434,31 @@ async function main() {
     assert(r.mine.includes('Mollets debout (machine)') && mine[0] === 'Mes exercices', 'Mes exercices : ' + mine.join());
   });
 
+  await test('Téléphone : barre du bas (Forme à la place de Profil), icône Profil en haut, Profil dans le menu ☰', async () => {
+    const out = {};
+    for (const p of ['index', 'nutrition', 'forme', 'profile']) {
+      const data = sampleData(); Object.assign(data.profile, { height: 180, age: 30, sex: 'M' });   // besoin du jour calculable
+      const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(700);
+      out[p] = await v.page.evaluate(() => ({
+        tabs: [...document.querySelectorAll('.mobile-nav__item')].map(a => a.textContent.trim() + (a.classList.contains('active') ? '*' : '')).join(),
+        icon: getComputedStyle(document.querySelector('.nav__profile')).display, menuBefore: getComputedStyle(document.querySelector('.nav__link--menu')).display }));
+      await v.page.click('.nav__menu-btn'); await v.page.waitForTimeout(150);
+      out[p].menuOpen = await v.page.evaluate(() => getComputedStyle(document.querySelector('.nav__link--menu')).display);
+      if (p === 'nutrition') out.legend = await v.page.evaluate(() => { const ch = Chart.getChart('chartMeals'); return ch && ch.legend.legendItems.map(l => l.text + ':' + l.pointStyle + ':' + (l.lineDash || []).length).join(); });
+      assert(!v.errors.length, p + ' : ' + v.errors[0]);
+      await v.ctx.close();
+    }
+    const d = await newUser();
+    await d.page.goto(`${BASE}/index.html`); await d.page.waitForTimeout(600);
+    const desk = await d.page.evaluate(() => ({ menu: getComputedStyle(document.querySelector('.nav__link--menu')).display, icon: getComputedStyle(document.querySelector('.nav__profile')).display }));
+    await d.ctx.close();
+    assert(out.index.tabs === 'Dashboard*,Séances,Sports,Nutrition,Forme' && out.forme.tabs.endsWith('Forme*') && !/Profil/.test(out.profile.tabs), 'barre du bas : ' + JSON.stringify(out));
+    assert(['index', 'nutrition', 'forme', 'profile'].every(p => out[p].icon !== 'none' && out[p].menuBefore === 'none' && out[p].menuOpen !== 'none'), 'icône / menu : ' + JSON.stringify(out));
+    assert(desk.menu === 'none' && desk.icon !== 'none', 'ordinateur : ' + JSON.stringify(desk));
+    assert(/Kcal consommées:rect:0,Besoin du jour \(pointillés\):line:0/.test(out.legend), 'légende du besoin : ' + out.legend);
+  });
+
   await test('Téléphone : champs en 16 px (pas de zoom automatique de l’iPhone), aucune fenêtre qui glisse de côté', async () => {
     const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
     const sizes = {};

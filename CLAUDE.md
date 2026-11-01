@@ -122,6 +122,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - **Tirer pour actualiser** (`initPullToRefresh`, app.js) : seulement dans l'appli
   installée (`navigator.standalone` ou `display-mode: standalone`) ; en haut de
   page, hors fenêtre ouverte : synchro Strava forcée (10 s max) puis rechargement.
+- **Navigation téléphone** : barre du bas Dashboard, Séances, Sports, Nutrition, Forme ; Profil = icône
+  `.nav__profile` en haut (toujours visible) + lien `.nav__link--menu` dans le menu ☰.
 - **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
   `#mes-sports`, `#apparence`… ouvre l'onglet Paramètres) ; réglages, Strava et données sont dans Paramètres.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
