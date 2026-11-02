@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261115a"></script>
+  <script src="theme.js?v=20261116a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261115a"></script>
+  <script src="auth-guard.js?v=20261116a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261115a">
+  <link rel="stylesheet" href="style.css?v=20261116a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -482,7 +482,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261115a"></script>
+<script src="app.js?v=20261116a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -2197,12 +2197,13 @@ function renderPerfComparison() {
   if (rpeWH && rpePH) {
     var diff  = (parseFloat(rpePH)-parseFloat(rpeWH)).toFixed(1);
     var color = parseFloat(diff)>0 ? 'var(--green)' : 'var(--yellow)';
-    var msg   = parseFloat(diff)>0.3 ? 'RPE '+diff+' pts plus eleve les jours moins hydrates.' : 'Pas d\'effet significatif detecte.';
+    var msg   = parseFloat(diff)>0.3 ? 'Effort ressenti (RPE) plus élevé de '+String(diff).replace('.', ',')+' point(s) les jours où tu as bu moins que ton objectif.' : 'Pas de différence nette entre ces jours-là.';
     out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:8px">'
       + '<div style="font-size:12px;font-weight:700;color:var(--nat);margin-bottom:6px">Hydratation et RPE</div>'
       + '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">'
-      + '<span>Jours &ge;2L : <b style="color:var(--nat)">'+rpeWH+'/10</b></span>'
-      + '<span>Jours &lt;2L : <b style="color:var(--red)">'+rpePH+'/10</b></span>'
+      // Seuil = ton objectif d'eau (1,5 L par défaut, réglable dans Hydratation)
+      + '<span>Jours &ge; '+TS.formatLiters(hGoal)+' : <b style="color:var(--nat)">'+rpeWH.replace('.', ',')+'/10</b></span>'
+      + '<span>Jours &lt; '+TS.formatLiters(hGoal)+' : <b style="color:var(--red)">'+rpePH.replace('.', ',')+'/10</b></span>'
       + '</div><div style="font-size:11px;color:'+color+'">'+msg+'</div></div>';
   }
   // Classées par RPE le plus bas, puis de la plus récente à la plus ancienne

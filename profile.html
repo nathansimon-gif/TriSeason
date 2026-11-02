@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261115a"></script>
+  <script src="theme.js?v=20261116a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261115a"></script>
+  <script src="auth-guard.js?v=20261116a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,9 +15,13 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261115a">
+  <link rel="stylesheet" href="style.css?v=20261116a">
   <style>
+    .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
     .avatar {
+      padding: 0; overflow: hidden; cursor: pointer; color: inherit; font-family: inherit;
       width: 80px; height: 80px; border-radius: 50%;
       background: var(--surface3); border: 1px solid var(--border2);
       display: flex; align-items: center; justify-content: center;
@@ -121,7 +125,14 @@
   <!-- ── Header profil ── -->
   <div class="section-card" style="margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap">
-      <div class="avatar" id="avatarEl">?</div>
+      <div class="avatar-wrap">
+        <button type="button" class="avatar" id="avatarEl" onclick="document.getElementById('photoInput').click()" title="Changer la photo" aria-label="Changer la photo de profil">?</button>
+        <input type="file" id="photoInput" accept="image/*" hidden onchange="onPhotoPicked(this)">
+        <div class="avatar-actions">
+          <button type="button" class="link-btn" onclick="document.getElementById('photoInput').click()" id="photoBtn">Ajouter une photo</button>
+          <button type="button" class="link-btn" onclick="removePhoto()" id="photoRemove" hidden>Retirer</button>
+        </div>
+      </div>
       <div style="flex:1;min-width:160px">
         <div style="font-size:22px;font-weight:600;letter-spacing:-.02em" id="profileName">Mon profil</div>
         <div style="font-size:13px;color:var(--text-2);margin-top:2px" id="profileSub"></div>
@@ -415,7 +426,7 @@
 </div>
 
 
-<script src="app.js?v=20261115a"></script>
+<script src="app.js?v=20261116a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -709,10 +720,26 @@ function renderBadges() {
 }
 
 // ── Profile render ────────────────────────────────────────────────────────────
+async function onPhotoPicked(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  try { await TS.setProfilePhoto(file); renderProfile(); TS.toast('Photo de profil enregistrée'); }
+  catch (e) { TS.toast(e.message, 'error'); }
+}
+function removePhoto() {
+  TS.removeProfilePhoto(); renderProfile(); TS.toast('Photo retirée');
+}
+
 function renderProfile() {
   const p = TS.getProfile();
   const name = p.name || 'Athlète';
-  document.getElementById('avatarEl').textContent = name[0]?.toUpperCase() || '?';
+  // Photo de profil (sinon l'initiale)
+  const av = document.getElementById('avatarEl');
+  if (p.photo) av.innerHTML = '<img alt="Ma photo de profil" src="' + p.photo + '">';
+  else av.textContent = name[0]?.toUpperCase() || '?';
+  document.getElementById('photoBtn').textContent = p.photo ? 'Changer' : 'Ajouter une photo';
+  document.getElementById('photoRemove').hidden = !p.photo;
   document.getElementById('profileName').textContent = name;
 
   const weight = TS.getLatestWeight();

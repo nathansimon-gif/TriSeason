@@ -150,6 +150,9 @@ input, select, textarea { font-family: var(--font); }
 .nav__logo-icon > i     { height: 14px; background: var(--velo); }
 .nav__logo-icon::after  { height: 11px; background: var(--run); }
 .nav__links { display: flex; gap: 2px; flex: 1; }
+/* Photo de profil à la place de l'icône (toutes les pages) */
+.nav__profile.has-photo { width: 32px; height: 32px; padding: 0; overflow: hidden; border-radius: 50%; }
+.nav__avatar { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; display: block; }
 /* Lien « Profil » seulement dans le menu ☰ du téléphone (l'icône suffit sur ordinateur) */
 .nav__link--menu { display: none; }
 .nav__links.open .nav__link--menu { display: block; }

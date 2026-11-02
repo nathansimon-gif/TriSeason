@@ -1294,7 +1294,7 @@ async function main() {
     const data = sampleData();
     const mk = (id, d, extra) => Object.assign({ id, date: day(d), sport: 'run', duration: 0.75, distance: 8 }, extra);
     data.sessions = [mk('a', -10, { rpe: 9, pain: 6 }), mk('b', -9, { rpe: 5, pain: 5 }), mk('c', -5, { rpe: 5, pain: 2 }), mk('d', -4, { rpe: 4, sensation: 4, pain: 3 }),
-      mk('e', -14, { rpe: 5, sensation: 1 })];
+      mk('e', -17, { rpe: 5, sensation: 1 })];   // 7 jours avant « a » : toujours une autre semaine
     data.competitions = [{ id: 'c1', date: day(-20), name: '10 km test', type: 'RUN', distance: '10', actual_time: '0:41:07' }];
     data.health = { consent: { version: 1, at: 1 }, periods: [{ id: 'h1', type: 'blessure', zone: 'Genou', sports: ['run'], start: day(-30), end: day(-12), status: 'reprise' }] };
     const v = await newUser({ data });
@@ -1459,6 +1459,30 @@ async function main() {
     assert(/Kcal consommées:rect:0,Besoin du jour \(pointillés\):line:0/.test(out.legend), 'légende du besoin : ' + out.legend);
   });
 
+  await test('Photo de profil : réduite en petite image, affichée à la place de l’icône Profil sur toutes les pages, retirable', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    // Image de 600 × 400 fabriquée dans la page (PNG), envoyée au champ fichier
+    const png = await v.page.evaluate(() => { const c = document.createElement('canvas'); c.width = 600; c.height = 400; const x = c.getContext('2d');
+      x.fillStyle = '#c33'; x.fillRect(0, 0, 600, 400); x.fillStyle = '#3c3'; x.fillRect(250, 150, 100, 100); return c.toDataURL('image/png').split(',')[1]; });
+    await v.page.setInputFiles('#photoInput', { name: 'moi.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+    await v.page.waitForTimeout(500);
+    const prof = await v.page.evaluate(() => { const p = TS.getProfile().photo || ''; const img = new Image(); img.src = p;
+      return { prefix: p.slice(0, 23), kb: Math.round(p.length * 0.75 / 1024), avatar: !!document.querySelector('#avatarEl img'),
+        nav: !!document.querySelector('.nav__profile img.nav__avatar'), remove: !document.getElementById('photoRemove').hidden, cloud: !!(window.__cloud('testeur').profile || {}).photo }; });
+    const dims = await v.page.evaluate(() => new Promise(r => { const i = new Image(); i.onload = () => r(i.width + 'x' + i.height); i.src = TS.getProfile().photo; }));
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const other = await v.page.evaluate(() => ({ img: !!document.querySelector('.nav__profile img'), shown: getComputedStyle(document.querySelector('.nav__profile')).display }));
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(600);
+    await v.page.click('#photoRemove'); await v.page.waitForTimeout(200);
+    const after = await v.page.evaluate(() => ({ photo: TS.getProfile().photo || null, nav: !!document.querySelector('.nav__profile svg') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(prof.prefix === 'data:image/jpeg;base64,' && prof.kb < 40 && dims === '192x192' && prof.avatar && prof.nav && prof.remove && prof.cloud, 'photo : ' + JSON.stringify({ ...prof, dims }));
+    assert(other.img && other.shown !== 'none', 'autre page : ' + JSON.stringify(other));
+    assert(!after.photo && after.nav, 'retrait : ' + JSON.stringify(after));
+  });
+
   await test('Téléphone : champs en 16 px (pas de zoom automatique de l’iPhone), aucune fenêtre qui glisse de côté', async () => {
     const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
     const sizes = {};
@@ -1597,12 +1621,20 @@ async function main() {
     await v.page.click('#hydroGoalLine .link-btn');
     await v.page.click('text=Par défaut (1,5 L)'); await v.page.waitForTimeout(200);
     const reset = await v.page.evaluate(() => TS.hydroGoal());
+    // Observation « Hydratation et RPE » : comparée à l'objectif (1,5 L), plus aux anciens 2 L
+    const obs = await v.page.evaluate(() => {
+      const d = TS.getData();
+      for (let i = 1; i <= 12; i++) { const k = TS.localDateStr(new Date(Date.now() - i * 864e5)); d.nutrition.hydration[k] = i % 2 ? 1700 : 900; }
+      TS.saveData(d); renderPerfComparison();
+      return document.getElementById('perfComparison').textContent.replace(/\s+/g, ' ');
+    });
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(/1,5 L/.test(before.text) && before.goal === 1500 && before.line === 1500, 'défaut : ' + JSON.stringify(before));
     assert(/2,2 L/.test(after.text) && after.goal === 2200 && after.cloud === 2200, 'modifié : ' + JSON.stringify(after));
     assert(after.ch && /2,2 L/.test(after.ch.label), 'défi hydratation : ' + JSON.stringify(after.ch));
     assert(reset === 1500, 'retour au défaut : ' + reset);
+    assert(/Jours ≥ 1,5 L/.test(obs) && /Jours < 1,5 L/.test(obs) && !/2L/.test(obs), 'observation hydratation : ' + obs.slice(0, 300));
   });
 
   await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {

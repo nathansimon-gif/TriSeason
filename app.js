@@ -1311,6 +1311,55 @@ function saveProfile(profile) {
   saveData(data);
 }
 
+// ── Photo de profil ─────────────────────────────────────────────────────────
+// Petite image carrée (192 px, JPEG ≈ 15-30 Ko) dans data.profile.photo : recadrée au
+// centre et réduite sur l'appareil avant l'envoi. Affichée à la place de l'icône Profil
+// (.nav__profile) sur toutes les pages, et sur la page Profil. Visible seulement par l'utilisateur.
+const PROFILE_PHOTO_PX = 192;
+function setProfilePhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type || 'image/')) return reject(new Error('Choisis une image (photo).'));
+    if (file.size > 25 * 1024 * 1024) return reject(new Error('Image trop lourde (25 Mo au plus).'));
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = PROFILE_PHOTO_PX;
+      canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, PROFILE_PHOTO_PX, PROFILE_PHOTO_PX);
+      URL.revokeObjectURL(url);
+      const photo = canvas.toDataURL('image/jpeg', 0.82);
+      // Enregistrement direct (une page peut avoir sa propre fonction saveProfile, qui masque celle d'app.js)
+      const data = getData();
+      data.profile = { ...(data.profile || {}), photo };
+      saveData(data);
+      applyProfilePhoto();
+      resolve(photo);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible : essaie une autre photo (JPEG ou PNG).')); };
+    img.src = url;
+  });
+}
+function removeProfilePhoto() {
+  const data = getData();
+  if (data.profile) delete data.profile.photo;
+  saveData(data);
+  applyProfilePhoto();
+}
+// Remplace l'icône Profil (petit personnage) par la photo, ou remet l'icône
+const PROFILE_ICON_SVG = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
+function applyProfilePhoto() {
+  let photo = null;
+  try { photo = (getProfile() || {}).photo || null; } catch {}
+  if (photo && !/^data:image\/(jpeg|png|webp);base64,/.test(photo)) photo = null;   // seulement une image enregistrée par l'appli
+  document.querySelectorAll('.nav__profile').forEach(a => {
+    a.classList.toggle('has-photo', !!photo);
+    a.innerHTML = photo ? '<img class="nav__avatar" alt="" src="' + photo + '">' : PROFILE_ICON_SVG;
+  });
+}
+window.addEventListener('triseason:update', applyProfilePhoto);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyProfilePhoto); else applyProfilePhoto();
+
 // ── Calculations ──────────────────────────────────────────────────────────────
 function calcPace(durH, distKm, sport) {
   if (!durH || !distKm) return null;
@@ -3225,6 +3274,7 @@ migrateWeeksToSessions();
 
 window.TS = {
   hydroGoal, setHydroGoal, HYDRO_GOAL_DEFAULT, formatLiters,
+  setProfilePhoto, removeProfilePhoto, applyProfilePhoto,
   getData, saveData, loadData, newId, resetAllData, deleteAccount, clearLocalUserData,
   getWeek, saveWeek, getCurrentWeek, getLast12Weeks, getLast52Weeks,
   getWeekMonday, formatDate, formatDateInput, getISOWeek, localDateStr, parseLocalDate,

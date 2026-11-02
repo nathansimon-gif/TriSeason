@@ -124,6 +124,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   page, hors fenêtre ouverte : synchro Strava forcée (10 s max) puis rechargement.
 - **Navigation téléphone** : barre du bas Dashboard, Séances, Sports, Nutrition, Forme ; Profil = icône
   `.nav__profile` en haut (toujours visible) + lien `.nav__link--menu` dans le menu ☰.
+  Photo de profil (`data.profile.photo`, JPEG 192 px en data URL, `setProfilePhoto` / `applyProfilePhoto`) :
+  remplace l'icône `.nav__profile` partout. Attention : profile.html a sa propre fonction globale
+  `saveProfile` (formulaire) qui masque celle d'app.js : dans app.js, enregistrer via `getData`/`saveData`.
 - **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
   `#mes-sports`, `#apparence`… ouvre l'onglet Paramètres) ; réglages, Strava et données sont dans Paramètres.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
