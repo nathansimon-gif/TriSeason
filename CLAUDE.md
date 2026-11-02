@@ -124,6 +124,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   page, hors fenêtre ouverte : synchro Strava forcée (10 s max) puis rechargement.
 - **Navigation téléphone** : barre du bas Dashboard, Séances, Sports, Nutrition, Forme ; Profil = icône
   `.nav__profile` en haut (toujours visible) + lien `.nav__link--menu` dans le menu ☰.
+  Photo de profil (`data.profile.photo`, JPEG 192 px en data URL, `setProfilePhoto` / `applyProfilePhoto`) :
+  remplace l'icône `.nav__profile` partout. Attention : profile.html a sa propre fonction globale
+  `saveProfile` (formulaire) qui masque celle d'app.js : dans app.js, enregistrer via `getData`/`saveData`.
 - **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
   `#mes-sports`, `#apparence`… ouvre l'onglet Paramètres) ; réglages, Strava et données sont dans Paramètres.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
@@ -235,6 +238,11 @@ le dire dans `confidentialite.html` et sans accord explicite.
   un arrêt ou une reprise, les défis s'adaptent et la série est en pause
   (`healthWeekPhase`). Uniquement des faits, aucun conseil médical. Un futur accès
   coach/nutritionniste ne doit **jamais** montrer ces informations par défaut.
+- **Option « Cycle menstruel »** (page Forme) : accord **séparé** dans `data.cycle.consent`
+  (`CYCLE_CONSENT_VERSION`), sans lui rien n'est enregistré (`cycleEdit` refuse) ; `data.cycle =
+  {mode, starts, period_days, signs}` ; `cycleInfo` / `cyclePhaseOn` (phases seulement en cycle naturel avec
+  une durée moyenne) / `cyclePredicted` / `cycleImpact` ; couleur `--cycle` (rose `#f472d0`, clair `#c638c9`) pour les règles (calendrier, graphique de forme) ; retirer l'accord (`TS.disableCycle`) efface tout.
+  Estimations, jamais d'avis médical ni de contraception ; jamais montré à un coach par défaut.
 - **Effacement** : `TS.resetAllData()` (données à zéro, compte gardé) et
   `TS.deleteAccount(password)` (réauthentification, suppression du document
   Firestore puis du compte Auth). Profil → « Supprimer mon compte ».

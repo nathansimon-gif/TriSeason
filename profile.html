@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261115a"></script>
+  <script src="theme.js?v=20261118a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261115a"></script>
+  <script src="auth-guard.js?v=20261118a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,9 +15,13 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261115a">
+  <link rel="stylesheet" href="style.css?v=20261118a">
   <style>
+    .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
     .avatar {
+      padding: 0; overflow: hidden; cursor: pointer; color: inherit; font-family: inherit;
       width: 80px; height: 80px; border-radius: 50%;
       background: var(--surface3); border: 1px solid var(--border2);
       display: flex; align-items: center; justify-content: center;
@@ -121,7 +125,14 @@
   <!-- ── Header profil ── -->
   <div class="section-card" style="margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap">
-      <div class="avatar" id="avatarEl">?</div>
+      <div class="avatar-wrap">
+        <button type="button" class="avatar" id="avatarEl" onclick="document.getElementById('photoInput').click()" title="Changer la photo" aria-label="Changer la photo de profil">?</button>
+        <input type="file" id="photoInput" accept="image/*" hidden onchange="onPhotoPicked(this)">
+        <div class="avatar-actions">
+          <button type="button" class="link-btn" onclick="document.getElementById('photoInput').click()" id="photoBtn">Ajouter une photo</button>
+          <button type="button" class="link-btn" onclick="removePhoto()" id="photoRemove" hidden>Retirer</button>
+        </div>
+      </div>
       <div style="flex:1;min-width:160px">
         <div style="font-size:22px;font-weight:600;letter-spacing:-.02em" id="profileName">Mon profil</div>
         <div style="font-size:13px;color:var(--text-2);margin-top:2px" id="profileSub"></div>
@@ -208,6 +219,12 @@
   <div class="section-card" id="healthCard">
     <div class="section-card__title">Blessures, maladie et reprise</div>
     <div id="healthBody" class="strava-note"></div>
+  </div>
+
+  <!-- ── Option cycle menstruel ── -->
+  <div class="section-card" id="cycleCard">
+    <div class="section-card__title">Cycle menstruel</div>
+    <div id="cycleBody" class="strava-note"></div>
   </div>
 
   <!-- ── Compte ── -->
@@ -415,7 +432,7 @@
 </div>
 
 
-<script src="app.js?v=20261115a"></script>
+<script src="app.js?v=20261118a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -434,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStrava();
   renderBadges();
   renderHealthOption();
+  renderCycleOption();
   renderGear();
   renderThemePick();
   handleStravaReturn();
@@ -560,7 +578,7 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderGear(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderCycleOption(); renderGear(); });
 
 // ── Apparence ───────────────────────────────────────────────────────────────
 function renderThemePick() {
@@ -693,6 +711,29 @@ function renderHealthOption() {
     <div class="strava-actions"><a class="btn btn--sm" href="forme.html#healthCard">Gérer dans Forme</a>
       <button class="btn btn--sm btn--danger" onclick="disableHealthOption()">Retirer mon accord et tout effacer</button></div>`;
 }
+// Option « Cycle menstruel » : résumé, gestion dans Forme
+function renderCycleOption() {
+  const el = document.getElementById('cycleBody');
+  const data = TS.getData();
+  if (!TS.cycleEnabled(data)) {
+    el.innerHTML = `Option facultative, désactivée. Elle permet de noter le début de tes règles pour connaître la durée de ton cycle,
+      voir tes prochaines règles prévues et comparer tes séances. Elle demande ton accord à part.
+      <div class="strava-actions"><a class="btn btn--sm" href="forme.html#cycleCard">Découvrir dans Forme</a></div>`;
+    return;
+  }
+  const info = TS.cycleInfo(data);
+  const at = new Date(data.cycle.consent.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  el.innerHTML = `Activée le ${at} avec ton accord. ${info.starts.length ? info.starts.length + ' début' + (info.starts.length > 1 ? 's' : '') + ' de règles noté' + (info.starts.length > 1 ? 's' : '') : 'Rien de noté pour l’instant'}.
+    Ces informations ne sont montrées à personne d'autre.
+    <div class="strava-actions"><a class="btn btn--sm" href="forme.html#cycleCard">Gérer dans Forme</a>
+      <button class="btn btn--sm btn--danger" onclick="disableCycleOption()">Retirer mon accord et tout effacer</button></div>`;
+}
+function disableCycleOption() {
+  if (!confirm('Retirer ton accord ? Toutes les dates de règles et les signes notés seront effacés, sur tous tes appareils.')) return;
+  TS.disableCycle();
+  renderCycleOption();
+  TS.toast('Accord retiré, informations effacées');
+}
 function disableHealthOption() {
   if (!confirm('Retirer ton accord ? Toutes les blessures, maladies, arrêts et douleurs notés seront effacés, sur tous tes appareils.')) return;
   TS.disableHealth();
@@ -709,10 +750,26 @@ function renderBadges() {
 }
 
 // ── Profile render ────────────────────────────────────────────────────────────
+async function onPhotoPicked(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  try { await TS.setProfilePhoto(file); renderProfile(); TS.toast('Photo de profil enregistrée'); }
+  catch (e) { TS.toast(e.message, 'error'); }
+}
+function removePhoto() {
+  TS.removeProfilePhoto(); renderProfile(); TS.toast('Photo retirée');
+}
+
 function renderProfile() {
   const p = TS.getProfile();
   const name = p.name || 'Athlète';
-  document.getElementById('avatarEl').textContent = name[0]?.toUpperCase() || '?';
+  // Photo de profil (sinon l'initiale)
+  const av = document.getElementById('avatarEl');
+  if (p.photo) av.innerHTML = '<img alt="Ma photo de profil" src="' + p.photo + '">';
+  else av.textContent = name[0]?.toUpperCase() || '?';
+  document.getElementById('photoBtn').textContent = p.photo ? 'Changer' : 'Ajouter une photo';
+  document.getElementById('photoRemove').hidden = !p.photo;
   document.getElementById('profileName').textContent = name;
 
   const weight = TS.getLatestWeight();

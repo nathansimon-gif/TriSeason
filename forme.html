@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261115a"></script>
+  <script src="theme.js?v=20261118a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261115a"></script>
+  <script src="auth-guard.js?v=20261118a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261115a">
+  <link rel="stylesheet" href="style.css?v=20261118a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -70,6 +70,18 @@
     .hp-milestones { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin-top:10px; }
     .hp-milestone { font-size:12px; color:var(--text-2); }
     .hp-note { font-size:11px; color:var(--text-3); line-height:1.55; margin-top:10px; }
+    .cy-status { font-size:14px; font-weight:600; margin-bottom:4px; padding-left:9px; border-left:3px solid var(--cycle); }
+    .cy-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0; }
+    .cy-row .form-input, .cy-row .form-select { width:auto; max-width:100%; min-width:0; }
+    #cyMode { flex:1 1 100%; }
+    .cy-signs { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .cy-sign { background:var(--surface2); border:1px solid var(--border2); color:var(--text-2); border-radius:999px; padding:5px 11px; font-size:12.5px; }
+    .cy-sign[aria-pressed="true"] { background:var(--cycle-dim); border-color:var(--cycle); color:var(--text); }
+    .cy-h { font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 4px; }
+    .cy-hist { font-size:12.5px; color:var(--text-2); }
+    .cy-hist div { display:flex; gap:10px; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); }
+    .cy-hist b { color:var(--text); font-weight:500; }
+    .cy-hist button { margin-left:auto; }
     .hp-consent { display:flex; gap:9px; align-items:flex-start; font-size:12px; color:var(--text-2); line-height:1.55; margin:12px 0; cursor:pointer; }
     .hp-consent input { margin-top:2px; accent-color:var(--accent); width:15px; height:15px; flex-shrink:0; }
     .hp-consent a, .hp-note a { color:var(--text); text-decoration:underline; text-underline-offset:2px; }
@@ -150,6 +162,7 @@
       <canvas id="chartPMC"></canvas>
     </div>
     <div id="pmcBandsNote" style="display:none;margin-top:6px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(240,185,65,.25);vertical-align:-1px;margin-right:5px"></span>Fond jaune : blessure, maladie ou arrêt noté (Blessures, maladie et reprise)</div>
+    <div id="pmcCycleNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:var(--cycle-dim);border:1px solid var(--cycle);box-sizing:border-box;vertical-align:-1px;margin-right:5px"></span>Fond rose : règles notées (Cycle menstruel)</div>
     <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
   </div>
 
@@ -187,6 +200,15 @@
       <button class="btn btn--sm" id="hpAddBtn" style="margin-left:auto;display:none" onclick="openHealthModal()">+ Ajouter</button>
     </div>
     <div id="healthBody"></div>
+  </div>
+
+  <!-- ── Cycle menstruel (option avec accord séparé) ── -->
+  <div class="card" style="margin-bottom:12px" id="cycleCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Cycle menstruel</span>
+      <span class="tip-icon" data-tip="Option facultative. Note le début de tes règles : l'appli calcule la durée moyenne de ton cycle, la phase du moment (estimation), prévoit tes prochaines règles et compare tes séances pendant les règles et le reste du temps. Des faits sur tes données, jamais un avis médical.">?</span>
+    </div>
+    <div id="cycleBody"></div>
   </div>
 
   <!-- ── Nutrition × performance ── -->
@@ -298,7 +320,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261115a"></script>
+<script src="app.js?v=20261118a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -329,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPrediction();
   renderPMC();
   renderHealth();
+  renderCycle();
   renderBodyMapCard();
   renderNutritionImpact();
   renderObservations();
@@ -340,6 +363,7 @@ window.addEventListener('triseason:update', () => {
   renderPrediction();
   renderPMC();
   renderHealth();
+  renderCycle();
   renderBodyMapCard();
   renderNutritionImpact();
   renderObservations();
@@ -513,16 +537,26 @@ function renderPMC() {
     if (idx.length) bands.push([idx[0], idx[idx.length - 1]]);
   });
   document.getElementById('pmcBandsNote').style.display = bands.length ? '' : 'none';
+  // Règles notées (option Cycle menstruel) : fond rose (--cycle-dim)
+  const periodSet = TS.cyclePeriodDays();
+  const cyBands = [];
+  recent.forEach((s, i) => { if (periodSet.has(s.day)) { const last = cyBands[cyBands.length - 1]; if (last && last[1] === i - 1) last[1] = i; else cyBands.push([i, i]); } });
+  document.getElementById('pmcCycleNote').style.display = cyBands.length ? '' : 'none';
   makeChart('chartPMC', {
     plugins: [{
       id: 'healthBands',
       beforeDatasetsDraw(chart) {
-        if (!bands.length) return;
+        if (!bands.length && !cyBands.length) return;
         const { ctx, chartArea: a, scales: { x } } = chart;
         const half = recent.length > 1 ? (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2 : 0;
         ctx.save();
         ctx.fillStyle = 'rgba(240,185,65,.10)';
         bands.forEach(([i, j]) => {
+          const l = Math.max(a.left, x.getPixelForValue(i) - half), r = Math.min(a.right, x.getPixelForValue(j) + half);
+          ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
+        });
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cycle-dim').trim() || 'rgba(244,114,208,.16)';
+        cyBands.forEach(([i, j]) => {
           const l = Math.max(a.left, x.getPixelForValue(i) - half), r = Math.min(a.right, x.getPixelForValue(j) + half);
           ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
         });
@@ -547,6 +581,104 @@ function renderPMC() {
       }
     }
   });
+}
+
+// ── Cycle menstruel (option avec accord séparé) ──────────────────────────────
+let cyDay = null;   // jour choisi pour les signes (aujourd'hui par défaut)
+function renderCycle() {
+  const body = document.getElementById('cycleBody');
+  if (!body) return;
+  if (!TS.cycleEnabled()) {
+    body.innerHTML = `
+      <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note le début de tes règles : l'appli calcule la durée moyenne
+        de ton cycle et la phase du moment (estimation), te montre tes prochaines règles prévues dans le calendrier, et compare ton
+        ressenti et ton effort pendant tes règles et le reste du temps. Tu peux aussi noter quelques signes du jour (crampes, fatigue,
+        sommeil…). Contraception hormonale, cycle irrégulier, grossesse ou ménopause : l'appli s'adapte et n'invente pas de phases.</div>
+      <label class="hp-consent"><input type="checkbox" id="cyConsent" onchange="document.getElementById('cyEnableBtn').disabled=!this.checked">
+        <span>J'accepte que TriSeason enregistre ces informations de santé (dates de mes règles, type de cycle, signes notés) pour me
+        les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
+        <a href="confidentialite.html#cycle" target="_blank" rel="noopener">En savoir plus</a></span></label>
+      <button class="btn btn--primary" id="cyEnableBtn" disabled onclick="TS.enableCycle();renderCycle();TS.toast('Option activée')">Activer cette option</button>
+      <div class="hp-note">Facultatif. Sans cet accord, rien de tout ça n'est enregistré.</div>`;
+    return;
+  }
+  const info = TS.cycleInfo();
+  const today = TS.localDateStr();
+  const day = cyDay || today;
+  const ph = TS.cyclePhaseOn(today, undefined, info);
+  const fmt = d => TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  const f1 = v => (Math.round(v * 10) / 10).toLocaleString('fr-FR');
+  // Où en est le cycle aujourd'hui
+  let status;
+  if (info.mode === 'grossesse') status = 'Grossesse : pas de cycle calculé.';
+  else if (info.mode === 'menopause') status = 'Ménopause : pas de cycle calculé.';
+  else if (!info.starts.length) status = 'Note le début de tes prochaines règles (ou des dernières) pour commencer.';
+  else if (ph && ph.phase === 'regles') status = `Règles : jour ${ph.day}`;
+  else if (ph && ph.phase) status = `Jour ${ph.day} de ton cycle · ${ph.label}`;
+  else if (ph && ph.day) status = `Jour ${ph.day} depuis le début de tes dernières règles`;
+  else status = `Dernières règles notées le ${fmt(info.starts[info.starts.length - 1])}`;
+  const sub = [];
+  if (info.mode === 'hormonal') sub.push('Contraception hormonale : pas de phases calculées (elles ne suivent pas un cycle naturel).');
+  if (info.mode === 'irregulier') sub.push('Cycle irrégulier : pas de prévision.');
+  if (info.avgLength) sub.push(`Durée moyenne de tes cycles : <b>${info.avgLength} jours</b> (${info.lengths.slice(-6).length} cycle${info.lengths.slice(-6).length > 1 ? 's' : ''}${info.minLength !== info.maxLength ? ', de ' + info.minLength + ' à ' + info.maxLength + ' jours' : ''}).`);
+  else if (info.mode === 'naturel' && info.starts.length) sub.push('Note au moins deux débuts de règles pour calculer la durée moyenne de ton cycle.');
+  const pred = TS.cyclePredicted(1, undefined, info)[0];
+  if (pred) sub.push(`Prochaines règles prévues vers le <b>${fmt(pred.start)}</b> (estimation, aussi dans le calendrier du Dashboard).`);
+  // Comparaison des séances
+  const imp = TS.cycleImpact();
+  let cmp = '';
+  if (imp && imp.enough) {
+    const part = (s, r) => [s != null ? 'ressenti ' + f1(s) + '/5' : '', r != null ? 'effort ' + f1(r) + '/10' : ''].filter(Boolean).join(' et ');
+    cmp = `<div class="hp-summary">Pendant tes règles : <b>${part(imp.sensDuring, imp.rpeDuring)}</b> en moyenne (${imp.during} séances),
+      contre <b>${part(imp.sensOther, imp.rpeOther)}</b> le reste du temps (${imp.other} séances).
+      <div class="hp-note" style="margin-top:4px">Une comparaison sur tes données, pas une preuve de cause à effet.</div></div>`;
+  } else if (imp) {
+    cmp = `<div class="hp-note">Dès 3 séances notées (ressenti ou effort) pendant tes règles et 3 le reste du temps, l'appli comparera les deux ici.</div>`;
+  }
+  const signs = ((TS.getData().cycle || {}).signs || {})[day] || [];
+  const hist = info.starts.slice().reverse().slice(0, 6).map(st => {
+    const l = info.lengths.find(x => x.from === st);
+    return `<div><b>${fmt(st)}</b><span>${l ? 'cycle de ' + l.days + ' jours' : st === info.starts[info.starts.length - 1] ? 'en cours' : ''}</span>
+      <button class="btn btn--ghost btn--sm btn--icon" onclick="cyRemove('${st}')" aria-label="Retirer ce début" title="Retirer">×</button></div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="cy-status">${status}</div>
+    ${sub.length ? `<div style="font-size:12.5px;color:var(--text-2);line-height:1.6">${sub.join('<br>')}</div>` : ''}
+    ${info.mode !== 'grossesse' && info.mode !== 'menopause' ? `<div class="cy-row">
+      <input class="form-input" type="date" id="cyStart" value="${today}" max="${today}" aria-label="Jour du début des règles">
+      <button class="btn btn--primary btn--sm" onclick="cyAddStart()">Mes règles ont commencé</button></div>` : ''}
+    ${cmp}
+    <div class="cy-h">Signes du ${day === today ? 'jour' : fmt(day)}</div>
+    <div class="cy-row" style="margin:4px 0"><input class="form-input" type="date" id="cySignDay" value="${day}" max="${today}" onchange="cyDay=this.value;renderCycle()" aria-label="Jour des signes"></div>
+    <div class="cy-signs">${Object.entries(TS.CYCLE_SIGNS).map(([k, l]) => `<button type="button" class="cy-sign" aria-pressed="${signs.includes(k)}" onclick="cyToggleSign('${k}')">${l}</button>`).join('')}</div>
+    ${hist ? `<div class="cy-h">Débuts de règles notés</div><div class="cy-hist">${hist}</div>` : ''}
+    <div class="cy-h">Réglages</div>
+    <div class="cy-row">
+      <select class="form-select" id="cyMode" onchange="TS.setCycleMode(this.value);renderCycle();renderPMC()" aria-label="Type de cycle">
+        ${Object.entries(TS.CYCLE_MODES).map(([k, l]) => `<option value="${k}"${k === info.mode ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <label style="font-size:12.5px;color:var(--text-2);display:inline-flex;gap:6px;align-items:center">Règles de
+        <select class="form-select" onchange="TS.setPeriodDays(this.value);renderCycle();renderPMC()" aria-label="Durée habituelle des règles">
+          ${[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option${n === info.periodDays ? ' selected' : ''}>${n}</option>`).join('')}</select> jours</label>
+    </div>
+    <div class="hp-note">Estimations à partir de tes dates, sans valeur médicale ; ces informations ne sont montrées à personne d'autre.
+      Pour toute question sur ton cycle, demande l'avis d'un professionnel de santé.
+      <a href="#" onclick="cyDisable();return false">Désactiver l'option et tout effacer</a></div>`;
+}
+function cyAddStart() {
+  const d = document.getElementById('cyStart').value;
+  if (!d) return;
+  TS.addPeriodStart(d); renderCycle(); renderPMC();
+  TS.toast('Début des règles noté le ' + TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }));
+}
+function cyRemove(d) {
+  if (!confirm('Retirer ce début de règles ?')) return;
+  TS.removePeriodStart(d); renderCycle(); renderPMC();
+}
+function cyToggleSign(k) { TS.toggleCycleSign(cyDay || TS.localDateStr(), k); renderCycle(); }
+function cyDisable() {
+  if (!confirm('Désactiver l’option ? Toutes les dates de règles et les signes notés seront effacés, sur tous tes appareils.')) return;
+  TS.disableCycle(); cyDay = null; renderCycle(); renderPMC();
+  TS.toast('Option désactivée, informations effacées');
 }
 
 // ── Blessures, maladie et reprise (option santé) ─────────────────────────────

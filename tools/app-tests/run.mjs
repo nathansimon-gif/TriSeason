@@ -1294,7 +1294,7 @@ async function main() {
     const data = sampleData();
     const mk = (id, d, extra) => Object.assign({ id, date: day(d), sport: 'run', duration: 0.75, distance: 8 }, extra);
     data.sessions = [mk('a', -10, { rpe: 9, pain: 6 }), mk('b', -9, { rpe: 5, pain: 5 }), mk('c', -5, { rpe: 5, pain: 2 }), mk('d', -4, { rpe: 4, sensation: 4, pain: 3 }),
-      mk('e', -14, { rpe: 5, sensation: 1 })];
+      mk('e', -17, { rpe: 5, sensation: 1 })];   // 7 jours avant « a » : toujours une autre semaine
     data.competitions = [{ id: 'c1', date: day(-20), name: '10 km test', type: 'RUN', distance: '10', actual_time: '0:41:07' }];
     data.health = { consent: { version: 1, at: 1 }, periods: [{ id: 'h1', type: 'blessure', zone: 'Genou', sports: ['run'], start: day(-30), end: day(-12), status: 'reprise' }] };
     const v = await newUser({ data });
@@ -1308,6 +1308,59 @@ async function main() {
     await v.ctx.close();
     assert(r.labels.includes('Compétition') && r.labels.some(l => /Séance dure/.test(l)) && r.comp === 1 && r.hard === 2, 'repères : ' + JSON.stringify(r));
     assert(/5,5\/10 en moyenne \(2 séances\), contre 2,5\/10 le reste du temps \(2 séances\)/.test(r.note) && /pas une preuve/.test(r.note), 'comparaison : ' + r.note);
+  });
+
+  await test('Cycle menstruel : accord à part, durée moyenne, phase, prévision, comparaison, calendrier, modes, effacement', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(700);
+    const off = await v.page.evaluate(() => { let err = ''; try { TS.addPeriodStart(TS.localDateStr()); } catch (e) { err = e.message; }
+      return { err, consent: !!document.getElementById('cyConsent'), btn: document.getElementById('cyEnableBtn').disabled }; });
+    await v.page.check('#cyConsent'); await v.page.click('#cyEnableBtn'); await v.page.waitForTimeout(200);
+    const r = await v.page.evaluate((d) => {
+      TS.addPeriodStart(d.m58); TS.addPeriodStart(d.m30); TS.addPeriodStart(d.m2); TS.addPeriodStart(d.m1);   // le 4e : mêmes règles, ignoré
+      TS.toggleCycleSign(TS.localDateStr(), 'crampes');
+      renderCycle(); renderPMC();
+      const info = TS.cycleInfo();
+      const ph = x => { const p = TS.cyclePhaseOn(x); return p ? p.phase + ':' + p.day : null; };
+      return { starts: info.starts.length, avg: info.avgLength, today: ph(TS.localDateStr()), fol: ph(d.m20), ov: ph(d.m17), lut: ph(d.m15),
+        pred: (TS.cyclePredicted(1)[0] || {}).start, imp: TS.cycleImpact(), text: document.getElementById('cycleBody').textContent.replace(/\s+/g, ' '),
+        pmc: getComputedStyle(document.getElementById('pmcCycleNote')).display, signs: TS.getData().cycle.signs };
+    }, { m58: day(-58), m30: day(-30), m20: day(-20), m17: day(-17), m15: day(-15), m2: day(-2), m1: day(-1) });
+    // Pas de débordement sur le côté (liste « type de cycle » au libellé long)
+    r.overflow = await v.page.evaluate(() => document.getElementById('cycleCard').scrollWidth - document.getElementById('cycleCard').clientWidth);
+    // Calendrier du Dashboard
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const cal = await v.page.evaluate((d) => {
+      const show = (date) => { const x = TS.parseLocalDate(date); calYear = x.getFullYear(); calMonthIdx = x.getMonth(); renderActivityCalendar(); };
+      show(d.m2);
+      const noted = document.querySelectorAll('#calGrid .cal-period:not(.cal-period--pred)').length;
+      // Repère des règles en rose (variable --cycle), pas en gris
+      const mk = document.querySelector('#calGrid .cal-period');
+      const pink = mk ? getComputedStyle(mk).borderLeftColor : '';
+      openPlanDay(d.m2);
+      const dayTxt = document.getElementById('planDayBody').textContent; closeModal('planModal');
+      show(d.p26);
+      const pred = document.querySelectorAll('#calGrid .cal-period--pred').length;
+      return { noted, pred, dayTxt, pink, legend: getComputedStyle(document.getElementById('calLegendCycle')).display };
+    }, { m2: day(-2), p26: day(26) });
+    // Contraception hormonale : pas de phases ni de prévision
+    const hormonal = await v.page.evaluate((d) => { TS.setCycleMode('hormonal'); const p = TS.cyclePhaseOn(d.m20);
+      return { phase: p && p.phase, pred: TS.cyclePredicted(1).length, regles: TS.cyclePhaseOn(TS.localDateStr()).phase }; }, { m20: day(-20) });
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(600);
+    const prof = await v.page.textContent('#cycleBody');
+    await v.page.click('#cycleBody .btn--danger'); await v.page.waitForTimeout(300);
+    const gone = await v.page.evaluate(() => ({ local: TS.getData().cycle, cloud: (window.__cloud('testeur') || {}).cycle }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/non activée/.test(off.err) && off.consent && off.btn, 'sans accord : ' + JSON.stringify(off));
+    assert(r.overflow <= 1, 'carte Cycle plus large que l’écran : ' + r.overflow);
+    assert(r.starts === 3 && r.avg === 28 && r.today === 'regles:3' && r.fol === 'folliculaire:11' && r.ov === 'ovulation:14' && r.lut === 'luteale:16', 'calculs : ' + JSON.stringify(r));
+    assert(r.pred === day(26) && /Durée moyenne de tes cycles : 28 jours/.test(r.text) && /Règles : jour 3/.test(r.text), 'prévision / texte : ' + r.pred + ' ' + r.text.slice(0, 200));
+    assert(r.imp.enough && r.imp.during >= 3 && /Pendant tes règles/.test(r.text) && r.pmc !== 'none' && r.signs[day(0)].join() === 'crampes', 'comparaison / graphique / signes : ' + JSON.stringify(r.imp));
+    assert(cal.noted >= 2 && cal.pred >= 1 && /Règles \(jour 1\)/.test(cal.dayTxt) && cal.legend !== 'none', 'calendrier : ' + JSON.stringify(cal));
+    assert(cal.pink === 'rgb(244, 114, 208)', 'repère des règles en rose dans le calendrier : ' + cal.pink);
+    assert(hormonal.phase === null && hormonal.pred === 0 && hormonal.regles === 'regles', 'contraception hormonale : ' + JSON.stringify(hormonal));
+    assert(/Activée le/.test(prof) && /3 débuts de règles notés/.test(prof) && !gone.local && !gone.cloud, 'Profil / effacement : ' + JSON.stringify({ prof, gone }));
   });
 
   await test('Blessures : une semaine d’arrêt ratée ne casse pas la série de défis', async () => {
@@ -1459,6 +1512,30 @@ async function main() {
     assert(/Kcal consommées:rect:0,Besoin du jour \(pointillés\):line:0/.test(out.legend), 'légende du besoin : ' + out.legend);
   });
 
+  await test('Photo de profil : réduite en petite image, affichée à la place de l’icône Profil sur toutes les pages, retirable', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    // Image de 600 × 400 fabriquée dans la page (PNG), envoyée au champ fichier
+    const png = await v.page.evaluate(() => { const c = document.createElement('canvas'); c.width = 600; c.height = 400; const x = c.getContext('2d');
+      x.fillStyle = '#c33'; x.fillRect(0, 0, 600, 400); x.fillStyle = '#3c3'; x.fillRect(250, 150, 100, 100); return c.toDataURL('image/png').split(',')[1]; });
+    await v.page.setInputFiles('#photoInput', { name: 'moi.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+    await v.page.waitForTimeout(500);
+    const prof = await v.page.evaluate(() => { const p = TS.getProfile().photo || ''; const img = new Image(); img.src = p;
+      return { prefix: p.slice(0, 23), kb: Math.round(p.length * 0.75 / 1024), avatar: !!document.querySelector('#avatarEl img'),
+        nav: !!document.querySelector('.nav__profile img.nav__avatar'), remove: !document.getElementById('photoRemove').hidden, cloud: !!(window.__cloud('testeur').profile || {}).photo }; });
+    const dims = await v.page.evaluate(() => new Promise(r => { const i = new Image(); i.onload = () => r(i.width + 'x' + i.height); i.src = TS.getProfile().photo; }));
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const other = await v.page.evaluate(() => ({ img: !!document.querySelector('.nav__profile img'), shown: getComputedStyle(document.querySelector('.nav__profile')).display }));
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(600);
+    await v.page.click('#photoRemove'); await v.page.waitForTimeout(200);
+    const after = await v.page.evaluate(() => ({ photo: TS.getProfile().photo || null, nav: !!document.querySelector('.nav__profile svg') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(prof.prefix === 'data:image/jpeg;base64,' && prof.kb < 40 && dims === '192x192' && prof.avatar && prof.nav && prof.remove && prof.cloud, 'photo : ' + JSON.stringify({ ...prof, dims }));
+    assert(other.img && other.shown !== 'none', 'autre page : ' + JSON.stringify(other));
+    assert(!after.photo && after.nav, 'retrait : ' + JSON.stringify(after));
+  });
+
   await test('Téléphone : champs en 16 px (pas de zoom automatique de l’iPhone), aucune fenêtre qui glisse de côté', async () => {
     const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
     const sizes = {};
@@ -1597,12 +1674,20 @@ async function main() {
     await v.page.click('#hydroGoalLine .link-btn');
     await v.page.click('text=Par défaut (1,5 L)'); await v.page.waitForTimeout(200);
     const reset = await v.page.evaluate(() => TS.hydroGoal());
+    // Observation « Hydratation et RPE » : comparée à l'objectif (1,5 L), plus aux anciens 2 L
+    const obs = await v.page.evaluate(() => {
+      const d = TS.getData();
+      for (let i = 1; i <= 12; i++) { const k = TS.localDateStr(new Date(Date.now() - i * 864e5)); d.nutrition.hydration[k] = i % 2 ? 1700 : 900; }
+      TS.saveData(d); renderPerfComparison();
+      return document.getElementById('perfComparison').textContent.replace(/\s+/g, ' ');
+    });
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(/1,5 L/.test(before.text) && before.goal === 1500 && before.line === 1500, 'défaut : ' + JSON.stringify(before));
     assert(/2,2 L/.test(after.text) && after.goal === 2200 && after.cloud === 2200, 'modifié : ' + JSON.stringify(after));
     assert(after.ch && /2,2 L/.test(after.ch.label), 'défi hydratation : ' + JSON.stringify(after.ch));
     assert(reset === 1500, 'retour au défaut : ' + reset);
+    assert(/Jours ≥ 1,5 L/.test(obs) && /Jours < 1,5 L/.test(obs) && !/2L/.test(obs), 'observation hydratation : ' + obs.slice(0, 300));
   });
 
   await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {
