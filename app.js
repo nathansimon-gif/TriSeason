@@ -1767,6 +1767,125 @@ function takeDonePlans() {
 // Séances : champ facultatif pain (douleur 0 à 10), seulement avec l'option.
 // Désactiver = retirer son accord : tout ce que l'option a enregistré est effacé.
 // Jamais montré à quelqu'un d'autre ; uniquement des faits, aucun conseil médical.
+// ── Cycle menstruel (option avec accord séparé, comme « Blessures ») ───────
+// data.cycle = { consent: {version, at}, mode, starts: ['YYYY-MM-DD'…] (débuts des règles),
+//   period_days (durée habituelle des règles), signs: { 'YYYY-MM-DD': ['crampes', …] } }
+// Sans accord : rien n'est enregistré. Retirer l'accord efface tout. Uniquement des faits
+// et des estimations sur les données de la personne, jamais de conseil médical ; jamais
+// montré à un futur coach / nutritionniste.
+// Modes : 'naturel' (phases estimées à partir de la durée moyenne), 'hormonal' (pilule,
+// stérilet hormonal, implant… : pas de phases calculées), 'irregulier' (pas de prévision),
+// 'grossesse' et 'menopause' (pas de cycle calculé).
+const CYCLE_CONSENT_VERSION = 1;
+const CYCLE_MODES = { naturel: 'Cycle naturel', hormonal: 'Contraception hormonale (pilule, stérilet hormonal, implant…)',
+  irregulier: 'Cycle irrégulier', grossesse: 'Grossesse', menopause: 'Ménopause' };
+const CYCLE_SIGNS = { crampes: 'Crampes', fatigue: 'Fatigue', sommeil: 'Sommeil difficile', tete: 'Maux de tête',
+  ballonnements: 'Ballonnements', moral: 'Moral bas', forme: 'Pleine forme' };
+const CYCLE_PHASES = { regles: 'Règles', folliculaire: 'Phase folliculaire', ovulation: 'Ovulation (estimée)', luteale: 'Phase lutéale' };
+function cycleEnabled(data = getData()) {
+  const c = data.cycle && data.cycle.consent;
+  return !!(c && c.version >= CYCLE_CONSENT_VERSION);
+}
+function enableCycle() {
+  const data = getData();
+  data.cycle = { mode: 'naturel', starts: [], period_days: 5, signs: {}, ...(data.cycle || {}), consent: { version: CYCLE_CONSENT_VERSION, at: Date.now() } };
+  saveData(data);
+}
+function disableCycle() {
+  const data = getData();
+  delete data.cycle;
+  saveData(data);
+}
+function cycleEdit(fn) {
+  const data = getData();
+  if (!cycleEnabled(data)) throw new Error('Option « Cycle menstruel » non activée');
+  fn(data.cycle);
+  saveData(data);
+}
+// Début des règles : un début noté pendant des règles déjà notées est ignoré (même règles)
+function addPeriodStart(day) {
+  cycleEdit(c => {
+    const starts = c.starts || (c.starts = []);
+    const pd = c.period_days || 5;
+    if (starts.some(d => { const n = daysBetweenStr(d, day); return n >= 0 && n < pd; })) return;
+    starts.push(day);
+    c.starts = [...new Set(starts)].sort();
+  });
+}
+function removePeriodStart(day) { cycleEdit(c => { c.starts = (c.starts || []).filter(d => d !== day); }); }
+function setCycleMode(mode) { if (CYCLE_MODES[mode]) cycleEdit(c => { c.mode = mode; }); }
+function setPeriodDays(n) { n = Math.round(Number(n)); if (n >= 2 && n <= 10) cycleEdit(c => { c.period_days = n; }); }
+function toggleCycleSign(day, sign) {
+  if (!CYCLE_SIGNS[sign]) return;
+  cycleEdit(c => {
+    const signs = c.signs || (c.signs = {});
+    const list = signs[day] || [];
+    signs[day] = list.includes(sign) ? list.filter(x => x !== sign) : list.concat(sign);
+    if (!signs[day].length) delete signs[day];
+  });
+}
+function daysBetweenStr(a, b) { return Math.round((parseLocalDate(b) - parseLocalDate(a)) / 86400000); }
+// Durées des cycles (entre deux débuts, 15 à 60 jours seulement) et durée moyenne des 6 derniers
+function cycleInfo(data = getData()) {
+  if (!cycleEnabled(data)) return null;
+  const c = data.cycle;
+  const starts = (c.starts || []).slice().sort();
+  const lengths = [];
+  for (let i = 1; i < starts.length; i++) {
+    const n = daysBetweenStr(starts[i - 1], starts[i]);
+    if (n >= 15 && n <= 60) lengths.push({ from: starts[i - 1], days: n });
+  }
+  const last6 = lengths.slice(-6).map(l => l.days);
+  const avg = last6.length ? Math.round(last6.reduce((a, b) => a + b, 0) / last6.length) : null;
+  return { mode: c.mode || 'naturel', starts, lengths, avgLength: avg, periodDays: c.period_days || 5,
+    minLength: last6.length ? Math.min(...last6) : null, maxLength: last6.length ? Math.max(...last6) : null };
+}
+// Jour du cycle et phase d'une date. Phase seulement en cycle naturel avec une durée moyenne
+// connue (ovulation estimée 14 jours avant les règles suivantes) ; règles notées : tous modes.
+function cyclePhaseOn(day, data = getData(), info = cycleInfo(data)) {
+  if (!info || info.mode === 'grossesse' || info.mode === 'menopause') return null;
+  const start = info.starts.filter(d => d <= day).pop();
+  if (!start) return null;
+  const n = daysBetweenStr(start, day) + 1;
+  if (n <= info.periodDays) return { day: n, start, phase: 'regles', label: CYCLE_PHASES.regles };
+  if (info.mode !== 'naturel' || !info.avgLength || n > info.avgLength + 10) return { day: info.mode === 'naturel' && n <= 60 ? n : null, start, phase: null, label: '' };
+  const ov = info.avgLength - 14;
+  const phase = n < ov - 1 ? 'folliculaire' : n <= ov + 1 ? 'ovulation' : 'luteale';
+  return { day: n, start, phase, label: CYCLE_PHASES[phase] };
+}
+// Prochaines règles prévues (cycle naturel, durée moyenne connue) : [{ start, days: [...] }]
+function cyclePredicted(count = 3, data = getData(), info = cycleInfo(data)) {
+  if (!info || info.mode !== 'naturel' || !info.avgLength || !info.starts.length) return [];
+  const today = localDateStr();
+  const out = [];
+  let next = addDaysStr(info.starts[info.starts.length - 1], info.avgLength);
+  while (next < today) next = addDaysStr(next, info.avgLength);   // règles non notées : prochaine date à venir
+  for (let k = 0; k < count; k++) {
+    out.push({ start: next, days: Array.from({ length: info.periodDays }, (_, i) => addDaysStr(next, i)) });
+    next = addDaysStr(next, info.avgLength);
+  }
+  return out;
+}
+// Jours de règles notés (débuts + durée habituelle), pour les graphiques et le calendrier
+function cyclePeriodDays(data = getData(), info = cycleInfo(data)) {
+  const set = new Set();
+  if (!info) return set;
+  info.starts.forEach(st => { for (let i = 0; i < info.periodDays; i++) set.add(addDaysStr(st, i)); });
+  return set;
+}
+// Séances pendant les règles comparées au reste (ressenti /5 et effort /10), dès 3 de chaque côté.
+// Seulement depuis le premier début noté. Des faits, pas une cause.
+function cycleImpact(data = getData()) {
+  const info = cycleInfo(data);
+  if (!info || !info.starts.length) return null;
+  const days = cyclePeriodDays(data, info);
+  const ss = (data.sessions || []).filter(s => s.date >= info.starts[0] && s.date <= localDateStr() && (s.sensation || s.rpe));
+  const avg = (l, k) => { const v = l.filter(s => s[k]).map(s => s[k]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const during = ss.filter(s => days.has(s.date)), other = ss.filter(s => !days.has(s.date));
+  return { during: during.length, other: other.length, sensDuring: avg(during, 'sensation'), sensOther: avg(other, 'sensation'),
+    rpeDuring: avg(during, 'rpe'), rpeOther: avg(other, 'rpe'), enough: during.length >= 3 && other.length >= 3 };
+}
+
 const HEALTH_CONSENT_VERSION = 1;
 const HEALTH_TYPES = { blessure: 'Blessure', maladie: 'Maladie', grossesse: 'Grossesse',
   post_partum: 'Après l’accouchement', arret: 'Arrêt (autre raison)' };
@@ -3292,6 +3411,8 @@ window.TS = {
   getGear, saveGear, deleteGear, gearRanges, gearForSession, gearStats, GEAR_KINDS, GEAR_DEFAULT_ALERT, GEAR_HINTS,
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
+  cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,
+  cycleInfo, cyclePhaseOn, cyclePredicted, cyclePeriodDays, cycleImpact, CYCLE_MODES, CYCLE_SIGNS, CYCLE_PHASES, CYCLE_CONSENT_VERSION,
   healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
   formatHours, FUEL_PRESETS, fuelCarbs, fuelMomentText, fuelTimeText, parseFuelTime, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,

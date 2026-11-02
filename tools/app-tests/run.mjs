@@ -1310,6 +1310,55 @@ async function main() {
     assert(/5,5\/10 en moyenne \(2 séances\), contre 2,5\/10 le reste du temps \(2 séances\)/.test(r.note) && /pas une preuve/.test(r.note), 'comparaison : ' + r.note);
   });
 
+  await test('Cycle menstruel : accord à part, durée moyenne, phase, prévision, comparaison, calendrier, modes, effacement', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(700);
+    const off = await v.page.evaluate(() => { let err = ''; try { TS.addPeriodStart(TS.localDateStr()); } catch (e) { err = e.message; }
+      return { err, consent: !!document.getElementById('cyConsent'), btn: document.getElementById('cyEnableBtn').disabled }; });
+    await v.page.check('#cyConsent'); await v.page.click('#cyEnableBtn'); await v.page.waitForTimeout(200);
+    const r = await v.page.evaluate((d) => {
+      TS.addPeriodStart(d.m58); TS.addPeriodStart(d.m30); TS.addPeriodStart(d.m2); TS.addPeriodStart(d.m1);   // le 4e : mêmes règles, ignoré
+      TS.toggleCycleSign(TS.localDateStr(), 'crampes');
+      renderCycle(); renderPMC();
+      const info = TS.cycleInfo();
+      const ph = x => { const p = TS.cyclePhaseOn(x); return p ? p.phase + ':' + p.day : null; };
+      return { starts: info.starts.length, avg: info.avgLength, today: ph(TS.localDateStr()), fol: ph(d.m20), ov: ph(d.m17), lut: ph(d.m15),
+        pred: (TS.cyclePredicted(1)[0] || {}).start, imp: TS.cycleImpact(), text: document.getElementById('cycleBody').textContent.replace(/\s+/g, ' '),
+        pmc: getComputedStyle(document.getElementById('pmcCycleNote')).display, signs: TS.getData().cycle.signs };
+    }, { m58: day(-58), m30: day(-30), m20: day(-20), m17: day(-17), m15: day(-15), m2: day(-2), m1: day(-1) });
+    // Pas de débordement sur le côté (liste « type de cycle » au libellé long)
+    r.overflow = await v.page.evaluate(() => document.getElementById('cycleCard').scrollWidth - document.getElementById('cycleCard').clientWidth);
+    // Calendrier du Dashboard
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const cal = await v.page.evaluate((d) => {
+      const show = (date) => { const x = TS.parseLocalDate(date); calYear = x.getFullYear(); calMonthIdx = x.getMonth(); renderActivityCalendar(); };
+      show(d.m2);
+      const noted = document.querySelectorAll('#calGrid .cal-period:not(.cal-period--pred)').length;
+      openPlanDay(d.m2);
+      const dayTxt = document.getElementById('planDayBody').textContent; closeModal('planModal');
+      show(d.p26);
+      const pred = document.querySelectorAll('#calGrid .cal-period--pred').length;
+      return { noted, pred, dayTxt, legend: getComputedStyle(document.getElementById('calLegendCycle')).display };
+    }, { m2: day(-2), p26: day(26) });
+    // Contraception hormonale : pas de phases ni de prévision
+    const hormonal = await v.page.evaluate((d) => { TS.setCycleMode('hormonal'); const p = TS.cyclePhaseOn(d.m20);
+      return { phase: p && p.phase, pred: TS.cyclePredicted(1).length, regles: TS.cyclePhaseOn(TS.localDateStr()).phase }; }, { m20: day(-20) });
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(600);
+    const prof = await v.page.textContent('#cycleBody');
+    await v.page.click('#cycleBody .btn--danger'); await v.page.waitForTimeout(300);
+    const gone = await v.page.evaluate(() => ({ local: TS.getData().cycle, cloud: (window.__cloud('testeur') || {}).cycle }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/non activée/.test(off.err) && off.consent && off.btn, 'sans accord : ' + JSON.stringify(off));
+    assert(r.overflow <= 1, 'carte Cycle plus large que l’écran : ' + r.overflow);
+    assert(r.starts === 3 && r.avg === 28 && r.today === 'regles:3' && r.fol === 'folliculaire:11' && r.ov === 'ovulation:14' && r.lut === 'luteale:16', 'calculs : ' + JSON.stringify(r));
+    assert(r.pred === day(26) && /Durée moyenne de tes cycles : 28 jours/.test(r.text) && /Règles : jour 3/.test(r.text), 'prévision / texte : ' + r.pred + ' ' + r.text.slice(0, 200));
+    assert(r.imp.enough && r.imp.during >= 3 && /Pendant tes règles/.test(r.text) && r.pmc !== 'none' && r.signs[day(0)].join() === 'crampes', 'comparaison / graphique / signes : ' + JSON.stringify(r.imp));
+    assert(cal.noted >= 2 && cal.pred >= 1 && /Règles \(jour 1\)/.test(cal.dayTxt) && cal.legend !== 'none', 'calendrier : ' + JSON.stringify(cal));
+    assert(hormonal.phase === null && hormonal.pred === 0 && hormonal.regles === 'regles', 'contraception hormonale : ' + JSON.stringify(hormonal));
+    assert(/Activée le/.test(prof) && /3 débuts de règles notés/.test(prof) && !gone.local && !gone.cloud, 'Profil / effacement : ' + JSON.stringify({ prof, gone }));
+  });
+
   await test('Blessures : une semaine d’arrêt ratée ne casse pas la série de défis', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(700);

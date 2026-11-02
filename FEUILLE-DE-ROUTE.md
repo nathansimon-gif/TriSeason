@@ -26,12 +26,10 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [x] 🤖 **4. Blessures, maladie, reprise, grossesse** : fait (PR #34). Reste à faire plus tard :
   - [ ] 🤖 Records : pouvoir marquer une séance faite pendant une blessure ou une grossesse pour ne pas fausser les comparaisons
   - [ ] 🤖 Si l'accès coach / nutritionniste arrive : case à part pour partager (ou non) ces informations, jamais par défaut
-- [ ] 🧑 Avant la tâche 5 : demander à une ou deux testeuses ce qu'elles voudraient voir et ce qui les gênerait
-- [ ] 🤖 **5. Cycle menstruel** :
-  - bouton « Mes règles ont commencé » (jour au choix) ; l'appli calcule la durée moyenne du cycle et la phase du moment ; petits signes du jour à cocher (crampes, fatigue, sommeil…)
-  - cas prévus : pilule ou stérilet hormonal, cycle irrégulier, grossesse, ménopause (pas de phases inventées)
-  - Forme : phases en légère couleur de fond sur le graphique ; croisement comme pour la nutrition (« pendant tes règles, ressenti moyen 6/10 contre 7,5/10 le reste du mois »)
-  - calendrier du Dashboard : petit repère sur les jours de règles prévus, pour placer une compétition ou une grosse séance
+- [ ] 🧑 Montrer l'option « Cycle menstruel » à une ou deux testeuses : ce qui leur manque, ce qui les gêne (à faire maintenant qu'une première version existe)
+- [x] 🤖 **5. Cycle menstruel** : fait (02/11/2026, voir « Fait »). Reste à faire plus tard :
+  - [ ] 🤖 Phases en couleur de fond sur les autres graphiques (aujourd'hui : règles en gris sur le graphique de forme) et comparaison par phase (folliculaire / lutéale) quand il y aura assez de séances
+  - [ ] 🤖 Si l'accès coach / nutritionniste arrive : jamais partagé par défaut
 
 **Ensuite :**
 
@@ -123,6 +121,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 02/11/2026 | #64 | **Cycle menstruel** (Forme, option avec accord à part, désactivée au départ) : « Mes règles ont commencé » (jour au choix), durée moyenne du cycle et phase du moment (estimation, cycle naturel), prochaines règles prévues, signes du jour à cocher (crampes, fatigue, sommeil…), historique ; modes contraception hormonale, cycle irrégulier, grossesse, ménopause (pas de phases inventées) ; règles en fond gris sur le graphique de forme ; comparaison ressenti et effort pendant les règles / le reste du temps (dès 3 séances de chaque côté, pas une cause) ; calendrier du Dashboard : trait sur les jours de règles (pointillé = prévues) et jour du cycle dans la fenêtre du jour ; Profil → Paramètres : résumé et retrait de l'accord ; Confidentialité et Aide mises à jour |
 | 02/11/2026 | #64 | **Photo de profil** (Profil : ajouter, changer, retirer ; réduite à une petite image sur l'appareil) affichée à la place de l'icône Profil sur toutes les pages ; Nutrition : l'observation « Hydratation et RPE » compare à ton objectif d'eau (1,5 L par défaut) au lieu de 2 L ; test du graphique de douleur rendu indépendant du jour où il tourne (il échouait ce lundi) |
 | 01/11/2026 | #63 | **Navigation sur téléphone** : barre du bas Dashboard, Séances, Sports, Nutrition, **Forme** (à la place de Profil) ; **icône Profil** (petit personnage) toujours visible en haut, et « Profil » aussi dans le menu ☰ ; Nutrition : légende « Besoin du jour (pointillés) » lisible (trait au lieu d'un carré vide) |
 | 01/11/2026 | #62 | **Records de course plus justes** : après une course sur route, le record va sur la **distance de course la plus proche** (5, 10, 15, 20 km, semi, 30, 35, 40 km, marathon) avec le **temps estimé à l'allure moyenne** (10,8 km en 45:00 → 10 km en 41:40, noté sur le record) ; au-delà de 30 km, la distance réelle sauf si elle est très proche de 35, 40 km ou du marathon ; nouvelle case **« Trail »** dans Compétitions : le record garde la distance réelle (« Trail 23 km ») ; ravitaillement : moment en **heures et minutes** (« 1h15 ») |

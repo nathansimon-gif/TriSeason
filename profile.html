@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261116a"></script>
+  <script src="theme.js?v=20261117a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261116a"></script>
+  <script src="auth-guard.js?v=20261117a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261116a">
+  <link rel="stylesheet" href="style.css?v=20261117a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -219,6 +219,12 @@
   <div class="section-card" id="healthCard">
     <div class="section-card__title">Blessures, maladie et reprise</div>
     <div id="healthBody" class="strava-note"></div>
+  </div>
+
+  <!-- ── Option cycle menstruel ── -->
+  <div class="section-card" id="cycleCard">
+    <div class="section-card__title">Cycle menstruel</div>
+    <div id="cycleBody" class="strava-note"></div>
   </div>
 
   <!-- ── Compte ── -->
@@ -426,7 +432,7 @@
 </div>
 
 
-<script src="app.js?v=20261116a"></script>
+<script src="app.js?v=20261117a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -445,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStrava();
   renderBadges();
   renderHealthOption();
+  renderCycleOption();
   renderGear();
   renderThemePick();
   handleStravaReturn();
@@ -571,7 +578,7 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderGear(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderCycleOption(); renderGear(); });
 
 // ── Apparence ───────────────────────────────────────────────────────────────
 function renderThemePick() {
@@ -703,6 +710,29 @@ function renderHealthOption() {
     Ces informations ne sont montrées à personne d'autre.
     <div class="strava-actions"><a class="btn btn--sm" href="forme.html#healthCard">Gérer dans Forme</a>
       <button class="btn btn--sm btn--danger" onclick="disableHealthOption()">Retirer mon accord et tout effacer</button></div>`;
+}
+// Option « Cycle menstruel » : résumé, gestion dans Forme
+function renderCycleOption() {
+  const el = document.getElementById('cycleBody');
+  const data = TS.getData();
+  if (!TS.cycleEnabled(data)) {
+    el.innerHTML = `Option facultative, désactivée. Elle permet de noter le début de tes règles pour connaître la durée de ton cycle,
+      voir tes prochaines règles prévues et comparer tes séances. Elle demande ton accord à part.
+      <div class="strava-actions"><a class="btn btn--sm" href="forme.html#cycleCard">Découvrir dans Forme</a></div>`;
+    return;
+  }
+  const info = TS.cycleInfo(data);
+  const at = new Date(data.cycle.consent.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  el.innerHTML = `Activée le ${at} avec ton accord. ${info.starts.length ? info.starts.length + ' début' + (info.starts.length > 1 ? 's' : '') + ' de règles noté' + (info.starts.length > 1 ? 's' : '') : 'Rien de noté pour l’instant'}.
+    Ces informations ne sont montrées à personne d'autre.
+    <div class="strava-actions"><a class="btn btn--sm" href="forme.html#cycleCard">Gérer dans Forme</a>
+      <button class="btn btn--sm btn--danger" onclick="disableCycleOption()">Retirer mon accord et tout effacer</button></div>`;
+}
+function disableCycleOption() {
+  if (!confirm('Retirer ton accord ? Toutes les dates de règles et les signes notés seront effacés, sur tous tes appareils.')) return;
+  TS.disableCycle();
+  renderCycleOption();
+  TS.toast('Accord retiré, informations effacées');
 }
 function disableHealthOption() {
   if (!confirm('Retirer ton accord ? Toutes les blessures, maladies, arrêts et douleurs notés seront effacés, sur tous tes appareils.')) return;
