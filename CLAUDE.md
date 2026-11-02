@@ -241,7 +241,7 @@ le dire dans `confidentialite.html` et sans accord explicite.
 - **Option « Cycle menstruel »** (page Forme) : accord **séparé** dans `data.cycle.consent`
   (`CYCLE_CONSENT_VERSION`), sans lui rien n'est enregistré (`cycleEdit` refuse) ; `data.cycle =
   {mode, starts, period_days, signs}` ; `cycleInfo` / `cyclePhaseOn` (phases seulement en cycle naturel avec
-  une durée moyenne) / `cyclePredicted` / `cycleImpact` ; retirer l'accord (`TS.disableCycle`) efface tout.
+  une durée moyenne) / `cyclePredicted` / `cycleImpact` ; couleur `--cycle` (rose `#f472d0`, clair `#c638c9`) pour les règles (calendrier, graphique de forme) ; retirer l'accord (`TS.disableCycle`) efface tout.
   Estimations, jamais d'avis médical ni de contraception ; jamais montré à un coach par défaut.
 - **Effacement** : `TS.resetAllData()` (données à zéro, compte gardé) et
   `TS.deleteAccount(password)` (réauthentification, suppression du document

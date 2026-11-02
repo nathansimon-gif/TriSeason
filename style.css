@@ -44,6 +44,8 @@
      trois daltonismes (écart proche de celui des 3 sports entre eux) */
   --muscu:     #9256fb;
   --muscu-dim: rgba(146,86,251,0.16);
+  --cycle:     #f472d0;
+  --cycle-dim: rgba(244,114,208,0.16);
   /* Accent de marque : boutons principaux, élément actif, jour courant */
   --accent:    #b9ec4a;
   --accent2:   #cdf56e;
@@ -94,6 +96,8 @@
   --run-dim:   rgba(203,47,99,0.12);
   --muscu:     #4b2a85;
   --muscu-dim: rgba(75,42,133,0.12);
+  --cycle:     #c638c9;
+  --cycle-dim: rgba(198,56,201,0.12);
   --accent:    #5a8c00;
   --accent2:   #4f7d00;
   --accent-dim:rgba(90,140,0,0.13);

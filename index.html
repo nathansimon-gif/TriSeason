@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261117a"></script>
+  <script src="theme.js?v=20261118a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261117a"></script>
+  <script src="auth-guard.js?v=20261118a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261117a">
+  <link rel="stylesheet" href="style.css?v=20261118a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -104,8 +104,8 @@
     /* Jour de course : petit drapeau en haut à droite et contour de la couleur de la course */
     .cal-cell--race { box-shadow:inset 0 0 0 1.5px var(--race-c); }
     /* Cycle menstruel (option) : trait à gauche de la case, plein = règles notées, pointillé = prévues */
-    .cal-period { position:absolute; left:2px; top:28%; bottom:28%; width:0; border-left:2px solid var(--text-2); }
-    .cal-period--pred { border-left-style:dashed; opacity:.8; }
+    .cal-period { position:absolute; left:2px; top:28%; bottom:28%; width:0; border-left:3px solid var(--cycle); border-radius:2px; }
+    .cal-period--pred { border-left-style:dotted; border-radius:0; }
     .cal-cell--race.cal-cell--today { box-shadow:inset 0 0 0 1.5px var(--race-c), inset 0 0 0 3px var(--accent); }
     .cal-flag { position:absolute; top:2px; right:3px; width:9px; height:10px; color:var(--race-c, var(--accent)); }
     .cal-flag svg { display:block; width:100%; height:100%; }
@@ -354,7 +354,7 @@
       <span class="cal-legend__dot" data-legend-sport="muscu" style="display:none"><span style="width:8px;height:8px;border-radius:50%;background:var(--muscu);display:inline-block"></span> Musculation</span>
       <span class="cal-legend__dot"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent2);display:inline-block"></span> Plusieurs sports</span>
       <span class="cal-legend__dot"><span class="cal-plan" style="color:var(--text-2)"></span> Séance prévue</span>
-      <span class="cal-legend__dot" id="calLegendCycle" style="display:none"><span style="display:inline-block;height:10px;border-left:2px solid var(--text-2);margin-right:2px"></span> Règles <span style="color:var(--text-3)">(pointillé : prévues)</span></span>
+      <span class="cal-legend__dot" id="calLegendCycle" style="display:none"><span style="display:inline-block;height:10px;border-left:3px solid var(--cycle);margin-right:2px"></span> Règles <span style="display:inline-block;height:10px;border-left:3px dotted var(--cycle);margin:0 2px 0 6px"></span> <span style="color:var(--text-3)">prévues</span></span>
       <span class="cal-legend__dot"><span class="cal-flag" style="position:static;color:var(--accent)"><svg viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.5 V9.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M1.6 0.8 H8.4 L6.6 3 L8.4 5.2 H1.6 Z" fill="currentColor"/></svg></span> Compétition</span>
       <span style="margin-left:auto">Appuie sur un jour pour voir le détail ou planifier</span>
     </div>
@@ -516,7 +516,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261117a"></script>
+<script src="app.js?v=20261118a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();

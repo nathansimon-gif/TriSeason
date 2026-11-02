@@ -1334,11 +1334,14 @@ async function main() {
       const show = (date) => { const x = TS.parseLocalDate(date); calYear = x.getFullYear(); calMonthIdx = x.getMonth(); renderActivityCalendar(); };
       show(d.m2);
       const noted = document.querySelectorAll('#calGrid .cal-period:not(.cal-period--pred)').length;
+      // Repère des règles en rose (variable --cycle), pas en gris
+      const mk = document.querySelector('#calGrid .cal-period');
+      const pink = mk ? getComputedStyle(mk).borderLeftColor : '';
       openPlanDay(d.m2);
       const dayTxt = document.getElementById('planDayBody').textContent; closeModal('planModal');
       show(d.p26);
       const pred = document.querySelectorAll('#calGrid .cal-period--pred').length;
-      return { noted, pred, dayTxt, legend: getComputedStyle(document.getElementById('calLegendCycle')).display };
+      return { noted, pred, dayTxt, pink, legend: getComputedStyle(document.getElementById('calLegendCycle')).display };
     }, { m2: day(-2), p26: day(26) });
     // Contraception hormonale : pas de phases ni de prévision
     const hormonal = await v.page.evaluate((d) => { TS.setCycleMode('hormonal'); const p = TS.cyclePhaseOn(d.m20);
@@ -1355,6 +1358,7 @@ async function main() {
     assert(r.pred === day(26) && /Durée moyenne de tes cycles : 28 jours/.test(r.text) && /Règles : jour 3/.test(r.text), 'prévision / texte : ' + r.pred + ' ' + r.text.slice(0, 200));
     assert(r.imp.enough && r.imp.during >= 3 && /Pendant tes règles/.test(r.text) && r.pmc !== 'none' && r.signs[day(0)].join() === 'crampes', 'comparaison / graphique / signes : ' + JSON.stringify(r.imp));
     assert(cal.noted >= 2 && cal.pred >= 1 && /Règles \(jour 1\)/.test(cal.dayTxt) && cal.legend !== 'none', 'calendrier : ' + JSON.stringify(cal));
+    assert(cal.pink === 'rgb(244, 114, 208)', 'repère des règles en rose dans le calendrier : ' + cal.pink);
     assert(hormonal.phase === null && hormonal.pred === 0 && hormonal.regles === 'regles', 'contraception hormonale : ' + JSON.stringify(hormonal));
     assert(/Activée le/.test(prof) && /3 débuts de règles notés/.test(prof) && !gone.local && !gone.cloud, 'Profil / effacement : ' + JSON.stringify({ prof, gone }));
   });

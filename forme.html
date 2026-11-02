@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261117a"></script>
+  <script src="theme.js?v=20261118a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261117a"></script>
+  <script src="auth-guard.js?v=20261118a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261117a">
+  <link rel="stylesheet" href="style.css?v=20261118a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -70,13 +70,13 @@
     .hp-milestones { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin-top:10px; }
     .hp-milestone { font-size:12px; color:var(--text-2); }
     .hp-note { font-size:11px; color:var(--text-3); line-height:1.55; margin-top:10px; }
-    .cy-status { font-size:14px; font-weight:600; margin-bottom:4px; }
+    .cy-status { font-size:14px; font-weight:600; margin-bottom:4px; padding-left:9px; border-left:3px solid var(--cycle); }
     .cy-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0; }
     .cy-row .form-input, .cy-row .form-select { width:auto; max-width:100%; min-width:0; }
     #cyMode { flex:1 1 100%; }
     .cy-signs { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
     .cy-sign { background:var(--surface2); border:1px solid var(--border2); color:var(--text-2); border-radius:999px; padding:5px 11px; font-size:12.5px; }
-    .cy-sign[aria-pressed="true"] { background:var(--accent-dim); border-color:var(--accent); color:var(--text); }
+    .cy-sign[aria-pressed="true"] { background:var(--cycle-dim); border-color:var(--cycle); color:var(--text); }
     .cy-h { font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 4px; }
     .cy-hist { font-size:12.5px; color:var(--text-2); }
     .cy-hist div { display:flex; gap:10px; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); }
@@ -162,7 +162,7 @@
       <canvas id="chartPMC"></canvas>
     </div>
     <div id="pmcBandsNote" style="display:none;margin-top:6px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(240,185,65,.25);vertical-align:-1px;margin-right:5px"></span>Fond jaune : blessure, maladie ou arrêt noté (Blessures, maladie et reprise)</div>
-    <div id="pmcCycleNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(163,171,185,.3);vertical-align:-1px;margin-right:5px"></span>Fond gris : règles notées (Cycle menstruel)</div>
+    <div id="pmcCycleNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:var(--cycle-dim);border:1px solid var(--cycle);box-sizing:border-box;vertical-align:-1px;margin-right:5px"></span>Fond rose : règles notées (Cycle menstruel)</div>
     <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
   </div>
 
@@ -320,7 +320,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261117a"></script>
+<script src="app.js?v=20261118a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -537,7 +537,7 @@ function renderPMC() {
     if (idx.length) bands.push([idx[0], idx[idx.length - 1]]);
   });
   document.getElementById('pmcBandsNote').style.display = bands.length ? '' : 'none';
-  // Règles notées (option Cycle menstruel) : fond gris
+  // Règles notées (option Cycle menstruel) : fond rose (--cycle-dim)
   const periodSet = TS.cyclePeriodDays();
   const cyBands = [];
   recent.forEach((s, i) => { if (periodSet.has(s.day)) { const last = cyBands[cyBands.length - 1]; if (last && last[1] === i - 1) last[1] = i; else cyBands.push([i, i]); } });
@@ -555,7 +555,7 @@ function renderPMC() {
           const l = Math.max(a.left, x.getPixelForValue(i) - half), r = Math.min(a.right, x.getPixelForValue(j) + half);
           ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
         });
-        ctx.fillStyle = 'rgba(163,171,185,.16)';
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cycle-dim').trim() || 'rgba(244,114,208,.16)';
         cyBands.forEach(([i, j]) => {
           const l = Math.max(a.left, x.getPixelForValue(i) - half), r = Math.min(a.right, x.getPixelForValue(j) + half);
           ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
