@@ -1371,7 +1371,7 @@ function calcPace(durH, distKm, sport) {
   if (sport === 'run') return fmtMinSec(durH * 3600 / distKm);
   if (sport === 'nat') return fmtMinSec(durH * 3600 / (distKm * 10));
   if (sport === 'velo') {
-    return `${(distKm / durH).toFixed(1)} km/h`;
+    return `${(distKm / durH).toFixed(1).replace('.', ',')} km/h`;   // virgule à la française
   }
   return null;
 }
@@ -2716,7 +2716,12 @@ function initTooltips() {
     current = el;
   }
 
+  // Sur écran tactile, le navigateur simule un survol juste avant le « click » : on l'ignore,
+  // sinon le toucher ouvrirait la bulle (survol) puis la refermerait aussitôt (click).
+  let lastTouch = 0;
+  document.addEventListener('touchstart', function () { lastTouch = Date.now(); }, { passive: true, capture: true });
   document.addEventListener('mouseover', function (e) {
+    if (Date.now() - lastTouch < 800) return;
     if (current && !document.body.contains(current)) hide(); // élément re-généré entre-temps
     const el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
     if (el) { if (el !== current) show(el); }
@@ -2729,7 +2734,38 @@ function initTooltips() {
     if (!to || !current.contains(to)) hide();
   });
 
-  window.addEventListener('scroll', hide, true);
+  // Téléphone et clavier : toucher (ou Entrée sur) un « ? » ouvre ou ferme sa bulle ;
+  // toucher ailleurs la ferme. Le survol à la souris ne suffit pas sur écran tactile.
+  document.addEventListener('click', function (e) {
+    const el = e.target && e.target.closest ? e.target.closest('.tip-icon[data-tip]') : null;
+    if (el) { e.preventDefault(); e.stopPropagation(); if (el === current && tip) hide(); else show(el); return; }
+    if (current) hide();
+  }, true);
+  document.addEventListener('keydown', function (e) {
+    const el = e.target && e.target.closest ? e.target.closest('.tip-icon[data-tip]') : null;
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (el === current && tip) hide(); else show(el); }
+    else if (e.key === 'Escape') hide();
+  });
+  // Les « ? » deviennent atteignables au clavier et annoncés comme des boutons
+  function prepIcons(root) {
+    (root || document).querySelectorAll('.tip-icon[data-tip]:not([tabindex])').forEach(function (el) {
+      el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button');
+      if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'Explication : ' + el.getAttribute('data-tip'));
+    });
+  }
+  document.addEventListener('focusin', function (e) { if (e.target && e.target.classList && e.target.classList.contains('tip-icon')) prepIcons(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { prepIcons(); });
+  else prepIcons();
+
+  // En faisant défiler : la bulle d'un « ? » ouvert au doigt suit son « ? » ; les autres se ferment
+  window.addEventListener('scroll', function () {
+    if (!tip || !current) return;
+    const r = current.getBoundingClientRect();
+    if (!current.matches('.tip-icon') || r.bottom < 0 || r.top > window.innerHeight) { hide(); return; }
+    let top = r.top - tip.offsetHeight - 8;
+    if (top < 8) top = r.bottom + 8;
+    tip.style.top = top + 'px';
+  }, true);
   window.addEventListener('triseason:update', hide);
 }
 

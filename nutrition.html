@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261118a"></script>
+  <script src="theme.js?v=20261119a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261118a"></script>
+  <script src="auth-guard.js?v=20261119a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261119a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -113,11 +113,6 @@
     .nutri-kpi { text-align:center; padding:12px; }
     .nutri-kpi__val { font-size:22px; font-weight:600; letter-spacing:-.02em; }
     .nutri-kpi__label { font-size:10px; color:var(--text-2); text-transform:uppercase; letter-spacing:.07em; margin-top:3px; }
-    .disclaimer-box {
-      background: rgba(240,185,65,.08); border: 1px solid rgba(240,185,65,.25);
-      border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
-      color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
-    }
   </style>
 </head>
 <body>
@@ -145,14 +140,10 @@
 
   <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
     <div>
-      <h1>Nutrition</h1>
-      <p>Suivi des repas, hydratation et ravitaillement d'entraînement</p>
+      <h1 style="display:flex;align-items:center;gap:8px">Nutrition <span class="tip-icon" data-tip="Un suivi indicatif : les glucides, protéines et lipides trouvés tout seuls et les repères affichés sont des estimations générales, pas un avis personnalisé. Ils ne remplacent pas un nutritionniste ou un médecin du sport.">?</span></h1>
+      <p>Tes repas, ton eau et tes ravitaillements</p>
     </div>
     <button class="btn btn--primary" onclick="openMealModal()">+ Ajouter</button>
-  </div>
-
-  <div class="disclaimer-box">
-    Ce suivi nutritionnel est indicatif : les macros détectées automatiquement et les repères donnés sont des estimations génériques, pas un avis personnalisé. Ils ne remplacent pas les conseils d'un nutritionniste ou d'un médecin du sport.
   </div>
 
   <!-- Day navigator -->
@@ -253,7 +244,7 @@
       <div class="card">
         <div class="card__title">
           Ravitaillement entraînement / course
-          <span class="tip-icon" data-tip="Gels, barres, boissons isotoniques consommés pendant l'effort. Utile pour optimiser votre stratégie nutritionnelle en compétition.">?</span>
+          <span class="tip-icon" data-tip="Gels, barres et boissons pris pendant l'effort. Utile pour préparer ce que tu prendras en course.">?</span>
         </div>
         <div id="fuelList" class="stack" style="margin-bottom:10px"></div>
         <button class="btn btn--ghost btn--sm" onclick="openFuelModal()" style="width:100%">+ Ajouter un ravitaillement</button>
@@ -266,7 +257,7 @@
     <div class="card">
       <div class="card__title">
         Hydratation — 7 derniers jours
-        <span class="tip-icon" data-tip="Votre consommation d'eau journalière sur la semaine. La ligne pointillée représente l'objectif.">?</span>
+        <span class="tip-icon" data-tip="L'eau bue chaque jour de la semaine. La ligne pointillée est ton objectif.">?</span>
       </div>
       <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartHydro"></canvas></div>
     </div>
@@ -286,14 +277,14 @@
   <!-- Besoins énergétiques -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title">Besoins énergétiques et balance du jour
-      <span class="tip-icon" data-tip="Métabolisme de base (formule Mifflin-St Jeor) × facteur de vie quotidienne hors sport, plus une part des calories brûlées en séance. Les deux réglages sont modifiables. Complétez votre profil pour des résultats précis.">?</span>
+      <span class="tip-icon" data-tip="Métabolisme de base (formule Mifflin-St Jeor) × facteur de vie quotidienne hors sport, plus une part des calories brûlées en séance. Les deux réglages sont modifiables. Complète ton profil pour des résultats plus précis.">?</span>
     </div>
     <div id="energyBalance"></div>
   </div>
   <!-- Nutrition et Performance -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title">Nutrition et Performance
-      <span class="tip-icon" data-tip="Compare hydratation et RPE pour identifier des effets sur vos entrainements.">?</span>
+      <span class="tip-icon" data-tip="Compare ton eau, tes repas et ton effort ressenti pour voir s'ils ont un lien avec tes séances.">?</span>
     </div>
     <div id="perfComparison"></div>
   </div>
@@ -301,7 +292,7 @@
   <div class="card">
     <div class="card__title">
       <span id="nutriTipsTitle">Repères nutritionnels pour le triathlon</span>
-      <span class="tip-icon" data-tip="Repères généraux — non personnalisés. Pour un suivi adapté à votre profil, consultez un nutritionniste du sport.">?</span>
+      <span class="tip-icon" data-tip="Repères généraux, les mêmes pour tout le monde : pas un avis personnalisé. Pour un suivi adapté à toi, un nutritionniste du sport.">?</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:4px" id="tipsGrid"></div>
   </div>
@@ -482,7 +473,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261118a"></script>
+<script src="app.js?v=20261119a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -829,7 +820,7 @@ function renderHydration() {
   const target = TS.hydroGoal();
   const pct = Math.min(100, Math.round(ml / target * 100));
   document.getElementById('hydroRing').style.setProperty('--pct', pct+'%');
-  document.getElementById('hydroVal').textContent = ml >= 1000 ? (ml/1000).toFixed(1)+'L' : ml+'ml';
+  document.getElementById('hydroVal').textContent = ml >= 1000 ? (ml/1000).toFixed(1).replace('.', ',')+' L' : ml+'ml';
   document.getElementById('hydroGoalLine').innerHTML = 'Objectif : <span id="hydroTarget">' + TS.formatLiters(target) + '</span> '
     + '<button type="button" class="link-btn" onclick="editHydroGoal()">Modifier</button>';
 }
@@ -1805,7 +1796,7 @@ function analyzeDescription() {
   });
   res.kcal = res.g * 4 + res.p * 4 + res.l * 9;
   if (!res.items.length) {
-    analysisEl.innerHTML = '<span style="color:var(--text-3)">Aliments non reconnus — saisissez les macros manuellement si besoin.</span>';
+    analysisEl.innerHTML = '<span style="color:var(--text-3)">Aliments non reconnus : tu peux noter les glucides, protéines et lipides toi-même.</span>';
     return;
   }
 
@@ -2010,7 +2001,7 @@ function renderEnergyBalance() {
   var h   = p.height;
   var age = p.age;
   if (!w || !h || !age) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--text-3)">Completez votre profil (age, poids, taille) pour voir vos besoins. <a href="profile.html" style="color:var(--accent2)">Mon profil</a></div>';
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-3)">Complète ton profil (âge, poids, taille) pour voir tes besoins. <a href="profile.html" style="color:var(--accent2)">Mon profil</a></div>';
     return;
   }
   var bmr  = Math.round(10*w + 6.25*h - 5*age + 5);
@@ -2118,7 +2109,7 @@ function editKcalGoal() {
 
 function saveKcalGoal() {
   var val = parseInt(document.getElementById('kcalGoalInput').value);
-  if (!val || val <= 0) { TS.toast('Entrez une valeur valide', 'error'); return; }
+  if (!val || val <= 0) { TS.toast('Entre une valeur valide', 'error'); return; }
   var nutri = getNutrition();
   if (!nutri.kcalGoals) nutri.kcalGoals = {};
   nutri.kcalGoals[currentDay] = val;
@@ -2174,7 +2165,7 @@ function renderPerfComparison() {
   var allHydro = nutri.hydration || {};
   var sessions = TS.getSessions().filter(function(s){ return s.date && s.rpe; });
   if (sessions.length < 3) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text-3)">Saisissez au moins 3 seances avec RPE pour voir l\'analyse.</div>';
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-3)">Note l\'effort ressenti d\'au moins 3 séances pour voir l\'analyse.</div>';
     return;
   }
   var days = {};
@@ -2214,15 +2205,15 @@ function renderPerfComparison() {
     var kcal  = allMeals.filter(function(m){return m.date===s.date;}).reduce(function(a,m){return a+(m.kcal||0);},0);
     var sp    = TS.SPORTS[s.sport]||{};
     rows.push('<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:12px">'
-      +'<span>'+(sp.emoji||'')+' '+s.date+'</span>'
+      +'<span>'+(sp.emoji||'')+' '+TS.parseLocalDate(s.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+'</span>'
       +'<span style="color:var(--green);font-weight:700">RPE '+s.rpe+'/10</span>'
-      +'<span style="color:var(--text-2)">'+(hydro?hydro+'ml':'non saisie')+'</span>'
+      +(hydro?'<span style="color:var(--text-2)">'+TS.formatLiters(hydro)+' d’eau</span>':'')
       +(kcal?'<span style="color:var(--text-2)">'+Math.round(kcal)+' kcal</span>':'')
-      +(s.kcal?'<span style="color:var(--run)">'+s.kcal+' kcal brulees</span>':'')
+      +(s.kcal?'<span style="color:var(--run)">'+s.kcal+' kcal brûlées</span>':'')
       +'</div>');
   });
   out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm)">'
-    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">Meilleures seances (RPE le plus bas)</div>'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">Séances les plus faciles (effort ressenti le plus bas)</div>'
     +perfLimited(rows, 'sess')+'</div>';
   // Analyse préparation nutritionnelle avant les courses associées
   // De la plus récente à la plus ancienne
@@ -2262,18 +2253,18 @@ function renderPerfComparison() {
       var objColor  = objectif === 'Objectif atteint' ? 'var(--green)' : 'var(--red)';
       compRows.push('<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
         + '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">'
-        + '<span style="font-size:12px;font-weight:700">' + c.date + ' · ' + (c.name||c.type||'Course') + '</span>'
+        + '<span style="font-size:12px;font-weight:700">' + TS.parseLocalDate(c.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) + ' · ' + (c.name||c.type||'Course') + '</span>'
         + (objectif ? '<span style="font-size:11px;color:'+objColor+';font-weight:700">'+objectif+'</span>' : '')
         + '</div>'
         + '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text-2)">'
-        + '<span>Hydratation moy. J-7 : <b style="color:var(--nat)">' + (avgHydro||'--') + ' ml</b></span>'
-        + '<span>Kcal moy. J-7 : <b style="color:var(--run)">' + (avgKcal||'--') + ' kcal</b></span>'
-        + '<span>Jours de donnees : <b>' + count + '</b></span>'
+        + '<span>Eau moy. J-7 : <b style="color:var(--nat)">' + (avgHydro ? TS.formatLiters(avgHydro) : '—') + '</b></span>'
+        + '<span>Kcal moy. J-7 : <b style="color:var(--run)">' + (avgKcal ? avgKcal.toLocaleString('fr-FR') + ' kcal' : '—') + '</b></span>'
+        + '<span>Jours notés : <b>' + count + '</b></span>'
         + '</div></div>');
     });
     if (compRows.length) {
       out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-top:8px">'
-        + '<div style="font-size:12px;font-weight:700;margin-bottom:10px">Preparation nutritionnelle avant vos courses</div>'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:10px">Préparation nutritionnelle avant tes courses</div>'
         + perfLimited(compRows, 'comp') + '</div>';
     }
   }
@@ -2284,17 +2275,15 @@ function renderPerfComparison() {
 function renderTips() {
   const tips = [
     { title:'Avant l\'effort', color:'var(--nat)',
-      text:'Repas 2-3h avant : riche en glucides complexes, pauvre en fibres et lipides. Ex: pâtes, riz, pain blanc + protéines légères.' },
+      text:'Repas 2 à 3 h avant : riche en glucides complexes, pauvre en fibres et en lipides. Ex. : pâtes, riz, pain blanc et protéines légères.' },
     { title:'Pendant l\'effort (>1h)', color:'var(--accent)',
-      text:'30-60g de glucides/heure pour les efforts > 1h. Hydratation : 500-750ml/h. Gels, barres ou boissons isotoniques.' },
+      text:'30 à 60 g de glucides par heure au-delà d’1 h d’effort. Eau : 500 à 750 ml par heure. Gels, barres ou boissons isotoniques.' },
     { title:'Récupération', color:'var(--green)',
-      text:'Dans les 30-45min post-effort : glucides + protéines (ratio 3:1). Ex: lait chocolaté, riz + poulet, yaourt + fruits.' },
+      text:'Dans les 30 à 45 min après l’effort : glucides et protéines (3 pour 1). Ex. : lait chocolaté, riz et poulet, yaourt et fruits.' },
     { title:'Hydratation', color:'var(--nat)',
-      text:'35-40ml/kg/jour au repos. Urine claire = bonne hydratation. Pesez-vous avant/après un effort long pour évaluer les pertes.' },
+      text:'35 à 40 ml par kg et par jour au repos. Urine claire = bonne hydratation. Te peser avant et après un effort long montre ce que tu as perdu.' },
     { title:'Charge glucidique', color:'var(--velo)',
-      text:'J-2 et J-1 avant une compétition longue (>2h) : augmentez les glucides à 8-10g/kg. Réduisez les fibres, lipides et protéines.' },
-    { title:'Disclaimer', color:'var(--text-3)',
-      text:'Ces repères sont généraux et indicatifs. Pour un plan nutritionnel personnalisé, consultez un nutritionniste du sport.' },
+      text:'J-2 et J-1 avant une course longue (plus de 2 h) : 8 à 10 g de glucides par kg, moins de fibres, de lipides et de protéines.' },
   ];
   document.getElementById('tipsGrid').innerHTML = tips.map(t=>`
     <div style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm)">

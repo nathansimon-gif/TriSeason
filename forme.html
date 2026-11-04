@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261118a"></script>
+  <script src="theme.js?v=20261119a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261118a"></script>
+  <script src="auth-guard.js?v=20261119a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261119a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -88,11 +88,6 @@
     .hp-sports { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; }
     .hp-sports label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
     .hp-sports input { accent-color:var(--accent); }
-    .disclaimer-box {
-      background: rgba(240,185,65,.08); border: 1px solid rgba(240,185,65,.25);
-      border-radius: var(--r-sm); padding: 12px 14px; font-size: 12px;
-      color: var(--text-2); line-height: 1.6; margin-bottom: 16px;
-    }
   </style>
 </head>
 <body>
@@ -118,12 +113,8 @@
 <div class="page"><div class="container">
 
   <div class="page-header" style="margin-bottom:16px">
-    <h1>Forme & Prévisions</h1>
-    <p>Estimations de temps de course et analyse de la charge d'entraînement</p>
-  </div>
-
-  <div class="disclaimer-box">
-    Ces estimations sont basées sur des modèles statistiques génériques (Riegel, Banister) et sur vos propres données. Elles ne remplacent pas un avis d'entraîneur ou de médecin du sport, et leur fiabilité dépend directement du volume de données saisies.
+    <h1 style="display:flex;align-items:center;gap:8px">Forme & Prévisions <span class="tip-icon" data-tip="Ces estimations viennent de modèles connus (Riegel pour les temps de course, Banister pour la charge) appliqués à tes données. Plus tu as de séances, plus elles sont fiables. Ce n'est pas un avis d'entraîneur ni de médecin.">?</span></h1>
+    <p>Ta forme du moment, ta charge d'entraînement et tes temps de course estimés</p>
   </div>
 
   <!-- ── Prédicteur de temps (Riegel) ── -->
@@ -196,7 +187,7 @@
   <div class="card" style="margin-bottom:12px" id="healthCard">
     <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span>Blessures, maladie et reprise</span>
-      <span class="tip-icon" data-tip="Option facultative. Note une blessure, une maladie, une grossesse ou un arrêt : tes défis s'adaptent, ta reprise est suivie semaine après semaine et, pour une blessure, la douleur notée sur tes séances est affichée à côté de ton volume.">?</span>
+      <span class="tip-icon" data-tip="Option facultative. Pendant un arrêt (blessure, maladie, grossesse ou pause), tes défis de la semaine s'adaptent et ta série est mise en pause. À la reprise, tu vois ta progression semaine après semaine, sans comparaison avec ton niveau d'avant. Pour une blessure, la douleur notée sur tes séances s'affiche à côté de ton volume d'entraînement.">?</span>
       <button class="btn btn--sm" id="hpAddBtn" style="margin-left:auto;display:none" onclick="openHealthModal()">+ Ajouter</button>
     </div>
     <div id="healthBody"></div>
@@ -206,7 +197,7 @@
   <div class="card" style="margin-bottom:12px" id="cycleCard">
     <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span>Cycle menstruel</span>
-      <span class="tip-icon" data-tip="Option facultative. Note le début de tes règles : l'appli calcule la durée moyenne de ton cycle, la phase du moment (estimation), prévoit tes prochaines règles et compare tes séances pendant les règles et le reste du temps. Des faits sur tes données, jamais un avis médical.">?</span>
+      <span class="tip-icon" data-tip="Option facultative. Note le début de tes règles : l'appli calcule la durée moyenne de ton cycle et la phase du moment (estimation), montre tes prochaines règles prévues dans le calendrier et compare ton ressenti et ton effort pendant les règles et le reste du temps. Tu peux aussi noter des signes du jour (crampes, fatigue, sommeil…). Contraception hormonale, cycle irrégulier, grossesse ou ménopause : l'appli s'adapte et n'invente pas de phases. Des faits sur tes données, jamais un avis médical.">?</span>
     </div>
     <div id="cycleBody"></div>
   </div>
@@ -249,9 +240,9 @@
   <!-- ── Observations (corrélations descriptives) ── -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
-      <span>Observations sur vos données</span>
+      <span>Observations sur tes données</span>
       <span class="confidence-badge confidence-badge--low">Descriptif — non causal</span>
-      <span class="tip-icon" data-tip="Ces observations décrivent des tendances dans VOS données uniquement — elles ne prouvent aucun lien de cause à effet et reposent souvent sur un petit nombre d'exemples.">?</span>
+      <span class="tip-icon" data-tip="Ces observations décrivent des tendances dans tes données seulement. Elles ne prouvent aucun lien de cause à effet et reposent souvent sur peu d'exemples.">?</span>
     </div>
     <div id="observations"></div>
   </div>
@@ -320,7 +311,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261118a"></script>
+<script src="app.js?v=20261119a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -422,7 +413,7 @@ function renderPrediction() {
   const src   = recs.find(r => r.id === srcId);
 
   if (!src) {
-    el.innerHTML = `<div class="empty"><div class="empty__text">Ajoutez au moins un record dans cette discipline pour obtenir des prédictions.</div>
+    el.innerHTML = `<div class="empty"><div class="empty__text">Ajoute au moins un record dans ce sport pour voir des temps estimés.</div>
       <a href="records.html" class="btn btn--ghost btn--sm" style="margin-top:8px">Ajouter un record →</a></div>`;
     return;
   }
@@ -442,7 +433,7 @@ function renderPrediction() {
 
   el.innerHTML = `
     <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">
-      Basé sur votre record de <b>${src.dist}</b> en <b style="color:var(--accent2)">${src.time}</b>${src.date ? ' (' + new Date(src.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) + ')' : ''}
+      D'après ton record de <b>${src.dist}</b> en <b style="color:var(--accent2)">${src.time}</b>${src.date ? ' (' + TS.parseLocalDate(src.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) + ')' : ''}
     </div>
     ${rows.map(r => `<div class="pred-row">
       <div class="pred-row__dist">${r.dist}</div>
@@ -480,7 +471,7 @@ function renderPMC() {
   const sessions = TS.getSessions().filter(s => s.date && s.duration && s.rpe);
   if (sessions.length < 5) {
     document.getElementById('tsbTiles').innerHTML =
-      '<div style="grid-column:1/-1"><div class="empty"><div class="empty__text">Saisissez au moins 5 séances avec durée et RPE pour voir votre courbe de forme.</div></div></div>';
+      '<div style="grid-column:1/-1"><div class="empty"><div class="empty__text">Note au moins 5 séances avec durée et effort ressenti pour voir ta courbe de forme.</div></div></div>';
     document.getElementById('tsbInterpretation').textContent = '';
     return;
   }
@@ -521,12 +512,12 @@ function renderPMC() {
 
   // Interpretation
   let msg;
-  if (last.tsb > 15) msg = "Forme très fraîche — vous êtes bien reposé, potentiellement un peu en sous-charge si loin d'une échéance.";
-  else if (last.tsb > 5) msg = "Bonne fraîcheur — profil favorable à l'approche d'une compétition.";
-  else if (last.tsb > -10) msg = "Charge équilibrée — vous entraînez sans excès de fatigue accumulée.";
-  else if (last.tsb > -25) msg = "Fatigue significative — phase de charge active, pensez à intégrer de la récupération.";
-  else msg = "Fatigue élevée — risque de surentraînement si cette tendance se prolonge. Une semaine allégée pourrait être bénéfique.";
-  document.getElementById('tsbInterpretation').innerHTML = `<b>Interprétation :</b> ${msg}`;
+  if (last.tsb > 15) msg = "Très frais : tu es bien reposé, peut-être un peu en sous-charge si ta prochaine course est loin.";
+  else if (last.tsb > 5) msg = "Bonne fraîcheur : un profil favorable à l'approche d'une course.";
+  else if (last.tsb > -10) msg = "Charge équilibrée : tu t'entraînes sans trop de fatigue accumulée.";
+  else if (last.tsb > -25) msg = "Fatigue marquée : tu es en phase de charge, la récupération compte aussi.";
+  else msg = "Fatigue élevée : si ça dure, le risque de surentraînement augmente. Une semaine plus légère peut aider.";
+  document.getElementById('tsbInterpretation').innerHTML = `<b>En résumé :</b> ${msg}`;
 
   // Chart — last 90 days max for readability
   const recent = series.slice(-90);
@@ -590,10 +581,7 @@ function renderCycle() {
   if (!body) return;
   if (!TS.cycleEnabled()) {
     body.innerHTML = `
-      <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note le début de tes règles : l'appli calcule la durée moyenne
-        de ton cycle et la phase du moment (estimation), te montre tes prochaines règles prévues dans le calendrier, et compare ton
-        ressenti et ton effort pendant tes règles et le reste du temps. Tu peux aussi noter quelques signes du jour (crampes, fatigue,
-        sommeil…). Contraception hormonale, cycle irrégulier, grossesse ou ménopause : l'appli s'adapte et n'invente pas de phases.</div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note tes règles : l'appli calcule ton cycle et le compare à tes séances.</div>
       <label class="hp-consent"><input type="checkbox" id="cyConsent" onchange="document.getElementById('cyEnableBtn').disabled=!this.checked">
         <span>J'accepte que TriSeason enregistre ces informations de santé (dates de mes règles, type de cycle, signes notés) pour me
         les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
@@ -711,10 +699,7 @@ function renderHealth() {
   destroyHealthChart();
   if (!on) {
     body.innerHTML = `
-      <div style="font-size:13px;color:var(--text-2);line-height:1.6">Une blessure, une maladie, une grossesse ou une pause ?
-        Note-la ici : pendant l'arrêt, tes défis de la semaine s'adaptent et ta série est mise en pause ; à la reprise, tu vois
-        ta progression semaine après semaine (sans comparaison avec ton niveau d'avant) et, pour une blessure, la douleur
-        notée sur tes séances à côté de ton volume d'entraînement.</div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note un arrêt (blessure, maladie, grossesse, pause) : tes défis s'adaptent.</div>
       <label class="hp-consent"><input type="checkbox" id="hpConsent" onchange="document.getElementById('hpEnableBtn').disabled=!this.checked">
         <span>J'accepte que TriSeason enregistre ces informations de santé (type d'arrêt, zone blessée, dates, notes et douleur
         notée sur mes séances) pour me les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
@@ -942,6 +927,7 @@ function renderObservations() {
   const el = document.getElementById('observations');
   const observations = [];
 
+  const obsNum = v => (Math.round(v * 10) / 10).toLocaleString('fr-FR');
   // 1. Poids vs allure (vélo W/kg trend, ou run pace trend)
   const weights = (TS.getData().weight || []).slice().sort((a,b) => a.date.localeCompare(b.date));
   if (weights.length >= 3) {
@@ -950,7 +936,8 @@ function renderObservations() {
     if (Math.abs(diff) >= 1) {
       observations.push({
         title: 'Évolution du poids',
-        text: `Votre poids a ${diff > 0 ? 'augmenté' : 'diminué'} de ${Math.abs(diff)} kg depuis le début de vos mesures (${weights.length} pesées). ${Math.abs(diff) >= 3 ? "Une variation de cette ampleur peut avoir un effet notable sur vos performances en course à pied et en vélo (rapport poids/puissance)." : "Variation modérée, effet probablement limité sur vos performances."}`
+        text: `Ton poids a ${diff > 0 ? 'augmenté' : 'baissé'} de ${obsNum(Math.abs(diff))} kg (${weights.length} pesées).`,
+        tip: Math.abs(diff) >= 3 ? 'Une variation de cette ampleur peut compter en course à pied et en vélo (rapport poids / puissance).' : 'Variation modérée : effet probablement limité sur tes performances.'
       });
     }
   }
@@ -972,7 +959,8 @@ function renderObservations() {
       if (Math.abs(diff) >= 0.5) {
         observations.push({
           title: 'Ressenti d’effort (RPE)',
-          text: `Votre RPE moyen est passé de ${firstAvg.toFixed(1)}/10 à ${lastAvg.toFixed(1)}/10 entre vos premières et dernières séances renseignées. ${diff < 0 ? "Une baisse peut indiquer une progression de la forme (mêmes efforts perçus comme plus faciles)." : "Une hausse peut refléter une charge d'entraînement plus exigeante ou un début de fatigue accumulée."}`
+          text: `Ton effort ressenti moyen ${diff < 0 ? 'baisse' : 'monte'} : ${obsNum(firstAvg)} → ${obsNum(lastAvg)}/10.`,
+          tip: 'Moyenne du premier mois comparée à celle du dernier mois noté. ' + (diff < 0 ? 'Une baisse peut indiquer une progression : les mêmes efforts paraissent plus faciles.' : 'Une hausse peut venir d\'un entraînement plus exigeant ou d\'un début de fatigue.')
         });
       }
     }
@@ -985,7 +973,8 @@ function renderObservations() {
     const pct = Math.round(highRpeCount / totalSessions * 100);
     observations.push({
       title: 'Répartition de l’intensité',
-      text: `${pct}% de vos séances renseignées ont un RPE ≥ 8/10 (${highRpeCount} sur ${totalSessions}). ${pct > 30 ? "C'est une proportion élevée — la littérature sportive recommande généralement 70-80% du volume en endurance fondamentale (RPE bas) pour limiter le risque de surentraînement." : "Cette répartition semble cohérente avec un modèle d'entraînement polarisé classique."}`
+      text: `${pct} % de tes séances sont dures (effort 8/10 ou plus : ${highRpeCount} sur ${totalSessions}).`,
+      tip: pct > 30 ? 'C\'est une part élevée. Beaucoup de plans d\'entraînement gardent 70 à 80 % du volume en effort facile. Repère général, pas un conseil personnalisé.' : 'Une répartition proche de ce que suivent beaucoup de plans : surtout des séances faciles, quelques-unes dures.'
     });
   }
 
@@ -995,7 +984,8 @@ function renderObservations() {
     const achieved = comps.filter(c => timeToSec(c.actual_time) <= timeToSec(c.goal_time)).length;
     observations.push({
       title: 'Taux de réussite des objectifs',
-      text: `Vous avez atteint votre objectif de temps sur ${achieved} course${achieved>1?'s':''} sur ${comps.length} renseignée${comps.length>1?'s':''} (${Math.round(achieved/comps.length*100)}%). ${comps.length < 5 ? "Échantillon encore restreint — ce taux se précisera avec plus de courses." : ""}`
+      text: `Objectif de temps atteint sur ${achieved} course${achieved>1?'s':''} sur ${comps.length} (${Math.round(achieved/comps.length*100)} %).`,
+      tip: comps.length < 5 ? 'Encore peu de courses : ce taux se précisera avec les prochaines.' : ''
     });
   }
 
@@ -1011,7 +1001,7 @@ function renderObservations() {
       { label: 'Mois différents avec des séances',  current: monthsCount,     target: 2  },
       { label: 'Compétitions avec objectif et résultat', current: comps.length, target: 2 },
     ];
-    el.innerHTML = '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Pas encore assez de données pour générer des observations. Voici ce qu\u2019il vous reste à saisir :</div>'
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Pas encore assez de données pour des observations. Ce qu\u2019il te reste à noter :</div>'
       + progressRows.map(r => {
           const pct = Math.min(100, Math.round(r.current / r.target * 100));
           const done = r.current >= r.target;
@@ -1024,13 +1014,13 @@ function renderObservations() {
             + '<div class="progress"><div class="progress__bar" style="width:' + pct + '%;background:' + color + '"></div></div>'
             + '</div>';
         }).join('')
-      + '<div style="font-size:11px;color:var(--text-3);margin-top:6px">Certaines observations nécessitent aussi une variation minimale dans vos données (ex : au moins 1 kg de différence de poids), même une fois le seuil de quantité atteint.</div>';
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:6px">Certaines observations demandent aussi un changement dans tes données (par exemple au moins 1 kg d\u2019écart de poids).</div>';
     return;
   }
 
   el.innerHTML = observations.map(o => `
     <div class="obs-card">
-      <div class="obs-card__title">${o.title}</div>
+      <div class="obs-card__title" style="display:flex;align-items:center;gap:6px">${o.title}${o.tip ? ` <span class="tip-icon" data-tip="${o.tip.replace(/"/g, '&quot;')}">?</span>` : ''}</div>
       <div class="obs-card__text">${o.text}</div>
     </div>`).join('');
 }
