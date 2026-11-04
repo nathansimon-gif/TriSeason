@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261120a"></script>
+  <script src="theme.js?v=20261121a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261120a"></script>
+  <script src="auth-guard.js?v=20261121a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261120a">
+  <link rel="stylesheet" href="style.css?v=20261121a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -144,6 +144,21 @@
 
     <!-- Stats rapides -->
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px" id="quickStats"></div>
+  </div>
+
+  <!-- ── Poids (venu du Dashboard) : dernière pesée, ajout, courbe, historique ── -->
+  <div class="section-card" id="poids">
+    <div class="section-card__title" style="justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px">Poids <span class="tip-icon" data-tip="Sert au W/kg vélo, à l'IMC et à tes besoins en calories. Une pesée par jour : en noter une autre le même jour la remplace. Ta taille se change dans « Modifier ».">?</span></span>
+      <span id="pwLatest" style="font-size:13px;font-weight:500;color:var(--text-2)"></span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <input class="form-input" type="number" inputmode="decimal" step="0.1" id="weightInput" placeholder="kg" aria-label="Poids en kg" style="width:90px">
+      <input class="form-input" type="date" id="weightDate" aria-label="Date de la pesée" style="width:auto;min-width:0">
+      <button class="btn btn--primary btn--sm" onclick="saveWeightEntry()">Noter</button>
+    </div>
+    <div id="pwChart" style="margin-top:12px"></div>
+    <div id="weightHistory" style="margin-top:8px"></div>
   </div>
 
   <!-- ── Records personnels : une ligne et un lien (le détail est sur la page Records) ── -->
@@ -431,7 +446,7 @@
 </div>
 
 
-<script src="app.js?v=20261120a"></script>
+<script src="app.js?v=20261121a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -444,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
   openProfileTab();
   renderSportChoice();
   renderProfile();
+  renderWeightCard();
   renderPBs();
   renderSeasonStats();
   renderFCZones();
@@ -575,7 +591,7 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderHealthOption(); renderCycleOption(); renderGear(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderWeightCard(); renderHealthOption(); renderCycleOption(); renderGear(); });
 
 // ── Apparence ───────────────────────────────────────────────────────────────
 function renderThemePick() {
@@ -771,7 +787,7 @@ function renderProfile() {
     p.club,
     p.age ? p.age + ' ans' : null,
     p.height ? p.height + ' cm' : null,
-    weight ? weight + ' kg' : null,
+    weight ? String(weight).replace('.', ',') + ' kg' : null,
   ].filter(Boolean).join(' · ');
   document.getElementById('profileSub').textContent = sub || 'Complète ton profil →';
 
@@ -809,6 +825,65 @@ function renderProfile() {
       document.getElementById('quickStats').after(banner);
     }
   }
+}
+
+// ── Poids ─────────────────────────────────────────────────────────────────────
+function pwFmt(v) { return Number(v).toFixed(1).replace('.', ','); }
+function pwDay(d, year) { return TS.parseLocalDate(d).toLocaleDateString('fr-FR', year ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
+function renderWeightCard() {
+  const all = TS.getWeight().filter(w => w.value > 0).sort((a, b) => a.date.localeCompare(b.date));
+  const last = all[all.length - 1];
+  const p = TS.getProfile();
+  const bmi = last && p.height ? last.value / ((p.height / 100) ** 2) : null;
+  document.getElementById('pwLatest').innerHTML = last
+    ? `<b style="color:var(--text);font-size:15px">${pwFmt(last.value)} kg</b> · ${pwDay(last.date)}${bmi ? ' · IMC ' + bmi.toFixed(1).replace('.', ',') : ''}` : 'Aucune pesée';
+  const wd = document.getElementById('weightDate');
+  wd.max = TS.localDateStr(); if (!wd.value) wd.value = TS.localDateStr();
+  // Courbe des 30 dernières pesées (dessin simple, sans bibliothèque)
+  const pts = all.slice(-30);
+  const box = document.getElementById('pwChart');
+  if (pts.length < 2) { box.innerHTML = ''; }
+  else {
+    const W = 300, H = 70, pad = 4;
+    const vals = pts.map(x => x.value), min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
+    const xy = pts.map((x, i) => [pad + i * (W - 2 * pad) / (pts.length - 1), H - pad - (x.value - min) / span * (H - 2 * pad)]);
+    const line = xy.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ');
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:70px;display:block" role="img" aria-label="Évolution du poids : de ${pwFmt(pts[0].value)} à ${pwFmt(last.value)} kg">
+        <path d="${line}" fill="none" stroke="var(--green)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3)"><span>${pwDay(pts[0].date)} · ${pwFmt(pts[0].value)} kg</span><span>min ${pwFmt(min)} · max ${pwFmt(max)}</span></div>`;
+  }
+  renderWeightHistory();
+}
+function saveWeightEntry() {
+  const val = parseFloat(String(document.getElementById('weightInput').value).replace(',', '.'));
+  if (!val || val < 20 || val > 250) { TS.toast('Poids invalide', 'error'); return; }
+  const dateEl = document.getElementById('weightDate');
+  const date = dateEl.value || TS.localDateStr();
+  if (date > TS.localDateStr()) { TS.toast('La date ne peut pas être dans le futur', 'error'); return; }
+  const exists = TS.getWeight().some(w => w.date === date);
+  TS.saveWeight({ date, value: val });
+  document.getElementById('weightInput').value = '';
+  dateEl.value = TS.localDateStr();
+  TS.toast(exists ? 'Pesée du jour remplacée' : 'Poids enregistré');
+  renderWeightCard(); renderProfile();
+}
+function deleteWeightEntry(date) {
+  if (!confirm('Supprimer la pesée du ' + pwDay(date, true) + ' ?')) return;
+  TS.deleteWeight(date);
+  TS.toast('Pesée supprimée');
+  renderWeightCard(); renderProfile();
+}
+let weightShowAll = false;
+function toggleWeightHistory() { weightShowAll = !weightShowAll; renderWeightHistory(); }
+function renderWeightHistory() {
+  const el = document.getElementById('weightHistory');
+  const all = TS.getWeight().filter(w => w.value > 0).slice().sort((a, b) => b.date.localeCompare(a.date));
+  if (!all.length) { el.innerHTML = ''; return; }
+  const list = weightShowAll ? all : all.slice(0, 3);
+  el.innerHTML = list.map(w => `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-top:1px solid var(--border);font-size:12px">
+      <span style="color:var(--text-2)">${pwDay(w.date, true)}</span><span style="font-weight:600;font-family:var(--mono)">${pwFmt(w.value)} kg</span>
+      <button class="btn btn--ghost btn--sm btn--icon" title="Supprimer cette pesée" aria-label="Supprimer la pesée du ${pwDay(w.date, true)}" onclick="deleteWeightEntry('${w.date}')">×</button></div>`).join('')
+    + (all.length > 3 ? `<button class="btn btn--ghost btn--sm" onclick="toggleWeightHistory()" style="margin-top:6px">${weightShowAll ? 'Voir moins' : 'Voir tout (' + all.length + ')'}</button>` : '');
 }
 
 // ── Personal bests ────────────────────────────────────────────────────────────
