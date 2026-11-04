@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261121a"></script>
+  <script src="theme.js?v=20261122a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261121a"></script>
+  <script src="auth-guard.js?v=20261122a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,8 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261121a">
-  <script src="vendor/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css?v=20261122a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -43,6 +42,24 @@
       font-size:16px; display:inline-flex; align-items:center; gap:4px;
       padding:2px 6px; border-radius:20px; background:var(--surface2);
     }
+      /* Liste des séances : une ligne lisible sur téléphone (date + sport, puis les chiffres) */
+    .ses-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+    .ses-sum { font-size:13px; color:var(--text-2); margin:0 2px 8px; }
+    .ses-sum b { color:var(--text); font-weight:600; }
+    .ses-card { padding:6px 0; }
+    .ses-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:4px 12px; align-items:center; width:100%;
+      padding:10px 16px; border:0; border-bottom:1px solid var(--border); background:none; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+    .ses-row:last-child { border-bottom:0; }
+    .ses-row:hover { background:var(--surface2); }
+    .ses-row__date { font-size:12px; color:var(--text-2); min-width:62px; line-height:1.3; }
+    .ses-row__date b { display:block; color:var(--text); font-size:13px; font-weight:600; }
+    .ses-row__main { min-width:0; }
+    .ses-row__title { font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; min-width:0; }
+    .ses-row__title span.t { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ses-row__meta { font-size:12px; color:var(--text-2); margin-top:2px; overflow-wrap:anywhere; }
+    .ses-row__big { font-size:15px; font-weight:600; text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .ses-row__big small { display:block; font-size:11px; font-weight:400; color:var(--text-2); }
+    .ses-tag { font-size:10px; font-weight:600; padding:1px 6px; border-radius:999px; background:var(--accent-dim); color:var(--accent); white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -60,11 +77,7 @@
     <a href="aide.html?depuis=sessions.html" class="nav__link">Aide</a>
   </div>
   <div class="nav__actions">
-    <label class="btn btn--ghost btn--sm" style="cursor:pointer" title="Importer GPX, FIT ou TCX depuis Garmin, Coros, Strava...">
-      ↑ Importer fichier
-      <input type="file" accept=".gpx,.fit,.tcx" multiple style="display:none" onchange="handleImportFiles(event)">
-    </label>
-    <button class="btn btn--primary" onclick="openSessionModal()">+ Saisie manuelle</button>
+    <button class="btn btn--primary" onclick="openSessionModal()">+ Nouvelle séance</button>
     <a href="profile.html" class="btn btn--ghost btn--sm btn--icon nav__profile" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
@@ -74,14 +87,17 @@
 
   <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
     <div>
-      <h1>Séances détaillées</h1>
-      <p>FC, puissance, W/kg — une ligne par séance</p>
+      <h1>Séances</h1>
+      <p>Ajoute, importe et retrouve tes séances</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn--ghost" id="stravaRefreshBtn" onclick="refreshStrava()" style="display:none" title="Chercher tes nouvelles séances sur Strava">Actualiser Strava</button>
-      <button class="btn btn--primary" onclick="openSessionModal()">+ Nouvelle séance</button>
+      <button class="btn btn--ghost" onclick="openImportModal()">Importer des séances</button>
     </div>
   </div>
+
+  <!-- ── Rappel : séances récentes sans ressenti (une action, donc en haut) ── -->
+  <div id="feelingNudge"></div>
 
   <!-- ── Import zone ── -->
   <div id="importZone" style="display:none;margin-bottom:16px">
@@ -104,66 +120,25 @@
   </div>
 
 
-  <!-- ── Drop zone ── -->
-  <div id="dropZone" style="border:2px dashed var(--border);border-radius:var(--r);padding:24px;text-align:center;margin-bottom:16px;transition:all .2s;cursor:pointer"
-    ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-    ondragleave="this.style.borderColor='var(--border)'"
-    ondrop="handleDrop(event)">
-    
-    <div style="font-size:14px;font-weight:600;color:var(--text);display:inline-flex;align-items:center;gap:8px">Glisse tes fichiers ici <span class="tip-icon" data-tip="Fichiers .fit, .gpx ou .tcx, venus de Garmin Connect, Coros, Polar Flow, Suunto, Wahoo ou d'un export Strava. 50 fichiers au plus à la fois, pour que l'import reste rapide.">?</span></div>
-    <div style="font-size:12px;color:var(--text-2);margin-top:4px">.fit, .gpx ou .tcx · 50 au plus à la fois</div>
-    <label class="btn btn--ghost btn--sm" style="margin-top:12px;cursor:pointer;display:inline-flex">
-      Sélectionner des fichiers
-      <input type="file" accept=".gpx,.fit,.tcx" multiple style="display:none" onchange="handleImportFiles(event)">
-    </label>
+  <!-- ── Filtres : une ligne ; dates et filtres avancés derrière « Filtres » ── -->
+  <div class="ses-filters">
+    <select class="form-select" id="filterSport" onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Sport">
+      <option value="">Tous les sports</option>
+      <option value="nat">Natation</option>
+      <option value="velo">Vélo</option>
+      <option value="run">Course</option>
+    </select>
+    <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" aria-label="Saison"></select>
+    <button class="btn btn--ghost btn--sm" onclick="toggleAdvancedFilters()" id="advFilterToggle" aria-expanded="false">Filtres ▾</button>
   </div>
-
-  <!-- ── Archive Strava : tout l'historique d'un coup ── -->
-  <div class="card" style="margin-bottom:16px" id="historique-strava">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <div style="min-width:0;flex:1 1 280px">
-        <div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px">Tout ton historique Strava d'un coup <span class="tip-icon" data-tip="Seul le résumé de tes activités est lu dans l'archive : c'est rapide, même pour plusieurs années. Tu vois les séances avant de les importer, et les doublons sont écartés.">?</span></div>
-        <div style="font-size:12px;color:var(--text-2);margin-top:3px" id="archiveIntro">Avec l'archive (.zip) que Strava t'envoie par e-mail.</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn--ghost btn--sm" id="historyFromStravaBtn" onclick="loadStravaHistory()" style="display:none">Depuis mon compte Strava</button>
-        <label class="btn btn--ghost btn--sm" style="cursor:pointer">
-          Choisir l'archive (.zip)
-          <input type="file" id="archiveInput" accept=".zip,.csv" style="display:none" onchange="handleArchive(event)">
-        </label>
-      </div>
-    </div>
-    <details style="margin-top:10px;font-size:12px;color:var(--text-2)">
-      <summary style="cursor:pointer;color:var(--text)">Comment obtenir mon archive Strava ?</summary>
-      <ol style="margin:8px 0 0;padding-left:18px;line-height:1.7">
-        <li>Sur strava.com (ordinateur) : ta photo → <b>Paramètres</b> → <b>Mon compte</b>.</li>
-        <li>En bas : <b>Télécharger ou supprimer votre compte</b> → <b>Commencer</b> → <b>Demander une archive</b> (ton compte n'est pas supprimé).</li>
-        <li>Strava t'envoie un e-mail avec un lien (en général en quelques minutes ou heures). Télécharge le fichier .zip.</li>
-        <li>Choisis ce fichier ici, sans le décompresser.</li>
-      </ol>
-    </details>
-    <div id="archiveResult"></div>
-  </div>
-
-  <!-- ── Filter bar ── -->
-  <div class="card" style="margin-bottom:16px;padding:14px 20px">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison (année)"></select>
-      <select class="form-select" id="filterSport" onchange="renderSessions()" style="width:auto">
-        <option value="">Tous les sports</option>
-        <option value="nat">Natation</option>
-        <option value="velo">Vélo</option>
-        <option value="run">Course</option>
-      </select>
-      <input class="form-input" type="date" id="filterFrom" onchange="renderSessions()" style="width:auto" placeholder="Du">
-      <input class="form-input" type="date" id="filterTo"   onchange="renderSessions()" style="width:auto" placeholder="Au">
-      <button class="btn btn--ghost btn--sm" onclick="toggleAdvancedFilters()" id="advFilterToggle">Plus de filtres ▾</button>
-      <button class="btn btn--ghost btn--sm" onclick="clearFilters()">Effacer</button>
-      <span id="sessionCount" style="font-size:13px;color:var(--text-2);margin-left:auto"></span>
-      <button class="btn btn--danger btn--sm" onclick="confirmDeleteAllSessions()" title="Supprimer toutes les séances">🗑 Tout supprimer</button>
-    </div>
-    <div id="advancedFilters" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
+  <div id="advancedFilters" class="card" style="display:none;margin-bottom:12px;padding:14px 16px">
+      <div style="display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text-2);min-width:60px">Dates</span>
+          <input class="form-input" type="date" id="filterFrom" onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Du">
+          <span style="font-size:11px;color:var(--text-3)">au</span>
+          <input class="form-input" type="date" id="filterTo"   onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Au">
+        </div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:11px;color:var(--text-2);min-width:60px">Distance</span>
           <input class="form-input" type="number" step="0.1" id="filterDistMin" onchange="renderSessions()" placeholder="Min" style="width:80px">
@@ -191,81 +166,77 @@
           <input class="form-input" type="number" min="1" max="10" id="filterRpeMax" onchange="renderSessions()" placeholder="Max" style="width:70px">
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- ── Stats strip ── -->
-  <div class="kpi-grid" id="sessionStats" style="margin-bottom:16px"></div>
-
-  <!-- ── Charts ── -->
-  <div class="grid-2" style="margin-bottom:16px">
-    <div class="card">
-      <div class="card__title">FC moyenne par séance
-        <span id="chartFCRange" style="font-weight:500;color:var(--text-3);text-transform:none;letter-spacing:0;font-size:11px"></span>
-        <span class="tip-icon" data-tip="FC moyenne enregistrée pour chaque séance, sur les 6 derniers mois. Si tu choisis une saison, le graphique couvre toute la saison.">?</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <button class="btn btn--ghost btn--sm" onclick="clearFilters()">Effacer les filtres</button>
+        <button class="btn btn--danger btn--sm" onclick="confirmDeleteAllSessions()" style="margin-left:auto">Supprimer toutes les séances</button>
       </div>
-      <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartFC"></canvas><div id="chartFCEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--text-3);padding:0 16px">Aucune donnée de fréquence cardiaque sur cette période.</div></div>
-    </div>
-    <div class="card">
-      <div class="card__title">Puissance & W/kg
-        <span id="chartPowerRange" style="font-weight:500;color:var(--text-3);text-transform:none;letter-spacing:0;font-size:11px"></span>
-        <span class="tip-icon" data-tip="Puissance moyenne (W) de chaque séance, sur les 6 derniers mois. Si tu choisis une saison, le graphique couvre toute la saison.">?</span>
-      </div>
-      <div style="position:relative;height:180px;overflow:hidden"><canvas id="chartPower"></canvas><div id="chartPowerEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--text-3);padding:0 16px">Aucune donnée de puissance sur cette période.</div></div>
-    </div>
   </div>
 
-  <!-- ── W/kg reference ── -->
-  <div class="grid-2" style="margin-bottom:16px">
-    <div class="card">
-      <div class="card__title">Mon W/kg actuel (vélo)</div>
-      <div id="wkgCurrent" style="margin-bottom:12px"></div>
-      <div class="card__title" style="margin-top:12px">Référentiel W/kg</div>
-      <div id="wkgTable"></div>
-    </div>
-    <div class="card">
-      <div class="card__title">Moyennes par discipline</div>
-      <div id="sportAvgs"></div>
-    </div>
-  </div>
+  <!-- ── Chiffres de la sélection, en une ligne ── -->
+  <div class="ses-sum" id="sessionStats"></div>
 
-  <!-- ── Rappel : séances récentes sans ressenti ── -->
-  <div id="feelingNudge"></div>
-
-  <!-- ── Session list ── -->
-  <div class="card">
-    <div class="card__title">Historique des séances</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Sport</th>
-            <th>Durée</th>
-            <th>Distance</th>
-            <th>Allure/Vit.</th>
-            <th>FC moy</th>
-            <th>Puissance</th>
-            <th>W/kg</th>
-            <th>RPE</th>
-            <th>Kcal</th>
-            <th>Dénivelé</th>
-            <th>Sensation</th>
-            <th>Notes</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="sessionTable"></tbody>
-      </table>
-    </div>
+  <!-- ── Liste des séances (FC, puissance et moyennes : page Sports) ── -->
+  <div class="card ses-card">
+    <div id="sessionTable" class="ses-list"></div>
+    <div id="sessionMore" style="text-align:center;margin-top:12px"></div>
     <div id="sessionEmpty" class="empty" style="display:none">
-      
       <div class="empty__text">Aucune séance enregistrée</div>
-      <div class="empty__sub">Touche « + Nouvelle séance » pour commencer</div>
+      <div class="empty__sub">Touche « + Nouvelle séance » ou « Importer des séances » pour commencer</div>
     </div>
   </div>
 
 </div></div>
+
+<!-- ── Fenêtre « Importer » : fichiers de montre et archive Strava ── -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal__header">
+      <div class="modal__title">Importer des séances</div>
+      <button class="modal__close" onclick="closeImportModal()" aria-label="Fermer">×</button>
+    </div>
+  <!-- ── Drop zone ── -->
+  <div id="dropZone" style="border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:14px;transition:all .2s;cursor:pointer"
+    ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+    ondragleave="this.style.borderColor='var(--border)'"
+    ondrop="handleDrop(event)">
+    
+    <div style="font-size:14px;font-weight:600;color:var(--text);display:inline-flex;align-items:center;gap:8px">Glisse tes fichiers ici <span class="tip-icon" data-tip="Fichiers .fit, .gpx ou .tcx, venus de Garmin Connect, Coros, Polar Flow, Suunto, Wahoo ou d'un export Strava. 50 fichiers au plus à la fois, pour que l'import reste rapide.">?</span></div>
+    <div style="font-size:12px;color:var(--text-2);margin-top:4px">.fit, .gpx ou .tcx · 50 au plus à la fois</div>
+    <label class="btn btn--ghost btn--sm" style="margin-top:12px;cursor:pointer;display:inline-flex">
+      Sélectionner des fichiers
+      <input type="file" accept=".gpx,.fit,.tcx" multiple style="display:none" onchange="handleImportFiles(event)">
+    </label>
+  </div>
+
+  <!-- ── Archive Strava : tout l'historique d'un coup ── -->
+  <div style="border-top:1px solid var(--border);padding-top:14px" id="historique-strava">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="min-width:0;flex:1 1 280px">
+        <div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px">Tout ton historique Strava d'un coup <span class="tip-icon" data-tip="Seul le résumé de tes activités est lu dans l'archive : c'est rapide, même pour plusieurs années. Tu vois les séances avant de les importer, et les doublons sont écartés.">?</span></div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:3px" id="archiveIntro">Avec l'archive (.zip) que Strava t'envoie par e-mail.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn--ghost btn--sm" id="historyFromStravaBtn" onclick="loadStravaHistory()" style="display:none">Depuis mon compte Strava</button>
+        <label class="btn btn--ghost btn--sm" style="cursor:pointer">
+          Choisir l'archive (.zip)
+          <input type="file" id="archiveInput" accept=".zip,.csv" style="display:none" onchange="handleArchive(event)">
+        </label>
+      </div>
+    </div>
+    <details style="margin-top:10px;font-size:12px;color:var(--text-2)">
+      <summary style="cursor:pointer;color:var(--text)">Comment obtenir mon archive Strava ?</summary>
+      <ol style="margin:8px 0 0;padding-left:18px;line-height:1.7">
+        <li>Sur strava.com (ordinateur) : ta photo → <b>Paramètres</b> → <b>Mon compte</b>.</li>
+        <li>En bas : <b>Télécharger ou supprimer votre compte</b> → <b>Commencer</b> → <b>Demander une archive</b> (ton compte n'est pas supprimé).</li>
+        <li>Strava t'envoie un e-mail avec un lien (en général en quelques minutes ou heures). Télécharge le fichier .zip.</li>
+        <li>Choisis ce fichier ici, sans le décompresser.</li>
+      </ol>
+    </details>
+    <div id="archiveResult"></div>
+  </div>
+
+  </div>
+</div>
 
 <!-- ── Session modal ── -->
 <div class="modal-overlay" id="sessionModal">
@@ -390,24 +361,11 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261121a"></script>
-<script src="import.js?v=20261121a"></script>
-<script src="app.js?v=20261121a"></script>
+<script src="fit-parser.js?v=20261122a"></script>
+<script src="import.js?v=20261122a"></script>
+<script src="app.js?v=20261122a"></script>
 <script>
-let charts = {};
-Chart.defaults.animation = false;
-Chart.defaults.responsive = true;
-Chart.defaults.maintainAspectRatio = false;
 
-function makeChart(id, config) {
-  if (charts[id]) { charts[id].destroy(); charts[id] = null; }
-  const canvas = document.getElementById(id);
-  if (!canvas) return null;
-  canvas.style.display = 'block';
-  const chart = new Chart(canvas, config);
-  charts[id] = chart;
-  return chart;
-}
 
 let editId = null;
 
@@ -436,9 +394,9 @@ function onSeasonChange() {
 document.addEventListener('DOMContentLoaded', () => {
   populateSeasonFilter();
   renderSessions();
-  renderWkgTable();
-  renderSportAvgs();
   TS.initTooltips();
+  // Glisser des fichiers sur la page ouvre la fenêtre « Importer »
+  document.addEventListener('dragenter', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) openImportModal(); });
 
   // Auto-hide the "similar sessions" zone whenever it becomes empty,
   // regardless of which action (ignore / import anyway) emptied it.
@@ -455,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('triseason:update', () => {
   renderSessions();
-  renderSportAvgs();
   renderStravaRefresh();
 });
 
@@ -485,7 +442,8 @@ function toggleAdvancedFilters() {
   const btn   = document.getElementById('advFilterToggle');
   const open  = panel.style.display === 'block';
   panel.style.display = open ? 'none' : 'block';
-  btn.textContent = open ? 'Plus de filtres ▾' : 'Moins de filtres ▴';
+  btn.textContent = open ? 'Filtres ▾' : 'Filtres ▴';
+  btn.setAttribute('aria-expanded', String(!open));
 }
 
 // Musculation dans le filtre seulement si au moins une séance existe
@@ -535,240 +493,70 @@ function renderSessions() {
   if (!isNaN(rpeMin))  sessions = sessions.filter(s => (s.rpe||0) >= rpeMin);
   if (!isNaN(rpeMax))  sessions = sessions.filter(s => (s.rpe||0) <= rpeMax);
 
-  document.getElementById('sessionCount').textContent = `${sessions.length} séance${sessions.length>1?'s':''}`;
   renderSessionStats(sessions);
-  const chartWin = getChartWindow(sessions);
-  renderFCChart(chartWin.list, chartWin.label);
-  renderPowerChart(chartWin.list, chartWin.label);
 
-  const tbody = document.getElementById('sessionTable');
+  const list  = document.getElementById('sessionTable');
   const empty = document.getElementById('sessionEmpty');
-
+  const more  = document.getElementById('sessionMore');
   if (!sessions.length) {
-    tbody.innerHTML = '';
+    list.innerHTML = ''; more.innerHTML = '';
     empty.style.display = 'flex';
     return;
   }
   empty.style.display = 'none';
+  const shown = sessions.slice(0, sessionLimit);
+  list.innerHTML = shown.map(sessionRowHtml).join('');
+  const left = sessions.length - shown.length;
+  more.innerHTML = left > 0
+    ? `<button class="btn btn--ghost btn--sm" onclick="sessionLimit += SESSION_PAGE; renderSessions()">Voir plus (${Math.min(left, SESSION_PAGE)}${left > SESSION_PAGE ? ' sur ' + left : ''})</button>` : '';
+}
 
-  tbody.innerHTML = sessions.map(s => {
-    const sp = TS.SPORTS[s.sport] || {};
-    const pace = TS.calcPace(s.duration, s.distance, s.sport);
-    const wkg  = s.power_avg ? TS.calcWkg(s.power_avg, s.date) : null;
-    return `<tr>
-      <td style="white-space:nowrap">${s.date ? new Date(s.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—'}</td>
-      <td><span class="badge-sport badge-sport--${s.sport}">${sp.label||s.sport}</span></td>
-      <td class="td-num">${s.duration ? formatDuration(s.duration) : '—'}</td>
-      <td class="td-num">${s.distance ? s.distance+' km' : (s.exercises ? s.exercises.length + ' exo' + (s.exercises.length > 1 ? 's' : '') : '—')}</td>
-      <td class="td-num"${s.exercises ? ' title="Tonnage : séries × répétitions × kg"' : ''}>${pace || (s.exercises && TS.muscuVolume(s) ? TS.muscuVolume(s).toLocaleString('fr-FR') + ' kg' : '—')}</td>
-      <td class="td-num">${s.fc_avg ? s.fc_avg+' bpm' : '—'}</td>
-      <td class="td-num">${s.power_avg ? s.power_avg+' W' : '—'}</td>
-      <td class="td-num" style="color:${wkg ? TS.wkgLevel(wkg).color : 'var(--text-2)'}">${wkg ? wkg+' W/kg' : '—'}</td>
-      <td class="td-num">${s.rpe||'—'}</td>
-      <td class="td-num">${s.kcal ? s.kcal+' kcal' : '—'}</td>
-      <td class="td-num">${s.elevation ? s.elevation+' m' : '—'}</td>
-      <td style="text-align:center">${s.sensation ? ['','😫','😕','😐','🙂','😄'][s.sensation] : ''}</td>
-      <td style="font-size:12px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        ${s.comp_id ? '<span style="font-size:10px;background:rgba(185,236,74,.15);color:var(--accent2);padding:1px 6px;border-radius:10px;margin-right:4px">⚑ Course</span>' : ''}${s.strava_id ? '<a href="https://www.strava.com/activities/' + encodeURIComponent(s.strava_id) + '" target="_blank" rel="noopener" style="color:#fc5200;font-size:11px;margin-right:4px" title="Voir sur Strava">Voir sur Strava</a>' : ''}${escHtml(s.notes||'')}
-      </td>
-      <td style="white-space:nowrap">
-        <button class="btn btn--ghost btn--sm btn--icon" onclick="editSession('${s.id}')" title="Modifier">✏️</button>
-        <button class="btn btn--danger btn--sm btn--icon" onclick="quickDeleteSession('${s.id}')" title="Supprimer">🗑</button>
-      </td>
-    </tr>`;
-  }).join('');
+// 30 séances affichées, puis « Voir plus » ; on revient à 30 quand les filtres changent
+const SESSION_PAGE = 30;
+let sessionLimit = SESSION_PAGE;
+function resetSessionPage() { sessionLimit = SESSION_PAGE; }
+const FEEL_WORDS = ['', 'très mauvais', 'mauvais', 'neutre', 'bon', 'très bon'];
+function sessionRowHtml(s) {
+  const sp = TS.SPORTS[s.sport] || {};
+  const d = s.date ? TS.parseLocalDate(s.date) : null;
+  const pace = TS.calcPace(s.duration, s.distance, s.sport);
+  const wkg  = s.power_avg ? TS.calcWkg(s.power_avg, s.date) : null;
+  // Titre : le nom donné à la séance (ou celui venu de Strava, rangé dans les notes), sinon le sport
+  const title = s.notes ? String(s.notes).split('\n')[0].slice(0, 70) : (sp.label || s.sport);
+  const big = s.distance
+    ? (s.sport === 'nat' ? Math.round(s.distance * 1000).toLocaleString('fr-FR') + ' m' : String(Math.round(s.distance * 100) / 100).replace('.', ',') + ' km')
+    : (s.exercises ? s.exercises.length + ' exo' + (s.exercises.length > 1 ? 's' : '') : '');
+  const meta = [
+    s.duration ? formatDuration(s.duration) : '',
+    pace ? pace + (s.sport === 'run' ? '/km' : s.sport === 'nat' ? '/100 m' : '') : '',
+    s.exercises && TS.muscuVolume(s) ? TS.muscuVolume(s).toLocaleString('fr-FR') + ' kg soulevés' : '',
+    s.fc_avg ? s.fc_avg + ' bpm' : '',
+    s.power_avg ? s.power_avg + ' W' + (wkg ? ' · ' + String(wkg).replace('.', ',') + ' W/kg' : '') : '',
+    s.elevation ? 'D+ ' + s.elevation + ' m' : '',
+    s.rpe ? 'effort ' + s.rpe + '/10' : '',
+    s.sensation ? 'ressenti ' + FEEL_WORDS[s.sensation] : '',
+    s.kcal ? s.kcal + ' kcal' : '',
+  ].filter(Boolean).join(' · ');
+  const tags = (s.comp_id ? '<span class="ses-tag">Course</span>' : '');
+  return `<button type="button" class="ses-row" onclick="editSession('${s.id}')" aria-label="${escHtml(title)}, ${d ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : ''} : ouvrir">
+    <span class="ses-row__date">${d ? `<b>${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</b>${d.toLocaleDateString('fr-FR', { weekday: 'short' })}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}` : '—'}</span>
+    <span class="ses-row__main">
+      <span class="ses-row__title"><span class="sport-dot sport-dot--${s.sport}"></span><span class="t">${escHtml(title)}</span>${tags}</span>
+      <span class="ses-row__meta" style="display:block">${s.notes ? sp.label + ' · ' : ''}${meta || '—'}</span>
+    </span>
+    <span class="ses-row__big">${big}${s.strava_id ? '<small>Strava</small>' : ''}</span>
+  </button>`;
 }
 
 function renderSessionStats(sessions) {
-  const el = document.getElementById('sessionStats');
-  const withFC    = sessions.filter(s=>s.fc_avg);
-  const withPower = sessions.filter(s=>s.power_avg);
-  const avgFC     = withFC.length    ? Math.round(withFC.reduce((a,s)=>a+s.fc_avg,0)/withFC.length)       : null;
-  const avgPow    = withPower.length ? Math.round(withPower.reduce((a,s)=>a+s.power_avg,0)/withPower.length) : null;
-  const wkg       = avgPow ? TS.calcWkg(avgPow) : null;
-  const wkgLvl    = wkg ? TS.wkgLevel(wkg) : null;
-  el.innerHTML = `
-    <div class="kpi"><div><span class="kpi__value">${sessions.length}</span></div><div class="kpi__label">Séances</div></div>
-    <div class="kpi"><div><span class="kpi__value">${avgFC||'—'}</span><span class="kpi__unit">${avgFC?'bpm':''}</span></div><div class="kpi__label">FC moyenne</div></div>
-    <div class="kpi"><div><span class="kpi__value">${avgPow||'—'}</span><span class="kpi__unit">${avgPow?'W':''}</span></div><div class="kpi__label">Puissance moy.</div></div>
-    <div class="kpi" style="border-color:${wkgLvl?.color||'var(--border)'}"><div><span class="kpi__value" style="color:${wkgLvl?.color||'inherit'}">${wkg||'—'}</span><span class="kpi__unit">${wkg?'W/kg':''}</span></div><div class="kpi__label">${wkgLvl?.label||'W/kg'}</div></div>
-  `;
-
-  // also update wkg current
-  const veloSessions = sessions.filter(s=>s.sport==='velo'&&s.power_avg);
-  const wkgVelo = veloSessions.length ? TS.calcWkg(veloSessions.reduce((a,s)=>a+s.power_avg,0)/veloSessions.length) : null;
-  const el2 = document.getElementById('wkgCurrent');
-  if (wkgVelo) {
-    const lvl = TS.wkgLevel(wkgVelo);
-    el2.innerHTML = `<div style="display:flex;align-items:center;gap:12px">
-      <div style="font-size:36px;font-weight:600;color:${lvl.color}">${wkgVelo}</div>
-      <div><div style="font-size:12px;color:var(--text-2)">W/kg</div><div style="font-size:14px;font-weight:600;color:${lvl.color}">${lvl.label}</div></div>
-    </div>`;
-  } else {
-    el2.innerHTML = `<div style="font-size:13px;color:var(--text-3)">Saisir des séances vélo avec puissance</div>`;
-  }
-}
-
-// ── Graphiques FC / puissance : fenêtre de temps ─────────────────────────────────
-// - une saison (ou des dates) choisie : toute la période choisie
-// - sinon : les 6 derniers mois
-function localISODate(d) {
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-
-function sixMonthsAgoISO() {
-  const now = new Date();
-  const target = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-  target.setDate(Math.min(now.getDate(), lastDay)); // évite le débordement (ex : 31 août - 6 mois)
-  return localISODate(target);
-}
-
-function getChartWindow(sessions) {
-  const from = document.getElementById('filterFrom').value;
-  const to   = document.getElementById('filterTo').value;
-  if (from || to) {
-    const season = TS.getSeasonFilter();
-    const range  = TS.getSeasonRange(season);
-    const label  = (range && from === range.from && to === range.to) ? 'Saison ' + season : 'Période choisie';
-    return { list: sessions, label: label };
-  }
-  const cutoff = sixMonthsAgoISO();
-  return { list: sessions.filter(s => s.date >= cutoff), label: '6 derniers mois' };
-}
-
-// Séances qui ont la valeur demandée, de la plus ancienne à la plus récente
-// (l'historique est trié du plus récent au plus ancien : un graphique doit suivre le temps).
-function chartPoints(sessions, key) {
-  return sessions.filter(s => s[key] && s.date).slice().sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function chartDateLabels(points) {
-  const multiYear = points.length > 0 && points[0].date.slice(0, 4) !== points[points.length - 1].date.slice(0, 4);
-  const opts = multiYear ? { day: '2-digit', month: '2-digit', year: '2-digit' } : { day: '2-digit', month: '2-digit' };
-  return points.map(s => new Date(s.date + 'T00:00:00').toLocaleDateString('fr-FR', opts));
-}
-
-// Indique la période dans le titre ; s'il n'y a rien à afficher, retire l'ancien graphique
-// (sinon il resterait affiché avec les données de la période précédente) et affiche un message.
-function showChartOrEmpty(id, points, label) {
-  const canvas = document.getElementById(id);
-  const empty  = document.getElementById(id + 'Empty');
-  const range  = document.getElementById(id + 'Range');
-  if (range) range.textContent = '· ' + label;
-  if (!points.length) {
-    if (charts[id]) { charts[id].destroy(); charts[id] = null; }
-    if (canvas) canvas.style.display = 'none';
-    if (empty)  empty.style.display = 'flex';
-    return false;
-  }
-  if (empty) empty.style.display = 'none';
-  return true;
-}
-
-const CHART_SCALES = {
-  x: { grid:{display:false}, ticks:{ color:'#6b7383', font:{size:10}, maxTicksLimit:10, maxRotation:0, autoSkip:true } },
-  y: { grid:{color:'#242b36'}, ticks:{ color:'#6b7383', font:{size:10} } },
-};
-
-function renderFCChart(sessions, label) {
-  const pts = chartPoints(sessions, 'fc_avg');
-  if (!showChartOrEmpty('chartFC', pts, label)) return;
-  charts['chartFC'] = makeChart('chartFC', {
-    type: 'line',
-    data: {
-      labels: chartDateLabels(pts),
-      datasets: [{
-        label:'FC moy (bpm)', data: pts.map(s=>s.fc_avg),
-        borderColor:'#ef5350', backgroundColor:'rgba(239,83,80,0.08)',
-        tension:0.4, fill:true, pointRadius: pts.length > 80 ? 2 : 3,
-        pointBackgroundColor: pts.map(s=>s.sport==='nat'?'#2f95e6':s.sport==='velo'?'#d8791a':'#dc3d6a')
-      }]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales: CHART_SCALES
-    }
-  });
-}
-
-function renderPowerChart(sessions, label) {
-  const pts = chartPoints(sessions, 'power_avg');
-  if (!showChartOrEmpty('chartPower', pts, label)) return;
-  charts['chartPower'] = makeChart('chartPower', {
-    type: 'bar',
-    data: {
-      labels: chartDateLabels(pts),
-      datasets: [{
-        label:'Puissance (W)', data: pts.map(s=>s.power_avg),
-        backgroundColor: pts.map(s=>s.sport==='nat'?'rgba(13,115,119,0.7)':s.sport==='velo'?'rgba(244,162,97,0.7)':'rgba(231,111,81,0.7)'),
-        borderRadius:4
-      }]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales: CHART_SCALES
-    }
-  });
-}
-
-function renderWkgTable() {
-  const levels = [
-    { range:'< 2,0', label:'Débutant',          color:'#a3abb9' },
-    { range:'2,0–2,5', label:'Amateur débutant', color:'#34c48b' },
-    { range:'2,5–3,0', label:'Amateur régulier', color:'#34c48b' },
-    { range:'3,0–3,5', label:'Bon niveau — Ironman', color:'#f0b941' },
-    { range:'3,5–4,0', label:'Très bon amateur / podiums AG', color:'#dc3d6a' },
-    { range:'4,0–5,0', label:'Élite amateur / semi-pro', color:'#ef5350' },
-    { range:'> 5,0',   label:'Professionnel',   color:'#a48be0' },
-  ];
-  document.getElementById('wkgTable').innerHTML = levels.map(l =>
-    `<div class="wkg-row">
-      <span class="wkg-val" style="color:${l.color}">${l.range}</span>
-      <span style="font-size:12px;color:${l.color}">${l.label}</span>
-    </div>`
-  ).join('');
-}
-
-function renderSportAvgs() {
-  const sports = TS.sportsShown();   // + musculation si l'utilisateur en fait
-  const el = document.getElementById('sportAvgs');
-  el.innerHTML = sports.map(s => {
-    const sp = TS.SPORTS[s];
-    const sessions = TS.getSessions({ sport: s });
-    const withFC = sessions.filter(x=>x.fc_avg);
-    const withP  = sessions.filter(x=>x.power_avg);
-    const withDist = sessions.filter(x=>x.duration&&x.distance);
-    const avgFC   = withFC.length   ? Math.round(withFC.reduce((a,x)=>a+x.fc_avg,0)/withFC.length) : null;
-    const avgPow  = withP.length    ? Math.round(withP.reduce((a,x)=>a+x.power_avg,0)/withP.length) : null;
-    const avgDur  = sessions.length ? sessions.reduce((a,x)=>a+(x.duration||0),0)/sessions.length : null;
-    // Musculation : exercices, séries et kg soulevés moyens par séance (séances avec exercices notés)
-    let muscu = '';
-    if (s === 'muscu') {
-      const withEx = sessions.filter(x => (x.exercises || []).length);
-      const avg = fn => withEx.length ? withEx.reduce((a, x) => a + fn(x), 0) / withEx.length : 0;
-      const exos = avg(x => x.exercises.length), sets = avg(x => x.exercises.reduce((a, e) => a + TS.exSeries(e).length, 0)), kg = avg(x => TS.muscuVolume(x));
-      const withRpe = sessions.filter(x => x.rpe);
-      const rpe = withRpe.length ? withRpe.reduce((a, x) => a + x.rpe, 0) / withRpe.length : 0;
-      const item = (l, v) => `<span style="font-size:12px;color:var(--text-2)">${l}: <b>${v}</b></span>`;
-      muscu = (exos ? item('Exercices / séance', exos.toLocaleString('fr-FR', { maximumFractionDigits: 1 })) : '')
-        + (sets ? item('Séries / séance', Math.round(sets)) : '')
-        + (kg ? item('Kg soulevés / séance', Math.round(kg).toLocaleString('fr-FR') + ' kg') : '')
-        + (rpe ? item('RPE moy', rpe.toLocaleString('fr-FR', { maximumFractionDigits: 1 })) : '');
-    }
-    return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:600;color:var(--${s});margin-bottom:6px">${sp.emoji} ${sp.label} <span style="font-size:11px;color:var(--text-3)">${sessions.length} séances</span></div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        ${avgFC  ? `<span style="font-size:12px;color:var(--text-2)">FC moy: <b>${avgFC} bpm</b></span>` : ''}
-        ${avgPow ? `<span style="font-size:12px;color:var(--text-2)">Puissance: <b>${avgPow} W</b></span>` : ''}
-        ${avgDur ? `<span style="font-size:12px;color:var(--text-2)">Durée moy: <b>${TS.formatHours(avgDur)}</b></span>` : ''}
-        ${muscu}
-        ${!avgFC&&!avgPow&&!avgDur&&!muscu ? `<span style="font-size:12px;color:var(--text-3)">Aucune donnée</span>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  const h = sessions.reduce((a, x) => a + (x.duration || 0), 0);
+  const km = sessions.reduce((a, x) => a + (x.sport !== 'nat' ? (x.distance || 0) : 0), 0);
+  const swim = sessions.reduce((a, x) => a + (x.sport === 'nat' ? (x.distance || 0) : 0), 0);
+  const parts = [`<b>${sessions.length}</b> séance${sessions.length > 1 ? 's' : ''}`, `<b>${TS.formatHours(h)}</b>`];
+  if (km) parts.push(`<b>${Math.round(km).toLocaleString('fr-FR')} km</b>`);
+  if (swim) parts.push(`<b>${Math.round(swim * 1000).toLocaleString('fr-FR')} m</b> de natation`);
+  document.getElementById('sessionStats').innerHTML = parts.join(' · ')
+    + ' <span style="color:var(--text-3)">· FC, puissance et moyennes : <a href="sport.html" style="color:var(--accent)">Sports</a></span>';
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -1173,9 +961,13 @@ function closeModal() {
   editId = null;
   setSensation(null);
 }
+// ── Fenêtre « Importer » ──────────────────────────────────────────────────────
+function openImportModal() { document.getElementById('importModal').classList.add('open'); renderHistoryButton(); }
+function closeImportModal() { document.getElementById('importModal').classList.remove('open'); }
 async function handleImportFiles(e) {
   const files = [...e.target.files];
   if (!files.length) return;
+  closeImportModal();   // le résultat s'affiche sur la page
   await processImportFiles(files);
   e.target.value = ''; // reset input
 }
@@ -1185,6 +977,7 @@ function handleDrop(e) {
   document.getElementById('dropZone').style.borderColor = 'var(--border)';
   const files = [...e.dataTransfer.files].filter(f => /\.(gpx|fit|tcx)$/i.test(f.name));
   if (!files.length) { TS.toast('Format non pris en charge : utilise un fichier .fit, .gpx ou .tcx', 'error'); return; }
+  closeImportModal();
   processImportFiles(files);
 }
 
@@ -1194,6 +987,7 @@ async function handleArchive(e) {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
+  openImportModal();
   const box = document.getElementById('archiveResult');
   box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)"><span class="spinner"></span>Lecture de l’archive…</div>';
   try {
@@ -1212,7 +1006,7 @@ let archiveSource = 'archive';
 async function loadStravaHistory() {
   const box = document.getElementById('archiveResult');
   box.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--accent2)"><span class="spinner"></span><span id="historyProgress">Récupération de ton historique sur Strava…</span></div>';
-  document.getElementById('historique-strava').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  openImportModal();
   try {
     archiveActs = await TS.stravaFetchHistory(n => {
       const el = document.getElementById('historyProgress');
@@ -1260,11 +1054,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = TS.getSessions().find(x => x.id === sid);
     if (s) openSessionModal(s);
   }
-  if (location.hash === '#historique-strava' && TS.stravaAvailable() && TS.getStrava()) {
-    history.replaceState(null, '', location.pathname);
-    loadStravaHistory();
-  }
+  openImportFromHash();
 });
+// Lien « Importer mon archive Strava » / « Récupérer tout l'historique » (Profil) : sessions.html#historique-strava
+function openImportFromHash() {
+  if (location.hash !== '#historique-strava') return;
+  history.replaceState(null, '', location.pathname);
+  if (TS.stravaAvailable() && TS.getStrava()) loadStravaHistory();
+  else openImportModal();
+}
+window.addEventListener('hashchange', openImportFromHash);
 window.addEventListener('triseason:update', renderHistoryButton);
 
 function archiveSince() {

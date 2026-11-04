@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261121a"></script>
+  <script src="theme.js?v=20261122a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261121a"></script>
+  <script src="auth-guard.js?v=20261122a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261121a">
+  <link rel="stylesheet" href="style.css?v=20261122a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -94,6 +94,13 @@
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
     }
+      .crop-view { position:relative; width:min(260px, 70vw); aspect-ratio:1; margin:0 auto; border-radius:50%; overflow:hidden;
+      background:var(--surface2); touch-action:none; cursor:grab; box-shadow:0 0 0 2px var(--accent); user-select:none; }
+    .crop-view:active { cursor:grabbing; }
+    .crop-view:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+    .crop-view img { position:absolute; left:0; top:0; max-width:none; transform-origin:0 0; pointer-events:none; }
+    .crop-zoom { display:flex; align-items:center; gap:10px; margin:16px 4px 4px; font-size:12px; color:var(--text-2); }
+    .crop-zoom input { flex:1; accent-color:var(--accent); }
   </style>
 </head>
 <body>
@@ -446,7 +453,7 @@
 </div>
 
 
-<script src="app.js?v=20261121a"></script>
+<script src="app.js?v=20261122a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -760,11 +767,67 @@ function renderBadges() {
 }
 
 // ── Profile render ────────────────────────────────────────────────────────────
-async function onPhotoPicked(input) {
+// ── Recadrage de la photo : déplacer (doigt, souris ou flèches) et zoomer ─────
+const crop = { file: null, url: null, w: 0, h: 0, V: 260, zoom: 1, ox: 0, oy: 0, drag: null };
+function onPhotoPicked(input) {
   const file = input.files && input.files[0];
   input.value = '';
   if (!file) return;
-  try { await TS.setProfilePhoto(file); renderProfile(); TS.toast('Photo de profil enregistrée'); }
+  if (!/^image\//.test(file.type || 'image/')) { TS.toast('Choisis une image (photo).', 'error'); return; }
+  if (crop.url) URL.revokeObjectURL(crop.url);
+  crop.file = file; crop.url = URL.createObjectURL(file);
+  const img = document.getElementById('cropImg');
+  img.onload = () => {
+    crop.w = img.naturalWidth; crop.h = img.naturalHeight;
+    crop.V = document.getElementById('cropView').clientWidth || 260;
+    crop.zoom = 1; document.getElementById('cropZoom').value = 1;
+    const sc = cropScale(); crop.ox = (crop.V - crop.w * sc) / 2; crop.oy = (crop.V - crop.h * sc) / 2;
+    cropDraw();
+  };
+  img.onerror = () => { closeCrop(); TS.toast('Image illisible : essaie une autre photo (JPEG ou PNG).', 'error'); };
+  img.src = crop.url;
+  document.getElementById('cropModal').classList.add('open');
+}
+function cropScale() { return crop.V / Math.min(crop.w, crop.h) * crop.zoom; }
+// L'image couvre toujours tout le rond : pas de bord vide
+function cropClamp() {
+  const sc = cropScale();
+  crop.ox = Math.min(0, Math.max(crop.V - crop.w * sc, crop.ox));
+  crop.oy = Math.min(0, Math.max(crop.V - crop.h * sc, crop.oy));
+}
+function cropDraw() {
+  cropClamp();
+  const sc = cropScale(), img = document.getElementById('cropImg');
+  img.style.width = crop.w * sc + 'px'; img.style.height = crop.h * sc + 'px';
+  img.style.transform = `translate(${crop.ox}px, ${crop.oy}px)`;
+}
+function cropSetZoom(z) {
+  const old = cropScale(), c = crop.V / 2;
+  crop.zoom = Math.max(1, Math.min(4, +z));
+  const sc = cropScale();
+  // Zoom autour du centre du rond
+  crop.ox = c - (c - crop.ox) * sc / old; crop.oy = c - (c - crop.oy) * sc / old;
+  cropDraw();
+}
+function cropDown(e) { crop.drag = { x: e.clientX, y: e.clientY, ox: crop.ox, oy: crop.oy }; e.currentTarget.setPointerCapture(e.pointerId); }
+function cropMove(e) { if (!crop.drag) return; crop.ox = crop.drag.ox + e.clientX - crop.drag.x; crop.oy = crop.drag.oy + e.clientY - crop.drag.y; cropDraw(); }
+function cropUp() { crop.drag = null; }
+function cropKey(e) {
+  const d = { ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10] }[e.key];
+  if (d) { e.preventDefault(); crop.ox += d[0]; crop.oy += d[1]; cropDraw(); }
+  else if (e.key === '+' || e.key === '=') cropSetZoom(crop.zoom + .1);
+  else if (e.key === '-') cropSetZoom(crop.zoom - .1);
+}
+function closeCrop() {
+  document.getElementById('cropModal').classList.remove('open');
+  if (crop.url) { URL.revokeObjectURL(crop.url); crop.url = null; }
+  crop.file = null;
+}
+async function saveCrop(asIs) {
+  if (!crop.file) return;
+  const sc = cropScale();
+  const area = asIs ? null : { x: -crop.ox / sc, y: -crop.oy / sc, side: crop.V / sc };
+  try { await TS.setProfilePhoto(crop.file, area); renderProfile(); TS.toast('Photo de profil enregistrée'); closeCrop(); }
   catch (e) { TS.toast(e.message, 'error'); }
 }
 function removePhoto() {
@@ -1049,6 +1112,28 @@ function toggleMenu() { document.getElementById('navLinks').classList.toggle('op
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 </script>
+
+<!-- Recadrer la photo de profil -->
+<div class="modal-overlay" id="cropModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal__header">
+      <div class="modal__title">Recadrer ta photo</div>
+      <button class="modal__close" onclick="closeCrop()" aria-label="Fermer">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:12px">Fais glisser la photo et zoome pour la placer dans le rond.</div>
+    <div class="crop-view" id="cropView" tabindex="0" role="application" aria-label="Photo à recadrer : flèches pour déplacer, + et − pour zoomer"
+      onpointerdown="cropDown(event)" onpointermove="cropMove(event)" onpointerup="cropUp()" onpointercancel="cropUp()" onkeydown="cropKey(event)">
+      <img id="cropImg" alt="" draggable="false">
+    </div>
+    <label class="crop-zoom"><span>Zoom</span>
+      <input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" oninput="cropSetZoom(this.value)" aria-label="Zoom">
+    </label>
+    <div class="form-actions" style="flex-wrap:wrap">
+      <button class="btn btn--ghost" onclick="saveCrop(true)">Garder telle quelle</button>
+      <button class="btn btn--primary" onclick="saveCrop(false)">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">

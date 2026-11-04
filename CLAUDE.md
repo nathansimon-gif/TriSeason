@@ -110,7 +110,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
 - **Téléphone** : champs de saisie à 16 px sur écran tactile (sinon l'iPhone zoome
   tout seul), `body { overflow-x: clip }` et fenêtres `.modal` en `overflow-x: hidden` :
-  ne pas réintroduire de défilement horizontal (seul le tableau des séances défile).
+  ne pas réintroduire de défilement horizontal (la liste des séances est en lignes, `.ses-row`, sans tableau).
 - `style.css` : design system (variables sur `:root`, et `:root[data-theme="light"]`
   pour le thème clair).
 - `theme.js` : chargé **en premier** dans le `<head>` de chaque page. Thème clair /
@@ -125,12 +125,16 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   page, hors fenêtre ouverte : synchro Strava forcée (10 s max) puis rechargement.
 - **Navigation téléphone** : barre du bas Dashboard, Séances, Sports, Nutrition, Forme ; Profil = icône
   `.nav__profile` en haut (toujours visible) + lien `.nav__link--menu` dans le menu ☰.
-  Photo de profil (`data.profile.photo`, JPEG 192 px en data URL, `setProfilePhoto` / `applyProfilePhoto`) :
+  Photo de profil (`data.profile.photo`, JPEG 192 px en data URL, `setProfilePhoto(file, crop)` / `applyProfilePhoto` ;
+  recadrage `{x, y, side}` choisi dans la fenêtre `#cropModal` de Profil, sinon carré centré) :
   remplace l'icône `.nav__profile` partout. Attention : profile.html a sa propre fonction globale
   `saveProfile` (formulaire) qui masque celle d'app.js : dans app.js, enregistrer via `getData`/`saveData`.
 - **Dashboard** : bandeau prochaine course (`#raceBanner`), tuiles de la semaine (`#heroStrip`, une par sport suivi),
   défis + lien badges, graphique unique « Évolution » (`chartTrend`, choix gardés dans `localStorage.triseason_trend`),
   calendrier, nutrition du jour, derniers records. Le **poids** est saisi dans Profil → Mon profil (`#poids`).
+- **Séances** : liste `.ses-row` (30 puis « Voir plus »), fenêtre `#importModal` (fichiers + archive Strava,
+  ouverte aussi par `sessions.html#historique-strava`), filtres repliés. FC, puissance, W/kg et moyennes par
+  séance : page Sports (`#perSessionCard`, `#muscuAvgs`).
 - **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
   `#mes-sports`, `#apparence`… ouvre l'onglet Paramètres) ; réglages, Strava et données sont dans Paramètres.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
