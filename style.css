@@ -671,8 +671,7 @@ tbody tr:hover td { background: var(--surface2); }
   /* Full-width cards */
   .card { border-radius: var(--r-sm); }
 
-  /* Hero sport grid → single column on very small */
-  .hero-strip { grid-template-columns: 1fr !important; }
+  /* (Dashboard : les tuiles de la semaine restent sur une rangée, voir index.html) */
 
   /* KPI grid → 2 cols */
   .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }

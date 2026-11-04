@@ -1865,7 +1865,7 @@ async function main() {
     await v.page.click('[data-sport-choice="velo"]'); await v.page.waitForTimeout(200);
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
     const dash = await v.page.evaluate(() => ({ hero: document.getElementById('heroStrip').textContent, legendNat: getComputedStyle(document.querySelector('[data-legend-sport="nat"]')).display,
-      freq: Chart.getChart('chartFrequency').data.datasets.map(d => d.label), modal: !!document.getElementById('newsModal') }));
+      freq: Chart.getChart('chartTrend').data.datasets.map(d => d.label), modal: !!document.getElementById('newsModal') }));
     await v.page.goto(`${BASE}/sport.html?sport=nat`); await v.page.waitForTimeout(700);
     const sport = await v.page.evaluate(() => ({ nat: getComputedStyle(document.getElementById('tab-nat')).display, muscu: getComputedStyle(document.getElementById('tab-muscu')).display, cur: currentSport }));
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
@@ -2036,6 +2036,51 @@ async function main() {
     assert(!sport.prog && sport.best > 0, 'Sports : ' + JSON.stringify(sport));
     assert(/2 records · dernier : 10km en 0:41:07/.test(prof.text) && prof.href === 'records.html', 'Profil : ' + JSON.stringify(prof));
     assert(/moins d’hydratation/.test(forme.head) && /effort ressenti 4,0 points plus élevé/.test(forme.head) && forme.groups.join() === '4,0/10,8,0/10', 'Forme, effort ressenti : ' + JSON.stringify(forme));
+  });
+
+  await test('Dashboard simplifié : bandeau course, tuiles de la semaine, graphique à onglets, poids dans Profil', async () => {
+    const data = sampleData();
+    data.sessions.push({ id: 'mu1', date: day(0), sport: 'muscu', duration: 1, rpe: 7, exercises: [{ name: 'Squat', group: 'Jambes', sets: 4, reps: 8, kg: 60 }] });
+    data.weight = [{ date: day(-30), value: 72 }, { date: day(-10), value: 70.4 }];
+    data.profile.height = 180;
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
+    const d1 = await v.page.evaluate(() => ({
+      banner: document.getElementById('raceBanner').hidden ? '' : document.getElementById('raceBanner').textContent.replace(/\s+/g, ' ').trim(),
+      tiles: [...document.querySelectorAll('#heroStrip .hero-sport__sport')].map(e => e.textContent),
+      sum: document.querySelector('.week-sum').textContent.replace(/\s+/g, ' ').trim(),
+      gone: ['weightDisplay', 'nextRaceDisplay', 'badgesRecent', 'chartWeekly', 'chartMonthly', 'chartDonut', 'chartFrequency'].filter(id => document.getElementById(id)),
+      badges: document.getElementById('badgesLink').textContent,
+      ds: Chart.getChart('chartTrend').data.datasets.map(x => x.label), n: Chart.getChart('chartTrend').data.labels.length,
+      overflow: document.documentElement.scrollWidth - innerWidth, height: document.documentElement.scrollHeight }));
+    await v.page.click('[data-trend-what="sessions"]'); await v.page.click('[data-trend-per="month"]'); await v.page.waitForTimeout(200);
+    const d2 = await v.page.evaluate(() => ({ ds: Chart.getChart('chartTrend').data.datasets.map(x => x.label), n: Chart.getChart('chartTrend').data.labels.length,
+      total: Chart.getChart('chartTrend').data.datasets.reduce((a, x) => a + x.data.reduce((p, q) => p + q, 0), 0), kept: localStorage.getItem('triseason_trend') }));
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const p1 = await v.page.evaluate(() => ({ latest: document.getElementById('pwLatest').textContent, svg: !!document.querySelector('#pwChart svg'), rows: document.querySelectorAll('#weightHistory [onclick^="deleteWeightEntry"]').length }));
+    await v.page.fill('#weightInput', '69.8'); await v.page.click('text=Noter'); await v.page.waitForTimeout(200);
+    const p2 = await v.page.evaluate(() => ({ latest: document.getElementById('pwLatest').textContent, cloud: window.__cloud('testeur').weight.length, sub: document.getElementById('profileSub').textContent }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/^J-30 Triathlon test/.test(d1.banner) && /Objectif 2:30:00/.test(d1.banner), 'bandeau : ' + d1.banner);
+    assert(d1.tiles.join() === 'Natation,Vélo,Course,Muscu' && /^Cette semaine/.test(d1.sum) && /séance/.test(d1.sum), 'tuiles : ' + JSON.stringify(d1));
+    assert(!d1.gone.length && /^Mes badges · \d+ \/ \d+/.test(d1.badges), 'anciens blocs : ' + JSON.stringify(d1));
+    assert(d1.ds.join() === 'Natation,Vélo,Course' && d1.n === 12 && d2.ds.join() === 'Natation,Vélo,Course,Musculation' && d2.n === 8 && d2.total >= 41 && /month/.test(d2.kept), 'graphique : ' + JSON.stringify({ d1, d2 }));
+    assert(d1.overflow <= 0 && d1.height < 4600, 'longueur / débordement : ' + JSON.stringify({ o: d1.overflow, h: d1.height }));
+    assert(/70,4 kg/.test(p1.latest) && /IMC 21,7/.test(p1.latest) && p1.svg && p1.rows === 2, 'poids dans Profil : ' + JSON.stringify(p1));
+    assert(/69,8 kg/.test(p2.latest) && p2.cloud === 3 && /69,8 kg/.test(p2.sub), 'nouvelle pesée : ' + JSON.stringify(p2));
+  });
+
+  await test('Sports décochés : « Ce que Strava ne te montre pas » prend la dernière séance d’un sport suivi', async () => {
+    const data = sampleData(); data.profile.sports = ['run'];
+    data.sessions.push({ id: 'v0', date: day(0), sport: 'velo', duration: 1, distance: 30 });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => ({ ins: document.querySelector('#insightBody .ins-session').textContent.replace(/\s+/g, ' '),
+      tiles: [...document.querySelectorAll('#heroStrip .hero-sport__sport')].map(e => e.textContent).join(), trend: Chart.getChart('chartTrend').data.datasets.map(x => x.label).join() }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/Course/.test(r.ins) && !/Vélo/.test(r.ins) && r.tiles === 'Course' && r.trend === 'Course', JSON.stringify(r));
   });
 
   await browser.close();

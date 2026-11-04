@@ -128,6 +128,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   Photo de profil (`data.profile.photo`, JPEG 192 px en data URL, `setProfilePhoto` / `applyProfilePhoto`) :
   remplace l'icône `.nav__profile` partout. Attention : profile.html a sa propre fonction globale
   `saveProfile` (formulaire) qui masque celle d'app.js : dans app.js, enregistrer via `getData`/`saveData`.
+- **Dashboard** : bandeau prochaine course (`#raceBanner`), tuiles de la semaine (`#heroStrip`, une par sport suivi),
+  défis + lien badges, graphique unique « Évolution » (`chartTrend`, choix gardés dans `localStorage.triseason_trend`),
+  calendrier, nutrition du jour, derniers records. Le **poids** est saisi dans Profil → Mon profil (`#poids`).
 - **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
   `#mes-sports`, `#apparence`… ouvre l'onglet Paramètres) ; réglages, Strava et données sont dans Paramètres.
 - Pages : `index.html` (Dashboard), `sessions.html`, `sport.html`,
