@@ -42,7 +42,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - `app.js` : couche de données partagée, exposée via `window.TS` (séances,
   compétitions, records, poids, profil, saisons, synchro des compétitions et
   records automatiques, formats FFTri, helpers de dates et d'allure,
-  `getNutritionImpact` : croisement nutrition × séances affiché dans Forme ;
+  `getNutritionImpact` : croisement nutrition × séances affiché dans Forme (résultats : ressenti,
+  effort ressenti `rpe`, vitesse vs habitude ; la carte « Avant tes courses » de Nutrition montre eau et kcal à J-7) ;
   `FUEL_PRESETS` / `fuelCarbs` : glucides des ravitaillements (valeurs indicatives
   des fabricants, octobre 2026, à mettre à jour si les formules changent) ; ravitaillement relié à une
   séance : `session_id` + moment `timing` (minutes, saisi et affiché en « 1h15 » : `parseFuelTime` /
@@ -79,7 +80,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   toutes les séances, rien d'enregistré ; 1RM estimé Epley jusqu'à 12 rép. ; `rm` = meilleure
   charge pour au moins 1/3/5/8/10/12 rép.), `muscuRecordEvents` (records battus, la 1re
   séance n'en est pas un) / `muscuSessionRecords` (records d'une séance : annonce, calendrier), `muscuMuscleLoad` + `renderBodyMap`
-  (carte du corps SVG de Forme et Sports → Muscu) ;
+  (carte du corps SVG dans Sports → Muscu, `#carte-du-corps` ; Forme n'en montre qu'une ligne et un lien) ;
   **nouveautés** : `NEWS` / `showNews`, message une fois par compte (`data.news_seen`),
   seulement pour les comptes qui avaient déjà des séances).
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
