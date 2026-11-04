@@ -140,7 +140,7 @@
 
   <div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
     <div>
-      <h1 style="display:flex;align-items:center;gap:8px">Nutrition <span class="tip-icon" data-tip="Un suivi indicatif : les glucides, protéines et lipides trouvés tout seuls et les repères affichés sont des estimations générales, pas un avis personnalisé. Ils ne remplacent pas un nutritionniste ou un médecin du sport.">?</span></h1>
+      <h1 style="display:flex;align-items:center;gap:8px">Nutrition <span class="tip-icon" data-tip="Un suivi indicatif : les glucides, protéines et lipides trouvés tout seuls sont des estimations, pas un avis personnalisé. Ils ne remplacent pas un nutritionniste ou un médecin du sport.">?</span></h1>
       <p>Tes repas, ton eau et tes ravitaillements</p>
     </div>
     <button class="btn btn--primary" onclick="openMealModal()">+ Ajouter</button>
@@ -290,15 +290,6 @@
     </div>
     <div id="perfComparison"></div>
   </div>
-  <!-- Conseils généraux -->
-  <div class="card">
-    <div class="card__title">
-      <span id="nutriTipsTitle">Repères nutritionnels pour le triathlon</span>
-      <span class="tip-icon" data-tip="Repères généraux, les mêmes pour tout le monde : pas un avis personnalisé. Pour un suivi adapté à toi, un nutritionniste du sport.">?</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:4px" id="tipsGrid"></div>
-  </div>
-
 </div></div>
 
 <!-- Meal modal -->
@@ -506,7 +497,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ses) { currentDay = ses.date; history.replaceState(null, '', location.pathname); }
     updateDayNav();
     renderAll();
-    renderTips();
     TS.initTooltips();
     if (ses) openFuelModal(null, ses.id);
   }, 0);
@@ -596,8 +586,6 @@ function getDayHydro(day) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAll() {
-  // Pas de « triathlon » si les trois sports ne sont pas suivis (Profil → Paramètres)
-  document.getElementById('nutriTipsTitle').textContent = 'Repères nutritionnels pour ' + (TS.triOn() ? 'le triathlon' : 'l’entraînement');
   renderDayKPIs();
   renderMealsList();
   renderFuelList();
@@ -2223,25 +2211,6 @@ function renderPerfComparison() {
   if (card) card.style.display = out ? '' : 'none';
 }
 
-function renderTips() {
-  const tips = [
-    { title:'Avant l\'effort', color:'var(--nat)',
-      text:'Repas 2 à 3 h avant : riche en glucides complexes, pauvre en fibres et en lipides. Ex. : pâtes, riz, pain blanc et protéines légères.' },
-    { title:'Pendant l\'effort (>1h)', color:'var(--accent)',
-      text:'30 à 60 g de glucides par heure au-delà d’1 h d’effort. Eau : 500 à 750 ml par heure. Gels, barres ou boissons isotoniques.' },
-    { title:'Récupération', color:'var(--green)',
-      text:'Dans les 30 à 45 min après l’effort : glucides et protéines (3 pour 1). Ex. : lait chocolaté, riz et poulet, yaourt et fruits.' },
-    { title:'Hydratation', color:'var(--nat)',
-      text:'35 à 40 ml par kg et par jour au repos. Urine claire = bonne hydratation. Te peser avant et après un effort long montre ce que tu as perdu.' },
-    { title:'Charge glucidique', color:'var(--velo)',
-      text:'J-2 et J-1 avant une course longue (plus de 2 h) : 8 à 10 g de glucides par kg, moins de fibres, de lipides et de protéines.' },
-  ];
-  document.getElementById('tipsGrid').innerHTML = tips.map(t=>`
-    <div style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm)">
-      <div style="font-size:13px;font-weight:700;color:${t.color};margin-bottom:6px">${t.title}</div>
-      <div style="font-size:12px;color:var(--text-2);line-height:1.6">${t.text}</div>
-    </div>`).join('');
-}
 
 function toggleMenu() { document.getElementById('navLinks').classList.toggle('open'); }
 </script>

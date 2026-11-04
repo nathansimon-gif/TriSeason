@@ -1901,7 +1901,7 @@ async function main() {
     await v.page.goto(`${BASE}/competitions.html`); await v.page.waitForTimeout(600);
     const comp = await v.page.evaluate(() => { openCompModal(); return [...document.querySelectorAll('#c_type option')].map(o => o.value); });
     await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(600);
-    const nutri = await v.page.textContent('#nutriTipsTitle');
+    const nutri = await v.page.evaluate(() => document.body.innerText);
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(/Choisis tes sports/.test(news), 'message d’ouverture : ' + news.slice(0, 120));
@@ -1915,7 +1915,7 @@ async function main() {
     assert(imp.earnedSwim && !imp.hiddenIfNotEarned.includes('swim2k') && !imp.hiddenIfNotEarned.includes('tri_week'), 'badges des sports non suivis (obtenus gardés, les autres masqués) : ' + imp.hiddenIfNotEarned.join());
     // Les données de test ont un triathlon prévu : sa section reste visible ; tous les types de course restent proposés
     assert(rec.nat === 'none' && rec.tri !== 'none' && rec.muscu === 'none' && /vélo, course et triathlon/.test(rec.intro), 'Records : ' + JSON.stringify(rec));
-    assert(['TRI', 'RUN', 'BIKE', 'NAT', 'DUATH', 'AQUA'].every(t => comp.includes(t)) && !/triathlon/i.test(nutri), 'courses multisport toujours proposées : ' + comp.join() + ' / ' + nutri);
+    assert(['TRI', 'RUN', 'BIKE', 'NAT', 'DUATH', 'AQUA'].every(t => comp.includes(t)) && !/triathlon/i.test(nutri) && !/Repères nutritionnels/.test(nutri), 'courses multisport toujours proposées / repères retirés : ' + comp.join() + ' / ' + nutri.slice(0, 200));
   });
 
   await test('Records de course : distance de route la plus proche (temps estimé à l’allure), trail à sa vraie distance', async () => {
