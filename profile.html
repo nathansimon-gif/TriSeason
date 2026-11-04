@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261119a"></script>
+  <script src="theme.js?v=20261120a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261119a"></script>
+  <script src="auth-guard.js?v=20261120a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261119a">
+  <link rel="stylesheet" href="style.css?v=20261120a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -44,6 +44,8 @@
     .pb-row__time  { font-family: var(--mono); font-size: 15px; font-weight: 700; flex: 1; }
     .pb-row__pace  { font-size: 11px; color: var(--text-2); font-family: var(--mono); }
     .section-card  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px; margin-bottom: 12px; }
+    .pb-link { display:flex; align-items:center; justify-content:space-between; gap:12px; text-decoration:none; color:inherit; }
+    .pb-link:hover { border-color: var(--border2); }
     .section-card__title {
       font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 14px;
       display: flex; align-items: center; gap: 8px;
@@ -144,17 +146,14 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px" id="quickStats"></div>
   </div>
 
-  <!-- ── Records personnels ── -->
-  <div class="section-card">
-    <div class="section-card__title">Records personnels</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="pbGrid">
-      <!-- filled by JS -->
-    </div>
-    <div style="margin-top:12px;text-align:center">
-      <a href="records.html" class="btn btn--ghost btn--sm">Gérer mes records →</a>
-    </div>
-  </div>
+  <!-- ── Records personnels : une ligne et un lien (le détail est sur la page Records) ── -->
+  <a class="section-card pb-link" href="records.html">
+    <span style="min-width:0">
+      <span class="section-card__title" style="margin-bottom:2px">Records personnels</span>
+      <span id="pbGrid" style="display:block;font-size:13px;color:var(--text-2)"></span>
+    </span>
+    <span aria-hidden="true" style="color:var(--text-3);font-size:18px">›</span>
+  </a>
 
   <!-- ── Badges ── -->
   <div class="section-card" id="badges">
@@ -432,7 +431,7 @@
 </div>
 
 
-<script src="app.js?v=20261119a"></script>
+<script src="app.js?v=20261120a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -813,53 +812,19 @@ function renderProfile() {
 }
 
 // ── Personal bests ────────────────────────────────────────────────────────────
+const pbEsc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 function renderPBs() {
-  const records = TS.getData().records || [];
-  const COLORS  = { nat:'var(--nat)', velo:'var(--velo)', run:'var(--run)', tri:'var(--accent)' };
-  const EMOJIS  = { nat:'<span class="sport-dot sport-dot--nat"></span>', velo:'<span class="sport-dot sport-dot--velo"></span>', run:'<span class="sport-dot sport-dot--run"></span>', tri:'<span class="sport-dot sport-dot--tri"></span>' };
-
-  // Best time per distance per sport
-  const bests = {};
-  records.forEach(r => {
-    const key = r.sport + '|' + r.dist;
-    const t   = timeToSec(r.time);
-    if (!bests[key] || t < timeToSec(bests[key].time)) bests[key] = r;
-  });
-
-  const bySection = { nat:[], velo:[], run:[], tri:[] };
-  Object.values(bests).forEach(r => { if (bySection[r.sport]) bySection[r.sport].push(r); });
-
-  const grid = document.getElementById('pbGrid');
-  let html = '';
-
-  for (const [sport, recs] of Object.entries(bySection)) {
-    if (!recs.length || (sport !== 'tri' && !TS.sportOn(sport))) continue;   // records multisport toujours montrés
-    const color = COLORS[sport];
-    html += `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.08em;margin-top:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${EMOJIS[sport]} ${{nat:'Natation',velo:'Vélo',run:'Course',tri:'Triathlon'}[sport]}</div>`;
-    recs.sort((a,b) => a.dist.localeCompare(b.dist)).forEach(r => {
-      const pace = calcPaceStr(r);
-      html += `<div class="pb-row" style="grid-column:1/-1">
-        <div class="pb-row__dist">${r.dist}</div>
-        <div class="pb-row__time" style="color:${color}">${r.time}</div>
-        ${pace ? `<div class="pb-row__pace">${pace}</div>` : ''}
-        <div style="font-size:11px;color:var(--text-3)">${r.date ? new Date(r.date+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'}) : ''}</div>
-      </div>`;
-    });
-  }
-
-  grid.innerHTML = html || '<div style="grid-column:1/-1;font-size:13px;color:var(--text-3)">Aucun record enregistré. <a href="records.html" style="color:var(--accent2)">Ajouter →</a></div>';
+  // Une ligne : nombre de records et le plus récent. Records multisport toujours comptés.
+  const records = (TS.getData().records || []).filter(r => r.sport === 'tri' || TS.sportOn(r.sport));
+  const muscu = TS.muscuOn() ? TS.muscuRecords().length : 0;
+  const last = records.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+  const n = records.length + muscu;
+  const fmt = d => TS.parseLocalDate(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  document.getElementById('pbGrid').innerHTML = n
+    ? `${n} record${n > 1 ? 's' : ''}${last ? ` · dernier : ${pbEsc(last.dist || '')} en <b style="color:var(--text)">${pbEsc(last.time || '')}</b>${last.date ? ' (' + fmt(last.date) + ')' : ''}` : ''}`
+    : 'Aucun record pour l’instant : ajoute-les sur la page Records.';
 }
 
-function calcPaceStr(r) {
-  const DIST_KM = {'50m':0.05,'100m':0.1,'200m':0.2,'400m':0.4,'800m':0.8,'1500m':1.5,'1km':1,'3km':3,'5km':5,'10km':10,'1 mile':1.609,'Semi-marathon (21,1km)':21.1,'Marathon (42,2km)':42.195,'3,8km (Ironman)':3.8,'40km':40,'100km':100,'180km (Ironman)':180,'20km':20,'50km':50};
-  const secs = timeToSec(r.time), km = DIST_KM[r.dist];
-  if (!secs || !km) return null;
-  const h = secs/3600;
-  if (r.sport==='velo') return (km/h).toFixed(1).replace('.', ',')+' km/h';
-  if (r.sport==='run')  { const m=secs/60/km; return Math.floor(m)+"'"+String(Math.round((m%1)*60)).padStart(2,'0')+'" /km'; }
-  if (r.sport==='nat')  { const m=secs/60/(km*10); return Math.floor(m)+"'"+String(Math.round((m%1)*60)).padStart(2,'0')+'" /100m'; }
-  return null;
-}
 
 function timeToSec(str) {
   if (!str) return 0;

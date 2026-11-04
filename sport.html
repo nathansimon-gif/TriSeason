@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261119a"></script>
+  <script src="theme.js?v=20261120a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261119a"></script>
+  <script src="auth-guard.js?v=20261120a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261119a">
+  <link rel="stylesheet" href="style.css?v=20261120a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -104,10 +104,10 @@
         <div style="position:relative;height:220px;overflow:hidden"><canvas id="chartMuscuMonthly"></canvas></div>
       </div>
     </div>
-    <div class="card" style="margin-bottom:12px">
+    <div class="card" style="margin-bottom:12px;scroll-margin-top:72px" id="carte-du-corps">
       <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span>Zones travaillées</span>
-        <span class="tip-icon" data-tip="Sur la saison choisie, ou les 12 derniers mois avec « Toutes les saisons ». Un muscle secondaire compte pour moitié. Aussi dans Forme, sur 7 jours à 12 mois.">?</span>
+        <span class="tip-icon" data-tip="Sur la saison choisie, ou les 12 derniers mois avec « Toutes les saisons ». Un muscle secondaire compte pour moitié. Touche une zone pour voir les exercices.">?</span>
         <select class="form-select" id="muscuMapMode" onchange="renderMuscuMap()" style="width:auto;margin-left:auto" aria-label="Compter">
           <option value="sets">Séries</option>
           <option value="reps">Répétitions</option>
@@ -199,16 +199,10 @@
     </div>
   </div></div>
 
-  <!-- Meilleures semaines + Progression mensuelle -->
-  <div class="grid-2" style="margin-bottom:12px">
-    <div class="card">
-      <div class="card__title">Meilleures semaines</div>
-      <div id="bestWeeks"></div>
-    </div>
-    <div class="card">
-      <div class="card__title">Progression mensuelle</div>
-      <div id="monthlyProgress"></div>
-    </div>
+  <!-- Meilleures semaines (la progression par mois est dans le graphique « Volume mensuel ») -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card__title">Meilleures semaines</div>
+    <div id="bestWeeks"></div>
   </div>
   </div><!-- /enduranceView -->
 
@@ -228,7 +222,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261119a"></script>
+<script src="app.js?v=20261120a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -255,6 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
   populateSeasonFilter();
   selectSport(currentSport);
   TS.initTooltips();
+  // Lien « Carte du corps » depuis Forme : la vue musculation vient d'être affichée, on y descend
+  if (location.hash === '#carte-du-corps') {
+    const el = document.getElementById('carte-du-corps');
+    if (el && el.offsetParent) requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
+  }
 });
 
 window.addEventListener('triseason:update', () => renderSport());
@@ -317,7 +316,6 @@ function renderSport() {
   renderPaceChart(s, weekData, weeksView, sp);
   renderMonthlyChart(s, seasonRange);
   renderBestWeeks(s, weekData, weeksView);
-  renderMonthlyProgress(s, seasonRange);
   renderZones(s, seasonRange);
   renderGoals(s); // objectifs : toujours la semaine/mois/année EN COURS, indépendamment du filtre
 }
@@ -662,34 +660,6 @@ function renderBestWeeks(s, weekData, weeks) {
     : '<div class="empty"><div class="empty__text">Aucune donnée</div></div>';
 }
 
-function renderMonthlyProgress(s, seasonRange) {
-  const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to });
-  const months = {};
-  for (const sess of sessions) {
-    if (!sess.date||!sess.distance) continue;
-    const d = new Date(sess.date+'T00:00:00');
-    const mk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    months[mk] = (months[mk]||0) + sess.distance;
-  }
-  const sorted = (seasonRange ? Object.keys(months).sort() : Object.keys(months).sort().slice(-6));
-  const max = Math.max(...sorted.map(k=>months[k]),1);
-  const color = s==='nat'?'var(--nat)':s==='velo'?'var(--velo)':'var(--run)';
-  document.getElementById('monthlyProgress').innerHTML = sorted.length
-    ? sorted.map(k => {
-        const [y,m] = k.split('-');
-        const label = new Date(y,m-1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
-        const val   = months[k];
-        const pct   = Math.round(val/max*100);
-        return `<div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-            <span style="color:var(--text-2)">${label}</span>
-            <span style="font-weight:600">${val.toFixed(0)} km</span>
-          </div>
-          <div class="progress"><div class="progress__bar" style="width:${pct}%;background:${color}"></div></div>
-        </div>`;
-      }).join('')
-    : '<div class="empty"><div class="empty__text">Aucune donnée mensuelle</div></div>';
-}
 
 // ── Zones d'intensité ─────────────────────────────────────────────────────────
 const ZONES = [

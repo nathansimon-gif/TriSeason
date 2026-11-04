@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261119a"></script>
+  <script src="theme.js?v=20261120a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261119a"></script>
+  <script src="auth-guard.js?v=20261120a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261119a">
+  <link rel="stylesheet" href="style.css?v=20261120a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -157,30 +157,14 @@
     <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
   </div>
 
-  <!-- ── Musculation : zones travaillées (seulement avec au moins une séance de musculation) ── -->
+  <!-- ── Musculation : une ligne (la carte du corps complète est dans Sports → Muscu) ── -->
   <div class="card" style="margin-bottom:12px;display:none" id="bodyMapCard">
-    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span><span class="sport-dot sport-dot--muscu"></span>Musculation : zones travaillées</span>
-      <span class="tip-icon" data-tip="Chaque exercice compte pour les muscles qu'il fait travailler (un muscle secondaire compte pour moitié). Plus la zone est foncée, plus elle a travaillé par rapport aux autres sur la période. Touche une zone pour voir les exercices.">?</span>
+    <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:8px"><span><span class="sport-dot sport-dot--muscu"></span>Musculation · 4 dernières semaines</span>
+        <span class="tip-icon" data-tip="Les muscles qui ont le plus travaillé (en séries) ces 4 dernières semaines. La carte du corps complète, avec la période et le détail par exercice, est dans Sports → Muscu.">?</span></span>
+      <a href="sport.html?sport=muscu#carte-du-corps" style="font-size:12px;font-weight:500;color:var(--accent)">Carte du corps</a>
     </div>
-    <div class="ni-controls">
-      <label class="ni-control"><span>Période</span>
-        <select class="form-select" id="bmPeriod" onchange="renderBodyMapCard()">
-          <option value="7">7 derniers jours</option>
-          <option value="28" selected>4 dernières semaines</option>
-          <option value="91">3 derniers mois</option>
-          <option value="365">12 derniers mois</option>
-        </select>
-      </label>
-      <label class="ni-control"><span>Compter</span>
-        <select class="form-select" id="bmMode" onchange="renderBodyMapCard()">
-          <option value="sets">Séries</option>
-          <option value="reps">Répétitions</option>
-          <option value="kg">Kg soulevés</option>
-        </select>
-      </label>
-    </div>
-    <div id="bodyMap"></div>
+    <div id="bodyMapLine" style="font-size:13px;color:var(--text-2);line-height:1.6"></div>
   </div>
 
   <!-- ── Blessures, maladie, reprise (option avec accord séparé) ── -->
@@ -222,6 +206,7 @@
       <label class="ni-control"><span>Comparer</span>
         <select class="form-select" id="niOutcome" onchange="renderNutritionImpact()">
           <option value="sensation">Ressenti de la séance</option>
+          <option value="rpe">Effort ressenti</option>
           <option value="perf">Vitesse vs ton habitude</option>
         </select>
       </label>
@@ -311,7 +296,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261119a"></script>
+<script src="app.js?v=20261120a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -461,10 +446,16 @@ function renderBodyMapCard() {
   const card = document.getElementById('bodyMapCard');
   card.style.display = TS.muscuOn() ? '' : 'none';
   if (!TS.muscuOn()) return;
-  const days = +document.getElementById('bmPeriod').value;
   const t = new Date();
-  const from = TS.localDateStr(new Date(t.getFullYear(), t.getMonth(), t.getDate() - days + 1));
-  TS.renderBodyMap(document.getElementById('bodyMap'), { from, to: TS.localDateStr(t), mode: document.getElementById('bmMode').value });
+  const from = TS.localDateStr(new Date(t.getFullYear(), t.getMonth(), t.getDate() - 27));
+  const totals = TS.muscuMuscleLoad({ from, to: TS.localDateStr(t), mode: 'sets' }).totals;
+  const worked = Object.keys(totals).filter(m => totals[m] > 0).sort((a, b) => totals[b] - totals[a]);
+  const name = m => (TS.MUSCLES[m] || m).toLowerCase();
+  const rest = Object.keys(TS.MUSCLES).length - worked.length;
+  document.getElementById('bodyMapLine').innerHTML = worked.length
+    ? `Surtout : <b style="color:var(--text)">${worked.slice(0, 3).map(name).join(', ')}</b>.`
+      + (rest > 0 ? ` ${rest} muscle${rest > 1 ? 's' : ''} pas travaillé${rest > 1 ? 's' : ''}.` : ' Tous les muscles ont travaillé.')
+    : 'Aucune séance de musculation ces 4 dernières semaines.';
 }
 
 function renderPMC() {
@@ -1035,6 +1026,7 @@ function niCss(name) { return getComputedStyle(document.documentElement).getProp
 function niFmtOutcome(o, v) {
   if (v === null || v === undefined) return '—';
   if (o === 'sensation') return v.toFixed(1).replace('.', ',') + '<small>/5</small>';
+  if (o === 'rpe') return v.toFixed(1).replace('.', ',') + '<small>/10</small>';
   return (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + '<small>%</small>';
 }
 
@@ -1070,6 +1062,7 @@ function renderNutritionImpact() {
     const need = min * 2;
     const outcomeHint = o === 'sensation'
       ? 'renseigne ton <b>ressenti</b> (les visages) quand tu enregistres une séance'
+      : o === 'rpe' ? 'note l’<b>effort ressenti</b> (de 1 à 10) quand tu enregistres une séance'
       : 'garde <b>distance et durée</b> sur tes séances (il faut au moins 5 séances d’un sport pour connaître ton habitude)';
     const factorHint = f === 'hydration'
       ? 'note ton <b>hydratation</b> dans Nutrition les jours où tu t’entraînes'
@@ -1110,9 +1103,9 @@ function renderNutritionImpact() {
   }
 
   const diff = cmp.high.avg - cmp.low.avg;
-  const meaningful = o === 'sensation' ? Math.abs(diff) >= 0.4 : Math.abs(diff) >= 2;
+  const meaningful = o === 'sensation' ? Math.abs(diff) >= 0.4 : o === 'rpe' ? Math.abs(diff) >= 0.5 : Math.abs(diff) >= 2;
   const thr = niFmtFactor(f, cmp.threshold);
-  const outcomeTxt = o === 'sensation' ? 'ton ressenti moyen' : 'ta vitesse par rapport à ton habitude';
+  const outcomeTxt = o === 'sensation' ? 'ton ressenti moyen' : o === 'rpe' ? 'ton effort ressenti moyen' : 'ta vitesse par rapport à ton habitude';
   let headline;
   if (!meaningful) {
     headline = `Pas de différence nette pour l’instant : avec plus ou moins ${niDe(factor.short)}, ${outcomeTxt} reste proche.`;
@@ -1120,6 +1113,8 @@ function renderNutritionImpact() {
     const better = diff > 0 ? 'plus' : 'moins';
     const gap = o === 'sensation'
       ? `${Math.abs(diff).toFixed(1).replace('.', ',')} point${Math.abs(diff) >= 2 ? 's' : ''} de ressenti en plus`
+      : o === 'rpe'
+      ? `un effort ressenti ${Math.abs(diff).toFixed(1).replace('.', ',')} point${Math.abs(diff) >= 2 ? 's' : ''} plus élevé`   // le groupe nommé est toujours celui où la valeur est la plus haute
       : `une vitesse ${Math.abs(diff).toFixed(1).replace('.', ',')} % plus élevée`;
     headline = `Tes séances avec <b>${better} ${niDe(factor.short)}</b> (${better === 'plus' ? 'au-dessus de' : 'jusqu’à'} ${thr}) vont avec <b>${gap}</b> en moyenne.`;
   }
@@ -1156,7 +1151,7 @@ function renderNutritionImpact() {
         label: NI_SPORT_LABELS[sp],
         data: pts.filter(p => p.sport === sp).map(p => ({
           x: p.factors[f],
-          y: o === 'sensation' ? p.outcomes[o] + niJitter(p.id) : p.outcomes[o],
+          y: o === 'sensation' || o === 'rpe' ? p.outcomes[o] + niJitter(p.id) : p.outcomes[o],
           value: p.outcomes[o], date: p.date,
         })),
         backgroundColor: niCss('--' + sp),
@@ -1185,7 +1180,8 @@ function renderNutritionImpact() {
              grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 10 } } },
         y: { title: { display: true, text: TS.NUTRI_OUTCOMES[o].label + ' (' + TS.NUTRI_OUTCOMES[o].unit + ')', color: '#a3abb9', font: { size: 11 } },
              grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#6b7383', font: { size: 10 } },
-             ...(o === 'sensation' ? { min: 0.5, max: 5.5, afterBuildTicks: axis => { axis.ticks = [1, 2, 3, 4, 5].map(v => ({ value: v })); } } : {}) },
+             ...(o === 'sensation' ? { min: 0.5, max: 5.5, afterBuildTicks: axis => { axis.ticks = [1, 2, 3, 4, 5].map(v => ({ value: v })); } }
+               : o === 'rpe' ? { min: 0.5, max: 10.5, afterBuildTicks: axis => { axis.ticks = [2, 4, 6, 8, 10].map(v => ({ value: v })); } } : {}) },
       },
     },
   });

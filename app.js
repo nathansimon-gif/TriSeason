@@ -1450,6 +1450,7 @@ const NUTRI_FACTORS = {
 };
 const NUTRI_OUTCOMES = {
   sensation: { label: 'Ressenti', unit: '/5' },
+  rpe:       { label: 'Effort ressenti', unit: '/10' },   // plus bas = séance vécue comme plus facile
   perf:      { label: 'Vitesse vs ton habitude', unit: '%' },
 };
 const NUTRI_MIN_GROUP = 3;      // séances minimum de chaque côté pour comparer
@@ -1539,6 +1540,7 @@ function getNutritionImpact(filters = {}) {
       },
       outcomes: {
         sensation: s.sensation >= 1 && s.sensation <= 5 ? s.sensation : null,
+        rpe: s.rpe >= 1 && s.rpe <= 10 ? s.rpe : null,
         perf: speed && ref ? Math.round((speed / ref - 1) * 1000) / 10 : null,
       },
     };

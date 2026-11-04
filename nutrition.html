@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261119a"></script>
+  <script src="theme.js?v=20261120a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261119a"></script>
+  <script src="auth-guard.js?v=20261120a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261119a">
+  <link rel="stylesheet" href="style.css?v=20261120a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -281,10 +281,12 @@
     </div>
     <div id="energyBalance"></div>
   </div>
-  <!-- Nutrition et Performance -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="card__title">Nutrition et Performance
-      <span class="tip-icon" data-tip="Compare ton eau, tes repas et ton effort ressenti pour voir s'ils ont un lien avec tes séances.">?</span>
+  <!-- Avant tes courses (le lien repas × séances est dans Forme) -->
+  <div class="card" style="margin-bottom:12px;display:none" id="raceNutriCard">
+    <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:8px">Avant tes courses
+        <span class="tip-icon" data-tip="Ton eau et tes calories en moyenne les 7 jours avant chaque course, à côté de ton résultat. Le lien entre tes repas, ton eau et tes séances est dans Forme.">?</span></span>
+      <a href="forme.html#nutriImpactCard" style="font-size:12px;font-weight:500;color:var(--accent)">Repas et séances : Forme</a>
     </div>
     <div id="perfComparison"></div>
   </div>
@@ -473,7 +475,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261119a"></script>
+<script src="app.js?v=20261120a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -2143,7 +2145,7 @@ function timeToSec(str) {
 
 // Nombre d'éléments affichés dans chaque liste (4 par défaut, +4 par clic sur « Afficher plus »)
 var PERF_STEP = 4;
-var perfShown = { sess: PERF_STEP, comp: PERF_STEP };
+var perfShown = { comp: PERF_STEP };
 function perfShowMore(key) { perfShown[key] += PERF_STEP; renderPerfComparison(); }
 function perfShowLess(key) { perfShown[key] = PERF_STEP; renderPerfComparison(); }
 
@@ -2157,64 +2159,16 @@ function perfLimited(items, key) {
   return shown + (btns ? '<div style="display:flex;gap:8px;margin-top:10px">' + btns + '</div>' : '');
 }
 
+// « Avant tes courses » : eau et calories moyennes des 7 jours avant chaque course, à côté du
+// résultat. (Le lien entre eau, repas et effort ressenti des séances est dans Forme.)
 function renderPerfComparison() {
   var el = document.getElementById('perfComparison');
   if (!el) return;
+  var card = document.getElementById('raceNutriCard');
   var nutri    = getNutrition();
   var allMeals = nutri.meals    || [];
   var allHydro = nutri.hydration || {};
-  var sessions = TS.getSessions().filter(function(s){ return s.date && s.rpe; });
-  if (sessions.length < 3) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text-3)">Note l\'effort ressenti d\'au moins 3 séances pour voir l\'analyse.</div>';
-    return;
-  }
-  var days = {};
-  sessions.forEach(function(s) {
-    if (!days[s.date]) {
-      var dm   = allMeals.filter(function(m){ return m.date===s.date; });
-      var kcal = dm.reduce(function(a,m){ return a+(m.kcal||(m.glucides||0)*4+(m.proteines||0)*4+(m.lipides||0)*9); },0);
-      days[s.date] = { rpes:[], hydro:allHydro[s.date]||0, kcal:kcal };
-    }
-    days[s.date].rpes.push(s.rpe);
-  });
-  var dayList = Object.values(days).filter(function(d){ return d.rpes.length>0; });
-  var avgArr  = function(arr){ return arr.reduce(function(a,b){return a+b;},0)/arr.length; };
-  var hGoal   = TS.hydroGoal();
-  var wh      = dayList.filter(function(d){ return d.hydro>=hGoal; });
-  var ph      = dayList.filter(function(d){ return d.hydro>0&&d.hydro<hGoal; });
-  var rpeWH   = wh.length ? (wh.reduce(function(a,d){return a+avgArr(d.rpes);},0)/wh.length).toFixed(1) : null;
-  var rpePH   = ph.length ? (ph.reduce(function(a,d){return a+avgArr(d.rpes);},0)/ph.length).toFixed(1) : null;
   var out = '';
-  if (rpeWH && rpePH) {
-    var diff  = (parseFloat(rpePH)-parseFloat(rpeWH)).toFixed(1);
-    var color = parseFloat(diff)>0 ? 'var(--green)' : 'var(--yellow)';
-    var msg   = parseFloat(diff)>0.3 ? 'Effort ressenti (RPE) plus élevé de '+String(diff).replace('.', ',')+' point(s) les jours où tu as bu moins que ton objectif.' : 'Pas de différence nette entre ces jours-là.';
-    out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:8px">'
-      + '<div style="font-size:12px;font-weight:700;color:var(--nat);margin-bottom:6px">Hydratation et RPE</div>'
-      + '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">'
-      // Seuil = ton objectif d'eau (1,5 L par défaut, réglable dans Hydratation)
-      + '<span>Jours &ge; '+TS.formatLiters(hGoal)+' : <b style="color:var(--nat)">'+rpeWH.replace('.', ',')+'/10</b></span>'
-      + '<span>Jours &lt; '+TS.formatLiters(hGoal)+' : <b style="color:var(--red)">'+rpePH.replace('.', ',')+'/10</b></span>'
-      + '</div><div style="font-size:11px;color:'+color+'">'+msg+'</div></div>';
-  }
-  // Classées par RPE le plus bas, puis de la plus récente à la plus ancienne
-  var best = sessions.slice().sort(function(a,b){ return ((a.rpe||10)-(b.rpe||10)) || b.date.localeCompare(a.date); });
-  var rows = [];
-  best.forEach(function(s) {
-    var hydro = allHydro[s.date]||0;
-    var kcal  = allMeals.filter(function(m){return m.date===s.date;}).reduce(function(a,m){return a+(m.kcal||0);},0);
-    var sp    = TS.SPORTS[s.sport]||{};
-    rows.push('<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:12px">'
-      +'<span>'+(sp.emoji||'')+' '+TS.parseLocalDate(s.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+'</span>'
-      +'<span style="color:var(--green);font-weight:700">RPE '+s.rpe+'/10</span>'
-      +(hydro?'<span style="color:var(--text-2)">'+TS.formatLiters(hydro)+' d’eau</span>':'')
-      +(kcal?'<span style="color:var(--text-2)">'+Math.round(kcal)+' kcal</span>':'')
-      +(s.kcal?'<span style="color:var(--run)">'+s.kcal+' kcal brûlées</span>':'')
-      +'</div>');
-  });
-  out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm)">'
-    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">Séances les plus faciles (effort ressenti le plus bas)</div>'
-    +perfLimited(rows, 'sess')+'</div>';
   // Analyse préparation nutritionnelle avant les courses associées
   // De la plus récente à la plus ancienne
   var comps = TS.getCompetitions().filter(function(c){ return c.actual_time; })
@@ -2262,14 +2216,11 @@ function renderPerfComparison() {
         + '<span>Jours notés : <b>' + count + '</b></span>'
         + '</div></div>');
     });
-    if (compRows.length) {
-      out += '<div style="padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-top:8px">'
-        + '<div style="font-size:12px;font-weight:700;margin-bottom:10px">Préparation nutritionnelle avant tes courses</div>'
-        + perfLimited(compRows, 'comp') + '</div>';
-    }
+    if (compRows.length) out = perfLimited(compRows, 'comp');
   }
 
   el.innerHTML = out;
+  if (card) card.style.display = out ? '' : 'none';
 }
 
 function renderTips() {

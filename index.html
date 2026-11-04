@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261119a"></script>
+  <script src="theme.js?v=20261120a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261119a"></script>
+  <script src="auth-guard.js?v=20261120a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261119a">
+  <link rel="stylesheet" href="style.css?v=20261120a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -82,6 +82,11 @@
     .ins-tile--empty .ins-tile__main { color:var(--text-3); font-weight:500; font-size:13px; }
     .ins-week { font-size:13px; color:var(--text-2); line-height:1.6; margin-top:12px; }
     .ins-week b { color:var(--text); }
+    /* Grand écran : séances prévues à droite du calendrier (sinon en dessous) */
+    @media (min-width: 1000px) {
+      .cal-split { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:28px; align-items:start; }
+      .cal-side > div:first-child { margin-top:0 !important; }
+    }
     .ins-note { font-size:12px; color:var(--text-3); margin-top:10px; line-height:1.5; }
     .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; max-width:380px; margin:0 auto; }
     .cal-dow { text-align:center; font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:.05em; padding-bottom:4px; }
@@ -145,12 +150,6 @@
     .cal-legend { display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap; font-size:11px; color:var(--text-2); }
     .cal-legend__dot { display:inline-flex; align-items:center; gap:5px; }
 
-    .month-stat-tile {
-      text-align:center; padding:10px 6px; background:var(--surface2);
-      border-radius:var(--r-sm);
-    }
-    .month-stat-tile__val { font-size:19px; font-weight:600; letter-spacing:-.02em; }
-    .month-stat-tile__label { font-size:9px; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
     .month-sport-row {
       display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border);
       font-size:12px;
@@ -331,8 +330,8 @@
     </div>
   </div>
 
-  <!-- ── Calendrier d'activité + Résumé du mois ── -->
-  <div class="grid-2" style="margin-bottom:12px">
+  <!-- ── Calendrier d'activité ── -->
+  <div style="margin-bottom:12px">
   <div class="card">
     <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <span>
@@ -345,6 +344,7 @@
         <button class="btn btn--ghost btn--sm btn--icon" onclick="changeCalMonth(1)" style="font-size:16px;line-height:1">›</button>
       </div>
     </div>
+    <div class="cal-split"><div class="cal-main">
     <div class="cal-nav"><div class="cal-nav__label" id="calMonthLabel"></div></div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="cal-legend">
@@ -358,27 +358,15 @@
       <span class="cal-legend__dot"><span class="cal-flag" style="position:static;color:var(--accent)"><svg viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.5 V9.5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M1.6 0.8 H8.4 L6.6 3 L8.4 5.2 H1.6 Z" fill="currentColor"/></svg></span> Compétition</span>
       <span style="margin-left:auto">Appuie sur un jour pour voir le détail ou planifier</span>
     </div>
+    </div><div class="cal-side">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap">
       <span style="font-size:12px;font-weight:600;color:var(--text)">Séances prévues</span>
       <button class="btn btn--sm" onclick="openPlanDay(TS.localDateStr(), true)">+ Planifier une séance</button>
     </div>
     <div class="plan-list" id="planList"></div>
+    </div></div>
   </div>
 
-  <!-- ── Résumé du mois affiché ── -->
-  <div class="card">
-    <div class="card__title">
-      Résumé du mois
-      <span class="tip-icon" data-tip="Statistiques du mois actuellement affiché dans le calendrier ci-contre. Change de mois avec les flèches pour voir le résumé correspondant.">?</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-      <div class="month-stat-tile"><div class="month-stat-tile__val" id="msJoursActifs">—</div><div class="month-stat-tile__label">Jours actifs</div></div>
-      <div class="month-stat-tile"><div class="month-stat-tile__val" id="msSeances">—</div><div class="month-stat-tile__label">Séances</div></div>
-      <div class="month-stat-tile"><div class="month-stat-tile__val" id="msHeures">—</div><div class="month-stat-tile__label">Heures</div></div>
-    </div>
-    <div id="msSportBreakdown"></div>
-    <div id="msBestDay"></div>
-  </div>
   </div>
 
   <!-- ── Poids + Prochaine course ── -->
@@ -445,11 +433,6 @@
     <div id="recordsWidget"></div>
   </div>
 
-  <!-- ── Métriques clés ── -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="card__title">Métriques clés — saison</div>
-    <div id="metricsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"></div>
-  </div>
 
 </div>
 </div>
@@ -516,7 +499,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261119a"></script>
+<script src="app.js?v=20261120a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -558,11 +541,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCharts();
   renderWeight();
   renderNextRace();
-  renderMetrics();
   renderNutriWidget();
   renderRecordsWidget();
   renderActivityCalendar();
-  renderMonthSummary();
   loadProfileForm();
   renderOnboarding();
   renderChallenges();
@@ -721,9 +702,7 @@ window.addEventListener('triseason:update', () => {
   renderCharts();
   renderWeight();
   renderNextRace();
-  renderMetrics();
   renderActivityCalendar();
-  renderMonthSummary();
 });
 
 // ── Greeting ──────────────────────────────────────────────────────────────────
@@ -904,7 +883,6 @@ function changeCalMonth(dir) {
   if (calMonthIdx < 0)  { calMonthIdx = 11; calYear--; }
   if (calMonthIdx > 11) { calMonthIdx = 0;  calYear++; }
   renderActivityCalendar();
-  renderMonthSummary();
 }
 
 function goToCalCurrentMonth() {
@@ -912,68 +890,9 @@ function goToCalCurrentMonth() {
   calYear = n.getFullYear();
   calMonthIdx = n.getMonth();
   renderActivityCalendar();
-  renderMonthSummary();
 }
 
 
-function renderMonthSummary() {
-  const jEl = document.getElementById('msJoursActifs');
-  if (!jEl) return;
-
-  const daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
-  const from = calYear + '-' + String(calMonthIdx+1).padStart(2,'0') + '-01';
-  const to   = calYear + '-' + String(calMonthIdx+1).padStart(2,'0') + '-' + String(daysInMonth).padStart(2,'0');
-
-  const sessions = TS.getSessions().filter(s => s.date >= from && s.date <= to);
-  const activeDays = new Set(sessions.map(s => s.date)).size;
-  const totalH = sessions.reduce((a, s) => a + (s.duration || 0), 0);
-
-  document.getElementById('msJoursActifs').textContent = activeDays + '/' + daysInMonth;
-  document.getElementById('msSeances').textContent = sessions.length;
-  document.getElementById('msHeures').textContent = calFormatDur(totalH);
-
-  // Répartition par sport
-  const bySport = { nat: { km: 0, h: 0, n: 0 }, velo: { km: 0, h: 0, n: 0 }, run: { km: 0, h: 0, n: 0 }, muscu: { km: 0, h: 0, n: 0 } };
-  sessions.forEach(s => {
-    if (!bySport[s.sport]) return;
-    bySport[s.sport].km += s.distance || 0;
-    bySport[s.sport].h  += s.duration || 0;
-    bySport[s.sport].n  += 1;
-  });
-  const SPORT_COLOR = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)', muscu: 'var(--muscu)' };
-  const breakdown = Object.keys(bySport)
-    .filter(k => bySport[k].n > 0)
-    .map(k => `<div class="month-sport-row">
-      <span style="width:8px;height:8px;border-radius:50%;background:${SPORT_COLOR[k]};flex-shrink:0"></span>
-      <span style="flex:1">${TS.SPORTS[k]?.label || k}</span>
-      <span style="color:var(--text-2)">${bySport[k].n} séance${bySport[k].n>1?'s':''}</span>
-      <span style="font-weight:700;min-width:60px;text-align:right">${k === 'muscu' ? TS.formatHours(bySport[k].h) : bySport[k].km.toFixed(0) + ' km'}</span>
-    </div>`).join('');
-  document.getElementById('msSportBreakdown').innerHTML = breakdown
-    || '<div style="font-size:12px;color:var(--text-3);padding:8px 0">Aucune séance ce mois-ci.</div>';
-
-  // Meilleure journée (plus gros volume)
-  const byDate = {};
-  sessions.forEach(s => {
-    if (!byDate[s.date]) byDate[s.date] = { h: 0, km: 0, n: 0 };
-    byDate[s.date].h  += s.duration || 0;
-    byDate[s.date].km += s.distance || 0;
-    byDate[s.date].n  += 1;
-  });
-  const dates = Object.keys(byDate);
-  const bestEl = document.getElementById('msBestDay');
-  if (dates.length) {
-    const bestDate = dates.reduce((a, b) => byDate[b].h > byDate[a].h ? b : a);
-    const best = byDate[bestDate];
-    const d = new Date(bestDate + 'T00:00:00');
-    bestEl.innerHTML = `<div class="month-best-day">
-      <b>Meilleure journée</b> : ${d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})}
-      — ${calFormatDur(best.h)}${best.km ? ' · ' + best.km.toFixed(1).replace('.', ',') + ' km' : ''} · ${best.n} séance${best.n>1?'s':''}
-    </div>`;
-  } else {
-    bestEl.innerHTML = '';
-  }
-}
 
 function renderActivityCalendar() {
   const grid  = document.getElementById('calGrid');
@@ -1620,35 +1539,6 @@ function renderNextRace(){
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
-function renderMetrics(){
-  const sessions=TS.getSessions();
-  const natP=[],veloV=[],runP=[];
-  for(const s of sessions){
-    if(s.sport==='nat'  &&s.duration&&s.distance) natP.push(s.duration*60/(s.distance*10));
-    if(s.sport==='velo' &&s.duration&&s.distance) veloV.push(s.distance/s.duration);
-    if(s.sport==='run'  &&s.duration&&s.distance) runP.push(s.duration*60/s.distance);
-  }
-  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
-  const ps=(m)=>{if(!m)return'—';const mm=Math.floor(m),ss=Math.round((m-mm)*60);return`${mm}'${String(ss).padStart(2,'0')}"`;};
-  const stats=TS.getSeasonStats();
-  const data=TS.getData();
-  const activeWeeks=new Set((data.sessions||[]).map(s=>TS.getISOWeek(s.date)));
-  const actives=activeWeeks.size;
-
-  const items=[
-    {label:'Allure nat. moy.',val:ps(avg(natP)),unit:'/100m',tip:'Référence : <1\'30"=élite · <2\'=confirmé · <2\'30"=amateur'},
-    {label:'Vitesse vélo moy.',val:avg(veloV).toFixed(1).replace('.', ',')||'—',unit:'km/h',tip:'Référence : <25=débutant · 30=amateur · 35+=confirmé'},
-    {label:'Allure course moy.',val:ps(avg(runP)),unit:'/km',tip:'Référence : <4\'=excellent · <5\'=bon · <6\'=amateur'},
-    {label:'RPE moyen',val:stats.total.rpe||'—',unit:'/10',tip:'RPE > 7 sur plusieurs semaines consécutives = risque de surmenage'},
-    {label:'Semaines actives',val:actives,unit:'',tip:'Semaines comportant au moins une saisie'},
-  ];
-
-  document.getElementById('metricsGrid').innerHTML=items.map(m=>`
-    <div class="metric-box" data-tip="${m.tip.replace(/"/g, '&quot;')}" style="border-right:1px solid var(--border);border-bottom:1px solid var(--border)">
-      <div style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">${m.label}</div>
-      <div style="font-size:18px;font-weight:600;font-family:var(--mono);letter-spacing:-.02em">${m.val}<span style="font-size:11px;color:var(--text-2);font-family:var(--font);font-weight:400"> ${m.unit}</span></div>
-    </div>`).join('');
-}
 
 // ── Profile modal ─────────────────────────────────────────────────────────────
 function loadProfileForm(){const p=TS.getProfile();document.getElementById('p_name').value=p.name||'';document.getElementById('p_height').value=p.height||'';document.getElementById('p_ftp').value=p.ftp||'';document.getElementById('p_fcmax').value=p.fcmax||'';}

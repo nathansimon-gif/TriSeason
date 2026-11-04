@@ -1575,14 +1575,19 @@ async function main() {
       const sets = TS.muscuMuscleLoad({ mode: 'sets' }).totals, kg = TS.muscuMuscleLoad({ mode: 'kg' }).totals;
       return { sq, po, ga, sets, kg, order: r.map(x => x.name) };
     });
+    // Carte du corps complète : Sports → Muscu (Forme n'en garde qu'une ligne et un lien)
+    const forme1 = await v.page.evaluate(() => ({ card: getComputedStyle(document.getElementById('carte-du-corps')).display,
+      quad: document.querySelector('#muscuBodyMap .bm-muscle[data-m="quadriceps"]').style.fillOpacity,
+      calf: document.querySelector('#muscuBodyMap .bm-muscle[data-m="mollets"]').style.fillOpacity,
+      detail: document.querySelector('#muscuBodyMap .bm-detail').textContent }));
+    await v.page.click('#muscuBodyMap .bm-row[data-m="abdos"]'); await v.page.waitForTimeout(100);
+    const forme2 = await v.page.evaluate(() => document.querySelector('#muscuBodyMap .bm-detail').textContent);
     await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(800);
-    const forme1 = await v.page.evaluate(() => ({ card: getComputedStyle(document.getElementById('bodyMapCard')).display,
-      quad: document.querySelector('#bodyMap .bm-muscle[data-m="quadriceps"]').style.fillOpacity,
-      calf: document.querySelector('#bodyMap .bm-muscle[data-m="mollets"]').style.fillOpacity,
-      detail: document.querySelector('#bodyMap .bm-detail').textContent }));
-    await v.page.selectOption('#bmPeriod', '7');
-    await v.page.click('#bodyMap .bm-row[data-m="abdos"]'); await v.page.waitForTimeout(100);
-    const forme2 = await v.page.evaluate(() => document.querySelector('#bodyMap .bm-detail').textContent);
+    const formeLine = await v.page.evaluate(() => ({ card: getComputedStyle(document.getElementById('bodyMapCard')).display,
+      text: document.getElementById('bodyMapLine').textContent, oldMap: !!document.querySelector('#bodyMapCard svg'),
+      link: document.querySelector('#bodyMapCard a').getAttribute('href') }));
+    await v.page.click('#bodyMapCard a'); await v.page.waitForTimeout(900);
+    const jumped = await v.page.evaluate(() => { const r = document.getElementById('carte-du-corps').getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; });
     await v.page.goto(`${BASE}/records.html`); await v.page.waitForTimeout(700);
     const rec = await v.page.evaluate(() => ({ shown: getComputedStyle(document.getElementById('muscuRecordSection')).display,
       cards: [...document.querySelectorAll('#records-muscu .record-card')].map(c => c.querySelector('.record-val').textContent) }));
@@ -1607,7 +1612,9 @@ async function main() {
     assert(calc.sets.quadriceps === 13 && calc.sets.pecs === 6 && calc.sets.triceps === 3, 'charge par muscle : ' + JSON.stringify(calc.sets));
     assert(calc.kg.quadriceps === 60 * 32 + 70 * 24 + 80 * 25 && !calc.kg.pecs, 'kg soulevés par muscle : ' + JSON.stringify(calc.kg));
     assert(forme1.card !== 'none' && forme1.quad === '1' && forme1.calf === '0' && /Quadriceps/.test(forme1.detail) && /Squat/.test(forme1.detail), 'carte du corps : ' + JSON.stringify(forme1));
-    assert(/Abdominaux/.test(forme2) && /Gainage/.test(forme2) && !/Pompes/.test(forme2), 'carte du corps sur 7 jours : ' + forme2);
+    assert(/Abdominaux/.test(forme2) && /Gainage/.test(forme2), 'carte du corps, détail d’un muscle : ' + forme2);
+    assert(formeLine.card !== 'none' && /Surtout : quadriceps/.test(formeLine.text) && !formeLine.oldMap && /carte-du-corps/.test(formeLine.link) && jumped,
+      'Forme : une ligne et un lien vers la carte : ' + JSON.stringify({ ...formeLine, jumped }));
     assert(rec.shown !== 'none' && rec.cards.join() === '80 kg,25 rép.,60 s', 'section Records : ' + JSON.stringify(rec));
     assert(none.tab === 'none' && none.view === 'none' && none.forme === 'none' && none.rec === 'none', 'musculation visible sans séance : ' + JSON.stringify(none));
   });
@@ -1674,20 +1681,16 @@ async function main() {
     await v.page.click('#hydroGoalLine .link-btn');
     await v.page.click('text=Par défaut (1,5 L)'); await v.page.waitForTimeout(200);
     const reset = await v.page.evaluate(() => TS.hydroGoal());
-    // Observation « Hydratation et RPE » : comparée à l'objectif (1,5 L), plus aux anciens 2 L
-    const obs = await v.page.evaluate(() => {
-      const d = TS.getData();
-      for (let i = 1; i <= 12; i++) { const k = TS.localDateStr(new Date(Date.now() - i * 864e5)); d.nutrition.hydration[k] = i % 2 ? 1700 : 900; }
-      TS.saveData(d); renderPerfComparison();
-      return document.getElementById('perfComparison').textContent.replace(/\s+/g, ' ');
-    });
+    // « Avant tes courses » (eau et kcal des 7 jours avant chaque course) ; l'ancienne carte en double a disparu
+    const obs = await v.page.evaluate(() => ({ card: getComputedStyle(document.getElementById('raceNutriCard')).display,
+      text: document.getElementById('perfComparison').textContent.replace(/\s+/g, ' '), old: /Hydratation et RPE|Séances les plus faciles/.test(document.body.textContent) }));
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(/1,5 L/.test(before.text) && before.goal === 1500 && before.line === 1500, 'défaut : ' + JSON.stringify(before));
     assert(/2,2 L/.test(after.text) && after.goal === 2200 && after.cloud === 2200, 'modifié : ' + JSON.stringify(after));
     assert(after.ch && /2,2 L/.test(after.ch.label), 'défi hydratation : ' + JSON.stringify(after.ch));
     assert(reset === 1500, 'retour au défaut : ' + reset);
-    assert(/Jours ≥ 1,5 L/.test(obs) && /Jours < 1,5 L/.test(obs) && !/2L/.test(obs), 'observation hydratation : ' + obs.slice(0, 300));
+    assert(obs.card !== 'none' && /10 km test/.test(obs.text) && /Objectif atteint/.test(obs.text) && !obs.old, 'avant tes courses : ' + JSON.stringify(obs).slice(0, 300));
   });
 
   await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {
@@ -2007,6 +2010,32 @@ async function main() {
     assert(/modèles connus/.test(open1) && closed && toggled && kb, '« ? » au toucher : ' + JSON.stringify({ open1: open1.slice(0, 60), closed, toggled, kb }));
     assert(!Object.keys(found).length, '« vous » restant : ' + JSON.stringify(found));
     assert(speed === '28,0 km/h', 'vitesse : ' + speed);
+  });
+
+  await test('Doublons retirés : Métriques clés, Résumé du mois, Progression mensuelle ; Profil → Records en une ligne ; effort ressenti dans Forme', async () => {
+    const data = sampleData();
+    data.records = [{ id: 'r1', sport: 'run', dist: '10km', time: '0:41:07', date: day(-20) }, { id: 'r2', sport: 'velo', dist: '40km', time: '1:10:00', date: day(-40) }];
+    // Effort ressenti plus bas les jours où l'on a bu davantage
+    data.nutrition.hydration = {};
+    data.sessions.forEach((x, i) => { data.nutrition.hydration[x.date] = i % 2 ? 2500 : 800; x.rpe = i % 2 ? 4 : 8; });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const dash = await v.page.evaluate(() => ({ metrics: !!document.getElementById('metricsGrid'), month: !!document.getElementById('msJoursActifs'),
+      txt: /Métriques clés|Résumé du mois/.test(document.body.innerText), cal: document.getElementById('calGrid').children.length }));
+    await v.page.goto(`${BASE}/sport.html`); await v.page.waitForTimeout(800);
+    const sport = await v.page.evaluate(() => ({ prog: !!document.getElementById('monthlyProgress'), best: document.getElementById('bestWeeks').children.length }));
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const prof = await v.page.evaluate(() => ({ text: document.getElementById('pbGrid').textContent, href: document.getElementById('pbGrid').closest('a').getAttribute('href') }));
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(800);
+    await v.page.selectOption('#niFactor', 'hydration'); await v.page.selectOption('#niOutcome', 'rpe'); await v.page.waitForTimeout(300);
+    const forme = await v.page.evaluate(() => ({ head: (document.querySelector('#niBody .ni-headline') || {}).textContent || document.getElementById('niBody').textContent.slice(0, 200),
+      groups: [...document.querySelectorAll('#niBody .ni-group__val')].map(e => e.textContent) }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!dash.metrics && !dash.month && !dash.txt && dash.cal > 27, 'Dashboard : ' + JSON.stringify(dash));
+    assert(!sport.prog && sport.best > 0, 'Sports : ' + JSON.stringify(sport));
+    assert(/2 records · dernier : 10km en 0:41:07/.test(prof.text) && prof.href === 'records.html', 'Profil : ' + JSON.stringify(prof));
+    assert(/moins d’hydratation/.test(forme.head) && /effort ressenti 4,0 points plus élevé/.test(forme.head) && forme.groups.join() === '4,0/10,8,0/10', 'Forme, effort ressenti : ' + JSON.stringify(forme));
   });
 
   await browser.close();
