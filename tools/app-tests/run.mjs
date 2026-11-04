@@ -1979,6 +1979,36 @@ async function main() {
     assert(r.fit.sport === 'muscu' && r.cardio.skip && r.txt.sport === 'muscu', 'import fichiers : ' + JSON.stringify(r));
   });
 
+  await test('Textes : « ? » au toucher, tutoiement partout, virgule décimale, plus d’avertissement jaune', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    // 1. Le « ? » du titre s'ouvre au doigt, se referme en touchant ailleurs
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(800);
+    const icon = v.page.locator('.page-header .tip-icon');
+    await icon.tap(); await v.page.waitForTimeout(150);
+    const open1 = await v.page.evaluate(() => (document.querySelector('.tooltip') || {}).textContent || '');
+    await v.page.tap('.page-header p'); await v.page.waitForTimeout(150);
+    const closed = await v.page.evaluate(() => !document.querySelector('.tooltip'));
+    await icon.tap(); await v.page.waitForTimeout(150); await icon.tap(); await v.page.waitForTimeout(150);
+    const toggled = await v.page.evaluate(() => !document.querySelector('.tooltip'));
+    const kb = await v.page.evaluate(() => { const i = document.querySelector('.page-header .tip-icon'); return i.getAttribute('tabindex') === '0' && i.getAttribute('role') === 'button'; });
+    // 2. Aucun « vous » (texte visible et bulles) ; pas d'avertissement jaune ; virgule décimale
+    const found = {};
+    for (const p of PAGES) {
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(700);
+      const t = await v.page.evaluate(() => document.body.innerText + ' ' + [...document.querySelectorAll('[data-tip]')].map(e => e.getAttribute('data-tip')).join(' '));
+      // Exceptions : libellés de Strava cités tels quels
+      const hits = (t.replace(/Télécharger ou supprimer votre compte|Voir les données de vos activités/g, '').match(/[^.\n]{0,30}\b(vous|votre|vos)\b[^.\n]{0,30}/gi) || []);
+      if (hits.length) found[p] = hits.slice(0, 3);
+      if (await v.page.$('.disclaimer-box')) found[p + ' (avertissement)'] = ['disclaimer-box'];
+    }
+    const speed = await v.page.evaluate(() => TS.calcPace(1, 28, 'velo'));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/modèles connus/.test(open1) && closed && toggled && kb, '« ? » au toucher : ' + JSON.stringify({ open1: open1.slice(0, 60), closed, toggled, kb }));
+    assert(!Object.keys(found).length, '« vous » restant : ' + JSON.stringify(found));
+    assert(speed === '28,0 km/h', 'vitesse : ' + speed);
+  });
+
   await browser.close();
   server.close();
 

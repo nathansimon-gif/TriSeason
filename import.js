@@ -287,7 +287,7 @@ async function parseActivityFile(file) {
     return parseTCX(text);
   }
 
-  throw new Error(`Format .${ext} non supporté. Utilisez .fit, .gpx ou .tcx`);
+  throw new Error(`Format .${ext} non supporté. Utilise un fichier .fit, .gpx ou .tcx`);
 }
 
 // ── TCX Parser (Garmin Training Center XML) ───────────────────────────────────

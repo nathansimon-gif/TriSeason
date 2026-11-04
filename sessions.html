@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261118a"></script>
+  <script src="theme.js?v=20261119a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261118a"></script>
+  <script src="auth-guard.js?v=20261119a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261119a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .sensation-btn {
@@ -98,15 +98,11 @@
         <span>Séances similaires déjà enregistrées</span>
         <button class="btn btn--ghost btn--sm" onclick="ignoreAllSimilar()">✕ Ignorer tous les doublons</button>
       </div>
-      <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Ces fichiers ressemblent à des séances déjà présentes dans votre historique (même date, distance et durée proches). Vérifiez avant d'importer pour éviter les doublons.</div>
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Ces fichiers ressemblent à des séances déjà enregistrées (même date, distance et durée proches). Vérifie avant d'importer pour éviter les doublons.</div>
       <div id="similarResults"></div>
     </div>
   </div>
 
-  <!-- ── Avertissement nombre de fichiers ── -->
-  <div style="font-size:12px;color:var(--text-2);margin-bottom:10px;text-align:center">
-    Importer maximum <b>50 fichiers</b> à la fois pour limiter le temps de traitement et les soucis de téléchargement des activités.
-  </div>
 
   <!-- ── Drop zone ── -->
   <div id="dropZone" style="border:2px dashed var(--border);border-radius:var(--r);padding:24px;text-align:center;margin-bottom:16px;transition:all .2s;cursor:pointer"
@@ -114,9 +110,8 @@
     ondragleave="this.style.borderColor='var(--border)'"
     ondrop="handleDrop(event)">
     
-    <div style="font-size:14px;font-weight:600;color:var(--text)">Glissez vos fichiers ici</div>
-    <div style="font-size:12px;color:var(--text-2);margin-top:4px">Formats supportés : .fit (Garmin, Coros, Polar) · .gpx · .tcx</div>
-    <div style="font-size:11px;color:var(--text-3);margin-top:8px">Compatible Garmin Connect · Coros · Polar Flow · Suunto · Wahoo · Strava export</div>
+    <div style="font-size:14px;font-weight:600;color:var(--text);display:inline-flex;align-items:center;gap:8px">Glisse tes fichiers ici <span class="tip-icon" data-tip="Fichiers .fit, .gpx ou .tcx, venus de Garmin Connect, Coros, Polar Flow, Suunto, Wahoo ou d'un export Strava. 50 fichiers au plus à la fois, pour que l'import reste rapide.">?</span></div>
+    <div style="font-size:12px;color:var(--text-2);margin-top:4px">.fit, .gpx ou .tcx · 50 au plus à la fois</div>
     <label class="btn btn--ghost btn--sm" style="margin-top:12px;cursor:pointer;display:inline-flex">
       Sélectionner des fichiers
       <input type="file" accept=".gpx,.fit,.tcx" multiple style="display:none" onchange="handleImportFiles(event)">
@@ -127,8 +122,8 @@
   <div class="card" style="margin-bottom:16px" id="historique-strava">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="min-width:0;flex:1 1 280px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">Tout ton historique Strava d'un coup</div>
-        <div style="font-size:12px;color:var(--text-2);margin-top:3px" id="archiveIntro">Avec l'archive que Strava t'envoie par e-mail (fichier .zip). Seul le résumé de tes activités est lu : rapide, même pour plusieurs années.</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px">Tout ton historique Strava d'un coup <span class="tip-icon" data-tip="Seul le résumé de tes activités est lu dans l'archive : c'est rapide, même pour plusieurs années. Tu vois les séances avant de les importer, et les doublons sont écartés.">?</span></div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:3px" id="archiveIntro">Avec l'archive (.zip) que Strava t'envoie par e-mail.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn--ghost btn--sm" id="historyFromStravaBtn" onclick="loadStravaHistory()" style="display:none">Depuis mon compte Strava</button>
@@ -266,7 +261,7 @@
     <div id="sessionEmpty" class="empty" style="display:none">
       
       <div class="empty__text">Aucune séance enregistrée</div>
-      <div class="empty__sub">Cliquez sur "+ Nouvelle séance" pour commencer</div>
+      <div class="empty__sub">Touche « + Nouvelle séance » pour commencer</div>
     </div>
   </div>
 
@@ -309,7 +304,7 @@
           <input class="form-input" type="number" min="1" max="10" id="s_rpe" placeholder="">
         </div>
         <div class="form-group">
-          <label class="form-label" data-tip="Calories dépensées pendant la séance (estimées par votre montre ou manuellement)">Kcal dépensées</label>
+          <label class="form-label" data-tip="Calories dépensées pendant la séance (estimées par ta montre, ou notées à la main)">Kcal dépensées</label>
           <input class="form-input" type="number" id="s_kcal" placeholder="">
         </div>
         <div class="form-group" id="elevationGroup">
@@ -329,7 +324,7 @@
         <div class="form-hint">Charges différentes d'une série à l'autre, ou une série « Max » : « Détailler les séries » sous l'exercice. Gainage et exercices tenus : les secondes dans « Rép. ». Sans charge (pompes, tractions…) : « kg » vide.</div>
       </div>
       <div class="form-group">
-        <label class="form-label" data-tip="Comment vous sentiez-vous pendant et après la séance ?">Sensation</label>
+        <label class="form-label" data-tip="Comment tu te sentais pendant et après la séance ?">Sensation</label>
         <div style="display:flex;gap:6px;margin-top:2px" id="sensationPicker">
           <button type="button" class="sensation-btn" data-val="1" onclick="setSensation(1)" title="Très mauvais">😫</button>
           <button type="button" class="sensation-btn" data-val="2" onclick="setSensation(2)" title="Mauvais">😕</button>
@@ -344,7 +339,7 @@
         <input class="form-input" type="number" min="0" max="10" step="1" id="s_pain" placeholder="0 = aucune douleur" style="max-width:180px">
       </div>
       <div class="form-group">
-        <label class="form-label" data-tip="Associez cette séance à une compétition pour suivre l'impact de votre préparation nutritionnelle">Associer à une compétition (optionnel)</label>
+        <label class="form-label" data-tip="Relie cette séance à une compétition pour suivre l'effet de ta préparation nutritionnelle">Associer à une compétition (optionnel)</label>
         <select class="form-select" id="s_comp_id">
           <option value="">— Aucune —</option>
         </select>
@@ -395,9 +390,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261118a"></script>
-<script src="import.js?v=20261118a"></script>
-<script src="app.js?v=20261118a"></script>
+<script src="fit-parser.js?v=20261119a"></script>
+<script src="import.js?v=20261119a"></script>
+<script src="app.js?v=20261119a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -1078,7 +1073,7 @@ function updateCalc() {
   const parts = [];
   if (dur && dist) { const p = TS.calcPace(dur,dist,sport); if(p) parts.push(p); }
   if (pow)         { const w = TS.calcWkg(pow,date); if(w) { const l=TS.wkgLevel(w); parts.push(`W/kg: ${w} (${l.label})`); } }
-  document.getElementById('s_calculated').textContent = parts.join('  ·  ') || 'Entrez les données pour voir les calculs';
+  document.getElementById('s_calculated').textContent = parts.join('  ·  ') || 'Remplis la durée et la distance pour voir les calculs';
 }
 
 document.getElementById('sessionModal').addEventListener('input', updateCalc);
@@ -1189,7 +1184,7 @@ function handleDrop(e) {
   e.preventDefault();
   document.getElementById('dropZone').style.borderColor = 'var(--border)';
   const files = [...e.dataTransfer.files].filter(f => /\.(gpx|fit|tcx)$/i.test(f.name));
-  if (!files.length) { TS.toast('Format non supporté — utilisez .fit, .gpx ou .tcx', 'error'); return; }
+  if (!files.length) { TS.toast('Format non pris en charge : utilise un fichier .fit, .gpx ou .tcx', 'error'); return; }
   processImportFiles(files);
 }
 
@@ -1237,8 +1232,8 @@ function renderHistoryButton() {
   if (btn) btn.style.display = connected ? '' : 'none';
   const intro = document.getElementById('archiveIntro');
   if (intro) intro.textContent = connected
-    ? 'Depuis ton compte Strava connecté, ou avec l’archive que Strava t’envoie par e-mail (.zip). Tu vois les séances avant de les importer.'
-    : 'Avec l’archive que Strava t’envoie par e-mail (fichier .zip). Seul le résumé de tes activités est lu : rapide, même pour plusieurs années.';
+    ? 'Depuis ton compte Strava, ou avec l’archive (.zip) que Strava t’envoie par e-mail.'
+    : 'Avec l’archive (.zip) que Strava t’envoie par e-mail.';
 }
 document.addEventListener('DOMContentLoaded', () => {
   renderHistoryButton();
@@ -1687,7 +1682,7 @@ function confirmDeleteAllSessions() {
   const total = TS.getSessions().length;
   if (!total) { TS.toast('Aucune séance à supprimer'); return; }
   if (!confirm(`Supprimer les ${total} séance${total>1?'s':''} enregistrée${total>1?'s':''} ? Cette action est irréversible.`)) return;
-  if (!confirm('Dernière confirmation — toutes vos séances seront définitivement supprimées.')) return;
+  if (!confirm('Dernière confirmation — toutes tes séances seront définitivement supprimées.')) return;
   const data = TS.getData();
   const affectedComps = Array.from(new Set(data.sessions.map(s => s.comp_id).filter(Boolean)));
   data.sessions = [];

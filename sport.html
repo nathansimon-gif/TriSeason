@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261118a"></script>
+  <script src="theme.js?v=20261119a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261118a"></script>
+  <script src="auth-guard.js?v=20261119a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261119a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -168,7 +168,7 @@
     <div id="enduGoalsSlot" style="display:flex;flex-direction:column"><div class="card" id="goalsCard" style="flex:1">
       <div class="card__title">
         Objectifs & Progression
-        <span class="tip-icon" data-tip="Définissez des objectifs hebdo, mensuels ou annuels. La progression est calculée depuis vos séances.">?</span>
+        <span class="tip-icon" data-tip="Fixe-toi des objectifs par semaine, par mois ou par an. La progression est calculée à partir de tes séances.">?</span>
       </div>
       <div id="goalsContent"></div>
       <!-- Add goal form -->
@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261118a"></script>
+<script src="app.js?v=20261119a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -653,7 +653,7 @@ function renderBestWeeks(s, weekData, weeks) {
         return `<div class="stat-row">
           <span style="font-size:16px;font-weight:600;color:var(--text-3);min-width:20px">${i+1}</span>
           <div style="flex:1;padding-left:10px">
-            <div style="font-size:13px;font-weight:600;color:${color}">${x.data.dist.toFixed(1)} km</div>
+            <div style="font-size:13px;font-weight:600;color:${color}">${s==='nat' ? Math.round(x.data.dist*1000).toLocaleString('fr-FR')+' m' : x.data.dist.toFixed(1).replace('.', ',')+' km'}</div>
             <div style="font-size:11px;color:var(--text-2)">${mon.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}${pace?' · '+pace:''}${s!=='nat'&&x.data.elevation?' · ⛰️ '+x.data.elevation.toFixed(0)+'m':''}</div>
           </div>
           <div style="font-size:11px;color:var(--text-3)">${x.data.dur?TS.formatHours(x.data.dur):''}</div>
@@ -699,29 +699,32 @@ const ZONES = [
   { key:'ana',   label:'Anaérobie/Sprint',range:[9,10], color:'#dc3d6a', tip:'RPE 9-10 : effort maximal, VO2max, sprint.' },
 ];
 
+// Repères généraux par sport : on affiche le fait (part de ton temps dans la zone) et
+// le repère courant ; les exemples de séances vont dans le « ? ». Jamais un ordre.
 const ZONE_RECOMMENDATIONS = {
   nat: [
-    { cond: d=>d.ef<50,    tag:'Endurance', color:'#34c48b', text:'Augmentez le volume en endurance fondamentale. Visez 60-70% du volume total en EF pour construire votre base aérobie.' },
-    { cond: d=>d.seuil<10, tag:'Seuil',    color:'#d8791a', text:'Ajoutez des séances de seuil (ex: 10×100m à RPE 7-8) pour améliorer votre vitesse de nage.' },
-    { cond: d=>d.ana<5,    tag:'Sprint',   color:'#dc3d6a', text:'Intégrez quelques sprints courts (15-25m max) pour développer votre poussée et votre efficacité technique.' },
+    { zone:'ef',    cond: d=>d.ef<50,    tag:'Endurance', color:'#34c48b', ref:'60 à 70 %', tip:'Beaucoup de plans placent 60 à 70 % du volume en endurance fondamentale (allure facile) pour construire la base aérobie. Repère général, pas un conseil personnalisé.' },
+    { zone:'seuil', cond: d=>d.seuil<10, tag:'Seuil',     color:'#d8791a', ref:'au moins 10 %', tip:'Exemple de séance au seuil : 10 × 100 m à un effort de 7-8/10. Repère général, pas un conseil personnalisé.' },
+    { zone:'ana',   cond: d=>d.ana<5,    tag:'Sprint',    color:'#dc3d6a', ref:'au moins 5 %', tip:'Exemple : quelques sprints courts (15 à 25 m) pour la poussée et la technique. Repère général, pas un conseil personnalisé.' },
   ],
   velo: [
-    { cond: d=>d.ef<50,    tag:'Endurance', color:'#34c48b', text:'Le vélo se construit sur une large base en endurance fondamentale. Visez 60-70% du volume total en EF (sortie longue, récupération).' },
-    { cond: d=>d.seuil<10, tag:'FTP',      color:'#d8791a', text:'Ajoutez des intervalles au seuil (2×20min, 3×15min à RPE 7-8) pour progresser en puissance soutenue.' },
-    { cond: d=>d.ana<5,    tag:'VO2max',   color:'#dc3d6a', text:'Intégrez des efforts courts intenses (4-6×3-5min à RPE 9+) pour développer votre VO2max.' },
+    { zone:'ef',    cond: d=>d.ef<50,    tag:'Endurance', color:'#34c48b', ref:'60 à 70 %', tip:'Le vélo se construit souvent sur une large base en endurance fondamentale : 60 à 70 % du volume (sorties longues, récupération). Repère général, pas un conseil personnalisé.' },
+    { zone:'seuil', cond: d=>d.seuil<10, tag:'Seuil',     color:'#d8791a', ref:'au moins 10 %', tip:'Exemples d\'intervalles au seuil : 2 × 20 min ou 3 × 15 min à un effort de 7-8/10, pour la puissance soutenue. Repère général, pas un conseil personnalisé.' },
+    { zone:'ana',   cond: d=>d.ana<5,    tag:'VO2max',    color:'#dc3d6a', ref:'au moins 5 %', tip:'Exemple : 4 à 6 efforts de 3 à 5 min à 9/10 ou plus. Repère général, pas un conseil personnalisé.' },
   ],
   run: [
-    { cond: d=>d.ef<55,    tag:'Endurance', color:'#34c48b', text:'La course se construit sur un volume élevé en endurance fondamentale. Visez 65-75% du volume en EF pour éviter les blessures.' },
-    { cond: d=>d.seuil<10, tag:'Seuil',    color:'#d8791a', text:'Ajoutez un tempo run hebdomadaire (20-40min à RPE 7) ou des intervalles au seuil pour améliorer votre allure de compétition.' },
-    { cond: d=>d.ana<5,    tag:'Vitesse',  color:'#dc3d6a', text:'Intégrez une séance de fractionné court par semaine (ex: 10×200m, 8×400m à RPE 9+) pour développer la vitesse.' },
+    { zone:'ef',    cond: d=>d.ef<55,    tag:'Endurance', color:'#34c48b', ref:'65 à 75 %', tip:'La course se construit souvent sur beaucoup d\'endurance fondamentale : 65 à 75 % du volume, ce qui limite aussi le risque de blessure. Repère général, pas un conseil personnalisé.' },
+    { zone:'seuil', cond: d=>d.seuil<10, tag:'Seuil',     color:'#d8791a', ref:'au moins 10 %', tip:'Exemples : un footing tempo de 20 à 40 min à 7/10, ou des intervalles au seuil, pour l\'allure de course. Repère général, pas un conseil personnalisé.' },
+    { zone:'ana',   cond: d=>d.ana<5,    tag:'Vitesse',   color:'#dc3d6a', ref:'au moins 5 %', tip:'Exemple : du fractionné court (10 × 200 m, 8 × 400 m à 9/10 ou plus). Repère général, pas un conseil personnalisé.' },
   ],
 };
+const ZONE_WORDS = { ef: 'en endurance fondamentale', aero: 'en aérobie', seuil: 'au seuil', ana: 'en effort maximal' };
 
 function renderZones(s, seasonRange) {
   const sessions = TS.getSessions({ sport:s, from: seasonRange?.from, to: seasonRange?.to }).filter(x=>x.rpe);
   if (!sessions.length) {
     document.getElementById('zonesContent').innerHTML =
-      '<div class="empty"><div class="empty__text">Saisissez des séances avec RPE pour voir la répartition</div></div>';
+      '<div class="empty"><div class="empty__text">Note l\'effort ressenti de tes séances pour voir la répartition</div></div>';
     return;
   }
   // Count duration per zone
@@ -756,11 +759,11 @@ function renderZones(s, seasonRange) {
   const recs = (ZONE_RECOMMENDATIONS[s]||[]).filter(r=>r.cond(pcts));
   const recsHTML = recs.length
     ? recs.map(r=>`<div class="rec-card">
-        <div class="rec-card__tag" style="color:${r.color}">À travailler · ${r.tag}</div>
-        <div class="rec-card__text">${r.text}</div>
+        <div class="rec-card__tag" style="color:${r.color};display:flex;align-items:center;gap:6px">${r.tag} <span class="tip-icon" data-tip="${r.tip}">?</span></div>
+        <div class="rec-card__text">${pcts[r.zone]} % de ton temps ${ZONE_WORDS[r.zone]} (repère courant : ${r.ref}).</div>
       </div>`).join('')
     : `<div class="rec-card"><div class="rec-card__tag" style="color:var(--green)">Répartition équilibrée</div>
-        <div class="rec-card__text">Votre répartition d'entraînement est bien équilibrée. Maintenez ce rythme.</div>
+        <div class="rec-card__text">Ta répartition est proche des repères courants.</div>
        </div>`;
 
   document.getElementById('zonesContent').innerHTML = `
@@ -846,7 +849,7 @@ function renderGoals(s) {
         <div class="progress"><div class="progress__bar" style="width:${pct}%;background:${barColor}"></div></div>
         <div class="goal-val">${prog.unit === 'h' ? TS.formatHours(prog.current) + ' / ' + TS.formatHours(g.target)
           : prog.unit === 'kg' ? Math.round(prog.current).toLocaleString('fr-FR') + ' / ' + g.target.toLocaleString('fr-FR') + ' kg'
-          : prog.current.toFixed(g.type.startsWith('sessions')?0:1) + ' ' + prog.unit + ' / ' + g.target + ' ' + prog.unit}</div>
+          : prog.current.toFixed(g.type.startsWith('sessions')?0:1).replace('.', ',') + ' ' + prog.unit + ' / ' + String(g.target).replace('.', ',') + ' ' + prog.unit}</div>
       </div>
       <div class="goal-pct" style="color:${barColor}">${pct}%</div>
       <button class="btn btn--ghost btn--sm btn--icon" onclick="askDeleteGoal('${g.id}')">×</button>

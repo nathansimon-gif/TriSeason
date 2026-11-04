@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261118a"></script>
+  <script src="theme.js?v=20261119a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261118a"></script>
+  <script src="auth-guard.js?v=20261119a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261119a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .hero-strip {
@@ -188,7 +188,7 @@
     <a href="aide.html?depuis=index.html" class="nav__link">Aide</a>
   </div>
   <div class="nav__actions">
-    <button class="btn btn--ghost btn--sm" onclick="TS.exportData()" data-tip="Sauvegarder toutes vos données">Exporter</button>
+    <button class="btn btn--ghost btn--sm" onclick="TS.exportData()" data-tip="Sauvegarder toutes tes données">Exporter</button>
     <label class="btn btn--ghost btn--sm" style="cursor:pointer" data-tip="Restaurer depuis une sauvegarde">
       Importer<input type="file" accept=".json" style="display:none" onchange="handleImport(event)">
     </label>
@@ -262,8 +262,8 @@
   <!-- ── Ce que Strava ne te montre pas (constat nutrition × séances) ── -->
   <div class="card" style="margin-bottom:12px" id="insightCard">
     <div class="card__title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>Ce que Strava ne te montre pas <span style="font-weight:400;color:var(--text-2)">· ta dernière séance, avec ce que tu as mangé et bu autour</span></span>
-      <a href="forme.html" style="font-size:12px;font-weight:500;color:var(--accent)">Voir le détail dans Forme</a>
+      <span style="display:flex;align-items:center;gap:8px">Ce que Strava ne te montre pas <span class="tip-icon" data-tip="Ta dernière séance, avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort. Des faits sur tes données, pas un conseil. Le lien entre tes repas et tes performances est détaillé dans Forme.">?</span></span>
+      <a href="forme.html" style="font-size:12px;font-weight:500;color:var(--accent)">Détail dans Forme</a>
     </div>
     <div id="insightBody"></div>
   </div>
@@ -280,7 +280,7 @@
 
   <div class="card" style="margin-bottom:12px" id="challengesCard">
     <div class="card__title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>Défis de la semaine</span>
+      <span style="display:flex;align-items:center;gap:8px">Défis de la semaine <span class="tip-icon" data-tip="Choisis chaque lundi d'après tes 4 dernières semaines. Relève les défis principaux chaque semaine pour faire grandir ta série. Le défi bonus de musculation ne compte pas pour la série.">?</span></span>
       <span id="challengeStreak" style="font-size:12px;font-weight:500;color:var(--text-2)"></span>
     </div>
     <div id="challengeList"></div>
@@ -297,7 +297,7 @@
     <div class="card">
       <div class="card__title">
         Distance hebdomadaire
-        <span class="tip-icon" data-tip="Distance par sport sur les 12 dernières semaines. Cliquez sur une légende pour masquer un sport.">?</span>
+        <span class="tip-icon" data-tip="Distance par sport sur les 12 dernières semaines. Touche un sport dans la légende pour le masquer.">?</span>
       </div>
       <div style="position:relative;height:200px;overflow:hidden"><canvas id="chartWeekly"></canvas></div>
     </div>
@@ -516,7 +516,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261118a"></script>
+<script src="app.js?v=20261119a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -655,16 +655,14 @@ function renderInsight() {
   const compare = train.length >= 3 && rest.length >= 2
     ? `<div class="ins-week">Ces 4 dernières semaines, tu as mangé en moyenne <b>${n0(avg(train))} g de glucides les jours d’entraînement</b>
         et <b>${n0(avg(rest))} g les jours de repos</b> (${train.length + rest.length} jours notés).</div>`
-    : `<div class="ins-week">Note tes repas quelques jours de plus pour comparer tes glucides les jours d’entraînement et les jours de repos
-        (${train.length + rest.length} jour${train.length + rest.length > 1 ? 's' : ''} noté${train.length + rest.length > 1 ? 's' : ''} sur les 4 dernières semaines).</div>`;
+    : `<div class="ins-week">Note tes repas encore quelques jours pour comparer jours d’entraînement et de repos (${train.length + rest.length} jour${train.length + rest.length > 1 ? 's' : ''} noté${train.length + rest.length > 1 ? 's' : ''} en 4 semaines).</div>`;
 
   const missing = !prev.meals || !day.meals;
   el.innerHTML = `<div class="ins-session"><span class="sport-dot sport-dot--${last.sport}"></span>
       <b>${sp.label || ''}</b> ${when}${facts ? ' · ' + facts : ''}</div>
     <div class="ins-tiles">${tiles.join('')}</div>
     ${compare}
-    ${missing ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn--sm" href="nutrition.html">Noter un repas</a></div>' : ''}
-    <div class="ins-note">Des faits sur tes données, pas un conseil. Le lien entre tes repas et tes performances est détaillé dans Forme.</div>`;
+    ${missing ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn--sm" href="nutrition.html">Noter un repas</a></div>' : ''}`;
 }
 
 // ── Défis de la semaine et badges ─────────────────────────────────────────────
@@ -688,8 +686,7 @@ function renderChallenges() {
   document.getElementById('challengeNote').textContent = (allDone
     ? (n > 1 ? 'Les deux défis sont réussis.' : 'Défi réussi.') + ' Nouveaux défis lundi.'
     : (daysLeft ? `Encore ${daysLeft} jour${daysLeft > 1 ? 's' : ''} pour ${n > 1 ? 'les relever' : 'le relever'}.` : `Dernier jour pour ${n > 1 ? 'les relever' : 'le relever'}.`)
-      + (hist.paused ? '' : ' Ils sont choisis d’après tes 4 dernières semaines.'))
-    + (hist.current.some(c => c.bonus) ? ' Le défi bonus de musculation ne compte pas pour ta série.' : '')
+    )
     + (hist.paused === 'arret' ? ' Pendant ton arrêt, pas de défi d’entraînement et ta série est en pause.'
       : hist.paused === 'reprise' ? ' Pendant ta reprise, le défi porte sur la régularité et une semaine ratée ne casse pas ta série.' : '');
   document.getElementById('challengeStreak').textContent = hist.streak
@@ -882,7 +879,7 @@ function renderHeroStrip() {
         <div class="hero-sport__bar"></div>
         <div class="hero-sport__sport">${sp.label}</div>
         <div>
-          <span class="hero-sport__val">${(d.dist || 0).toFixed(d.dist >= 10 ? 0 : 1)}</span>
+          <span class="hero-sport__val">${(d.dist || 0).toFixed(d.dist >= 10 ? 0 : 1).replace('.', ',')}</span>
           <span class="hero-sport__unit">km</span>
         </div>
         <div class="hero-sport__meta">
@@ -971,7 +968,7 @@ function renderMonthSummary() {
     const d = new Date(bestDate + 'T00:00:00');
     bestEl.innerHTML = `<div class="month-best-day">
       <b>Meilleure journée</b> : ${d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'})}
-      — ${calFormatDur(best.h)}${best.km ? ' · ' + best.km.toFixed(1) + ' km' : ''} · ${best.n} séance${best.n>1?'s':''}
+      — ${calFormatDur(best.h)}${best.km ? ' · ' + best.km.toFixed(1).replace('.', ',') + ' km' : ''} · ${best.n} séance${best.n>1?'s':''}
     </div>`;
   } else {
     bestEl.innerHTML = '';
@@ -1036,7 +1033,7 @@ function renderActivityCalendar() {
       const px = Math.round(MIN_PX + ratio * (MAX_PX - MIN_PX));
       dot = `<div class="cal-dot" style="width:${px}px;height:${px}px;background:${color}"></div>`;
       const sportLabels = sportKeys.map(k => (TS.SPORTS[k]?.label || k)).join(', ');
-      tip = `${day} ${monthDate.toLocaleDateString('fr-FR',{month:'long'})} — ${calFormatDur(d.dur)}${d.dist ? ' · ' + d.dist.toFixed(1) + ' km' : ''} · ${d.count} séance${d.count>1?'s':''} (${sportLabels})`;
+      tip = `${day} ${monthDate.toLocaleDateString('fr-FR',{month:'long'})} — ${calFormatDur(d.dur)}${d.dist ? ' · ' + d.dist.toFixed(1).replace('.', ',') + ' km' : ''} · ${d.count} séance${d.count>1?'s':''} (${sportLabels})`;
     }
 
     const plans = plansByDate[dateStr] || [];
@@ -1455,7 +1452,7 @@ function renderNutriWidget() {
       tile(meals.length, 'Repas', 'var(--text)')
     + tile(Math.round(kcal) || '\u2014', 'Kcal', 'var(--accent2)')
     + tile(g || '\u2014', 'Glucides (g)', 'var(--run)')
-    + tile(hydro ? (hydro >= 1000 ? (hydro/1000).toFixed(1)+'L' : hydro+'ml') : '\u2014', 'Hydratation', 'var(--nat)');
+    + tile(hydro ? (hydro >= 1000 ? (hydro/1000).toFixed(1).replace('.', ',')+' L' : hydro+'ml') : '\u2014', 'Hydratation', 'var(--nat)');
 }
 
 // ── Widget records (derniers records personnels) ───────────────────────────────
@@ -1492,7 +1489,7 @@ function renderRecordsWidget() {
 function renderWeight() {
   const w=TS.getLatestWeight();
   const p=TS.getProfile();
-  document.getElementById('weightDisplay').textContent = w?w.toFixed(1):'—';
+  document.getElementById('weightDisplay').textContent = w?w.toFixed(1).replace('.', ','):'—';
   document.getElementById('bmiDisplay').textContent = '';
   document.getElementById('wkgDisplay').innerHTML = '';
   renderWeightHistory();
@@ -1504,7 +1501,7 @@ function renderWeight() {
   if(w&&p.height){
     const bmi=w/((p.height/100)**2);
     const bmiLabel=bmi<18.5?'Insuffisance pondérale':bmi<25?'Poids normal':bmi<30?'Surpoids':'Obésité';
-    document.getElementById('bmiDisplay').textContent=`IMC : ${bmi.toFixed(1)} · ${bmiLabel}`;
+    document.getElementById('bmiDisplay').textContent=`IMC : ${bmi.toFixed(1).replace('.', ',')} · ${bmiLabel}`;
   }
 
   // W/kg
@@ -1640,7 +1637,7 @@ function renderMetrics(){
 
   const items=[
     {label:'Allure nat. moy.',val:ps(avg(natP)),unit:'/100m',tip:'Référence : <1\'30"=élite · <2\'=confirmé · <2\'30"=amateur'},
-    {label:'Vitesse vélo moy.',val:avg(veloV).toFixed(1)||'—',unit:'km/h',tip:'Référence : <25=débutant · 30=amateur · 35+=confirmé'},
+    {label:'Vitesse vélo moy.',val:avg(veloV).toFixed(1).replace('.', ',')||'—',unit:'km/h',tip:'Référence : <25=débutant · 30=amateur · 35+=confirmé'},
     {label:'Allure course moy.',val:ps(avg(runP)),unit:'/km',tip:'Référence : <4\'=excellent · <5\'=bon · <6\'=amateur'},
     {label:'RPE moyen',val:stats.total.rpe||'—',unit:'/10',tip:'RPE > 7 sur plusieurs semaines consécutives = risque de surmenage'},
     {label:'Semaines actives',val:actives,unit:'',tip:'Semaines comportant au moins une saisie'},

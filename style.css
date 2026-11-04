@@ -535,7 +535,11 @@ input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
   cursor: help; flex-shrink: 0; transition: all .15s;
 }
-.tip-icon:hover { background: var(--surface2); color: var(--text-2); }
+.tip-icon:hover, .tip-icon:focus-visible { background: var(--surface2); color: var(--text-2); }
+.tip-icon { position: relative; }
+/* Zone de toucher plus grande que le rond visible (doigt ≈ 32 px) */
+.tip-icon::after { content: ''; position: absolute; inset: -9px; }
+@media (hover: none) { .tip-icon { width: 18px; height: 18px; font-size: 10.5px; } }
 
 /* ── Empty state ──────────────────────────────────────────────────────────── */
 .empty {

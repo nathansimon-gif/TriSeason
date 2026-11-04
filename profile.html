@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261118a"></script>
+  <script src="theme.js?v=20261119a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261118a"></script>
+  <script src="auth-guard.js?v=20261119a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261118a">
+  <link rel="stylesheet" href="style.css?v=20261119a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -173,7 +173,7 @@
   <!-- ── Zones d'entraînement ── -->
   <div class="section-card">
     <div class="section-card__title">Zones FC personnalisées
-      <span class="tip-icon" data-tip="Basé sur votre FC max. Renseignez-la dans 'Modifier le profil'.">?</span>
+      <span class="tip-icon" data-tip="Calculées d'après ta FC max. Renseigne-la dans « Modifier ».">?</span>
     </div>
     <div id="fcZones"></div>
   </div>
@@ -181,7 +181,7 @@
   <!-- ── Équipement ── -->
   <div class="section-card" id="equipement">
     <div class="section-card__title" style="justify-content:space-between">
-      <span>Équipement</span>
+      <span style="display:flex;align-items:center;gap:8px">Équipement <span class="tip-icon" data-tip="Ajoute tes chaussures, ton vélo ou ta combinaison avec leur date de première utilisation : TriSeason compte les kilomètres et les sorties faites avec, t'alerte au seuil que tu choisis et prévoit quand tu l'atteindras.">?</span></span>
       <button class="btn btn--sm" onclick="openGearModal()">+ Ajouter</button>
     </div>
     <div id="gearList"></div>
@@ -193,8 +193,8 @@
   <div data-ptab-panel="parametres" hidden>
   <!-- ── Mes sports ── -->
   <div class="section-card" id="mes-sports">
-    <div class="section-card__title">Mes sports</div>
-    <div class="strava-note" style="margin-bottom:12px">Coche les sports que tu pratiques : l'appli n'affiche que ceux-là, et les imports (Strava, montre, fichiers) ne prennent que ces sports. Tes séances déjà enregistrées sont toujours gardées, même d'un sport décoché.</div>
+    <div class="section-card__title">Mes sports <span class="tip-icon" data-tip="L'appli n'affiche que les sports cochés, et les imports (Strava, montre, fichiers) ne prennent que ceux-là. Tes séances déjà enregistrées sont toujours gardées, même d'un sport décoché.">?</span></div>
+    <div class="strava-note" style="margin-bottom:12px">Coche les sports que tu pratiques.</div>
     <div class="sport-choice" id="sportChoice" role="group" aria-label="Mes sports"></div>
   </div>
 
@@ -211,7 +211,7 @@
 
   <!-- ── Strava ── -->
   <div class="section-card" id="stravaCard" hidden>
-    <div class="section-card__title">Strava</div>
+    <div class="section-card__title">Strava <span class="tip-icon" data-tip="Ta montre (Garmin, Coros, Polar…) doit déjà envoyer ses séances à Strava. TriSeason lit seulement tes activités, ne publie rien sur Strava, et tu peux te déconnecter à tout moment.">?</span></div>
     <div id="stravaBody"></div>
   </div>
 
@@ -282,7 +282,7 @@
   </div><!-- /parametres -->
 
   <div style="text-align:center;font-size:11px;color:var(--text-3);padding:16px 0">
-    TriSeason Tracker · Données stockées localement sur cet appareil
+    TriSeason · Tes données sont enregistrées dans ton compte
   </div>
 
 </div></div>
@@ -432,7 +432,7 @@
 </div>
 
 
-<script src="app.js?v=20261118a"></script>
+<script src="app.js?v=20261119a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -526,9 +526,7 @@ function renderStrava() {
   const body = document.getElementById('stravaBody');
   const powered = '<div class="strava-powered">Séances fournies par <b>Strava</b> (Powered by Strava)</div>';
   if (!st) {
-    body.innerHTML = `<div class="strava-note">Connecte ton compte Strava : tes nouvelles séances de natation, vélo et course
-      arrivent toutes seules dans TriSeason, sans fichier à importer. Ta montre (Garmin, Coros, Polar…) doit déjà envoyer ses séances à Strava.
-      TriSeason lit seulement tes activités, ne publie rien sur Strava et tu peux te déconnecter à tout moment.</div>
+    body.innerHTML = `<div class="strava-note">Connecte Strava : tes nouvelles séances arrivent toutes seules, sans fichier à importer.</div>
       ${stravaLimitNote ? `<div class="strava-note" style="margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);color:var(--text)">${stravaLimitNote}
         <div style="margin-top:8px"><a class="btn btn--sm" href="sessions.html#historique-strava">Importer mon archive Strava</a></div></div>`
       : `<div class="strava-actions"><button class="btn btn--strava" onclick="TS.stravaConnect()" ${stravaBusy ? 'disabled' : ''}>${stravaBusy ? '<span class="spinner"></span>' + stravaBusy : 'Connecter avec Strava'}</button></div>`}`;
@@ -637,8 +635,7 @@ function renderGear() {
   const data = TS.getData();
   const gear = TS.getGear(data);
   if (!gear.length) {
-    el.innerHTML = `<div style="font-size:13px;color:var(--text-2);line-height:1.6">Ajoute tes chaussures, ton vélo ou ta combinaison avec leur date de première utilisation :
-      TriSeason compte les kilomètres et les sorties faites avec, t'alerte au seuil que tu choisis et prévoit quand tu l'atteindras.</div>`;
+    el.innerHTML = `<div style="font-size:13px;color:var(--text-2);line-height:1.6">Ajoute tes chaussures ou ton vélo : l'appli compte les kilomètres faits avec.</div>`;
     return;
   }
   const stats = TS.gearStats(data);
@@ -699,8 +696,7 @@ function renderHealthOption() {
   const el = document.getElementById('healthBody');
   const data = TS.getData();
   if (!TS.healthEnabled(data)) {
-    el.innerHTML = `Option facultative, désactivée. Elle permet de noter une blessure, une maladie, une grossesse ou un arrêt
-      pour adapter tes défis et suivre ta reprise. Elle demande ton accord à part.
+    el.innerHTML = `Désactivée. Pour adapter tes défis pendant un arrêt et suivre ta reprise (accord à part).
       <div class="strava-actions"><a class="btn btn--sm" href="forme.html#healthCard">Découvrir dans Forme</a></div>`;
     return;
   }
@@ -716,8 +712,7 @@ function renderCycleOption() {
   const el = document.getElementById('cycleBody');
   const data = TS.getData();
   if (!TS.cycleEnabled(data)) {
-    el.innerHTML = `Option facultative, désactivée. Elle permet de noter le début de tes règles pour connaître la durée de ton cycle,
-      voir tes prochaines règles prévues et comparer tes séances. Elle demande ton accord à part.
+    el.innerHTML = `Désactivée. Pour suivre ton cycle et le comparer à tes séances (accord à part).
       <div class="strava-actions"><a class="btn btn--sm" href="forme.html#cycleCard">Découvrir dans Forme</a></div>`;
     return;
   }
@@ -779,7 +774,7 @@ function renderProfile() {
     p.height ? p.height + ' cm' : null,
     weight ? weight + ' kg' : null,
   ].filter(Boolean).join(' · ');
-  document.getElementById('profileSub').textContent = sub || 'Complétez votre profil →';
+  document.getElementById('profileSub').textContent = sub || 'Complète ton profil →';
 
   // Quick stats
   const stats = TS.getSeasonStats();
@@ -794,8 +789,8 @@ function renderProfile() {
   document.getElementById('quickStats').innerHTML = [
     { val: stats.total.sessions,          label: 'Séances',    color: 'var(--accent2)' },
     { val: TS.formatHours(stats.total.h), label: 'Heures',     color: 'var(--text)' },
-    { val: bmi || '—',                    label: 'IMC',         color: bmi ? (bmi<18.5||bmi>=25?'var(--yellow)':'var(--green)') : 'var(--text-2)' },
-    { val: wkg ? wkg+' W/kg' : '—',       label: 'W/kg vélo',  color: 'var(--velo)' },
+    { val: bmi ? bmi.replace('.', ',') : '—',                    label: 'IMC',         color: bmi ? (bmi<18.5||bmi>=25?'var(--yellow)':'var(--green)') : 'var(--text-2)' },
+    { val: wkg ? wkg.replace('.', ',')+' W/kg' : '—',       label: 'W/kg vélo',  color: 'var(--velo)' },
     { val: p.ftp ? p.ftp+'W' : '—',       label: 'FTP',        color: 'var(--text)' },
     { val: p.fcmax ? p.fcmax+' bpm' : '—',label: 'FC max',     color: 'var(--red)' },
   ].map(s => `<div class="stat-block">
@@ -860,7 +855,7 @@ function calcPaceStr(r) {
   const secs = timeToSec(r.time), km = DIST_KM[r.dist];
   if (!secs || !km) return null;
   const h = secs/3600;
-  if (r.sport==='velo') return (km/h).toFixed(1)+' km/h';
+  if (r.sport==='velo') return (km/h).toFixed(1).replace('.', ',')+' km/h';
   if (r.sport==='run')  { const m=secs/60/km; return Math.floor(m)+"'"+String(Math.round((m%1)*60)).padStart(2,'0')+'" /km'; }
   if (r.sport==='nat')  { const m=secs/60/(km*10); return Math.floor(m)+"'"+String(Math.round((m%1)*60)).padStart(2,'0')+'" /100m'; }
   return null;
@@ -892,7 +887,7 @@ function renderFCZones() {
   const fcmax = p.fcmax;
   const el = document.getElementById('fcZones');
   if (!fcmax) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--text-3)">Renseignez votre FC max dans le profil pour voir vos zones.</div>';
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-3)">Renseigne ta FC max dans le profil pour voir tes zones.</div>';
     return;
   }
   const zones = [

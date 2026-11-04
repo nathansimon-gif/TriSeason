@@ -203,7 +203,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
    IBM Plex, accent citron vert (`--accent`) pour les boutons principaux et
    l'élément actif, couleurs de sport vives (natation bleu, vélo orange, course
    framboise) en touches : barres, fonds teintés `--*-dim`. Pas de dégradés,
-   de halos ni d'emojis décoratifs. Utiliser les variables de `style.css` (`--nat`, `--velo`,
+   de halos ni d'emojis décoratifs. **Lisibilité** : une carte = un titre + le chiffre ou le
+   graphique, une phrase de plus au maximum ; les explications (méthode, limites, « pas un avis ») vont dans
+   un « ? » (`<span class="tip-icon" data-tip="…">?</span>`, s'ouvre au toucher et au clavier : `initTooltips`) ;
+   toujours « tu », nombres avec une virgule (« 28,0 km/h »), dates « 31 oct. ». Utiliser les variables de `style.css` (`--nat`, `--velo`,
    `--run`, `--text-2`…) et le repère `.sport-dot` plutôt que des emojis de sport.
    Les 3 couleurs de sport et le violet de la musculation (`--muscu` : `#9256fb`,
    clair `#4b2a85`) ont été validés (daltonisme compris) sur le fond
