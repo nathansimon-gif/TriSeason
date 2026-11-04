@@ -101,6 +101,21 @@
     .crop-view img { position:absolute; left:0; top:0; max-width:none; transform-origin:0 0; pointer-events:none; }
     .crop-zoom { display:flex; align-items:center; gap:10px; margin:16px 4px 4px; font-size:12px; color:var(--text-2); }
     .crop-zoom input { flex:1; accent-color:var(--accent); }
+      /* Paramètres : des lignes simples */
+    .set-row { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:11px 0; border:0; border-top:1px solid var(--border);
+      background:none; color:var(--text); font:inherit; font-size:14px; text-align:left; text-decoration:none; }
+    .section-card__title + .set-row { border-top:0; padding-top:2px; }
+    .set-row span { min-width:0; }
+    .set-row small { display:block; font-size:12px; color:var(--text-2); margin-top:2px; }
+    .set-row b { font-weight:600; overflow-wrap:anywhere; }
+    .set-row--link { cursor:pointer; }
+    .set-row--link:hover span { color:var(--accent); }
+    .set-row i { font-style:normal; color:var(--text-3); font-size:18px; }
+    .set-danger .set-row span { color:var(--red); }
+    .set-danger .set-row--link:hover span { color:var(--red); text-decoration:underline; }
+    .set-block { padding:10px 0; border-top:1px solid var(--border); }
+    .section-card__title + .set-block { border-top:0; padding-top:2px; }
+    .set-block > b { display:block; font-size:14px; font-weight:600; margin-bottom:4px; }
   </style>
 </head>
 <body>
@@ -183,6 +198,7 @@
       <span>Badges</span><span id="badgesCount" style="font-size:12px;font-weight:500;color:var(--text-2)"></span>
     </div>
     <div class="badge-list" id="badgesAll"></div>
+    <button class="btn btn--ghost btn--sm" id="badgesMore" onclick="badgesShowAll=!badgesShowAll;renderBadges()" style="margin-top:10px" hidden></button>
   </div>
 
   <!-- ── Saison en cours ── -->
@@ -221,13 +237,12 @@
 
   <!-- ── Apparence (préférence de cet appareil) ── -->
   <div class="section-card" id="apparence">
-    <div class="section-card__title">Apparence</div>
+    <div class="section-card__title">Apparence <span class="tip-icon" data-tip="Réglage de cet appareil : sur un autre téléphone ou ordinateur, choisis-le aussi.">?</span></div>
     <div class="theme-pick" role="radiogroup" aria-label="Apparence de l'appli">
       <button type="button" class="btn btn--sm" data-theme-pick="dark" role="radio">Sombre</button>
       <button type="button" class="btn btn--sm" data-theme-pick="light" role="radio">Clair</button>
       <button type="button" class="btn btn--sm" data-theme-pick="auto" role="radio">Comme le téléphone</button>
     </div>
-    <div class="strava-note" style="margin-top:8px">Réglage de cet appareil : sur un autre téléphone ou ordinateur, choisis-le aussi.</div>
   </div>
 
   <!-- ── Strava ── -->
@@ -236,68 +251,37 @@
     <div id="stravaBody"></div>
   </div>
 
-  <!-- ── Option santé : blessures et reprise ── -->
-  <div class="section-card" id="healthCard">
-    <div class="section-card__title">Blessures, maladie et reprise</div>
-    <div id="healthBody" class="strava-note"></div>
-  </div>
-
-  <!-- ── Option cycle menstruel ── -->
-  <div class="section-card" id="cycleCard">
-    <div class="section-card__title">Cycle menstruel</div>
-    <div id="cycleBody" class="strava-note"></div>
+  <!-- ── Options santé (chacune avec son accord, gérées dans Forme) ── -->
+  <div class="section-card" id="options-sante">
+    <div class="section-card__title">Options santé <span class="tip-icon" data-tip="Facultatives et désactivées au départ. Chacune demande ton accord à part ; retirer l'accord efface tout ce qui a été noté. Ces informations ne sont montrées à personne d'autre.">?</span></div>
+    <div class="set-block" id="healthCard"><b>Blessures, maladie et reprise</b><div id="healthBody" class="strava-note"></div></div>
+    <div class="set-block" id="cycleCard"><b>Cycle menstruel</b><div id="cycleBody" class="strava-note"></div></div>
   </div>
 
   <!-- ── Compte ── -->
   <div class="section-card">
     <div class="section-card__title">Compte</div>
-    <div class="stack">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="font-size:13px;color:var(--text-2)">Connecté en tant que <span id="accountEmail" style="color:var(--text);font-weight:600">—</span></div>
-        <button class="data-export-btn" style="width:auto;padding:8px 16px;color:var(--red);border-color:rgba(239,83,80,.25)" onclick="TS_logout()">
-          <div>Se déconnecter</div>
-        </button>
-      </div>
+    <div class="set-row">
+      <span>Connecté en tant que <b id="accountEmail">—</b></span>
+      <button class="btn btn--ghost btn--sm" onclick="TS_logout()">Se déconnecter</button>
     </div>
   </div>
 
-  <!-- ── Données & Confidentialité ── -->
+  <!-- ── Données et aide : des lignes simples ── -->
   <div class="section-card">
-    <div class="section-card__title">Données et confidentialité</div>
-    <div class="stack">
-      <button class="data-export-btn" onclick="TS.exportData()">
-        <div>
-          <div>Exporter mes données</div>
-          <div style="font-size:11px;color:var(--text-2);font-weight:400">Sauvegarde complète au format JSON</div>
-        </div>
-      </button>
-      <label class="data-export-btn" style="cursor:pointer">
-        <div>
-          <div>Importer des données</div>
-          <div style="font-size:11px;color:var(--text-2);font-weight:400">Restaurer depuis une sauvegarde JSON</div>
-        </div>
-        <input type="file" accept=".json" style="display:none" onchange="handleImport(event)">
-      </label>
-      <button class="data-export-btn" onclick="clearAllData()" style="color:var(--red);border-color:rgba(239,83,80,.25)">
-        <div>
-          <div>Effacer toutes mes données</div>
-          <div style="font-size:11px;color:var(--text-3);font-weight:400">Séances, nutrition, records… sur tous tes appareils. Ton compte reste ouvert.</div>
-        </div>
-      </button>
-      <button class="data-export-btn" onclick="openDeleteAccount()" style="color:var(--red);border-color:rgba(239,83,80,.25)">
-        <div>
-          <div>Supprimer mon compte</div>
-          <div style="font-size:11px;color:var(--text-3);font-weight:400">Supprime définitivement ton compte et toutes tes données. Irréversible.</div>
-        </div>
-      </button>
-      <a class="data-export-btn" href="aide.html?depuis=profile.html#contact">
-        <div>
-          <div>Aide et contact</div>
-          <div style="font-size:11px;color:var(--text-2);font-weight:400">Questions fréquentes, signaler un problème, proposer une idée</div>
-        </div>
-      </a>
-      <a href="confidentialite.html" style="font-size:12px;color:var(--text-2);text-decoration:underline;text-underline-offset:2px">Politique de confidentialité et mentions légales</a>
-    </div>
+    <div class="section-card__title">Données et aide</div>
+    <button class="set-row set-row--link" onclick="TS.exportData()"><span>Exporter mes données<small>Sauvegarde complète (fichier JSON)</small></span><i aria-hidden="true">›</i></button>
+    <label class="set-row set-row--link"><span>Importer des données<small>Restaurer depuis une sauvegarde JSON</small></span><i aria-hidden="true">›</i>
+      <input type="file" accept=".json" style="display:none" onchange="handleImport(event)"></label>
+    <a class="set-row set-row--link" href="aide.html?depuis=profile.html#contact"><span>Aide et contact<small>Questions fréquentes, signaler un problème, proposer une idée</small></span><i aria-hidden="true">›</i></a>
+    <a class="set-row set-row--link" href="confidentialite.html"><span>Confidentialité et mentions légales</span><i aria-hidden="true">›</i></a>
+  </div>
+
+  <!-- ── Zone sensible : à part, en bas ── -->
+  <div class="section-card set-danger">
+    <div class="section-card__title">Zone sensible <span class="tip-icon" data-tip="Effacer tes données garde ton compte ouvert (tu repars de zéro). Supprimer ton compte efface tout, définitivement. Pense à exporter tes données avant si tu veux les garder.">?</span></div>
+    <button class="set-row set-row--link" onclick="clearAllData()"><span>Effacer toutes mes données<small>Séances, nutrition, records… sur tous tes appareils. Ton compte reste ouvert.</small></span><i aria-hidden="true">›</i></button>
+    <button class="set-row set-row--link" onclick="openDeleteAccount()"><span>Supprimer mon compte<small>Définitif : ton compte et toutes tes données.</small></span><i aria-hidden="true">›</i></button>
   </div>
 
   </div><!-- /parametres -->
@@ -763,8 +747,16 @@ function renderBadges() {
   const earned = badges.filter(b => b.earned).sort((a, b) => b.date.localeCompare(a.date));
   const locked = badges.filter(b => !b.earned).sort((a, b) => b.value / b.target - a.value / a.target);
   document.getElementById('badgesCount').textContent = earned.length + ' / ' + badges.length;
-  document.getElementById('badgesAll').innerHTML = earned.concat(locked).map(TS.badgeTileHtml).join('');
+  // Les 6 derniers obtenus et le prochain à débloquer ; tout le reste derrière « Voir les … badges »
+  const all = earned.concat(locked);
+  const short = earned.slice(0, 6).concat(locked.slice(0, earned.length ? 1 : 4));
+  const list = badgesShowAll || location.hash === '#badges-tous' ? all : short;
+  document.getElementById('badgesAll').innerHTML = list.map(TS.badgeTileHtml).join('');
+  const more = document.getElementById('badgesMore');
+  more.hidden = all.length <= short.length;
+  more.textContent = list === all ? 'Voir moins' : `Voir les ${all.length} badges`;
 }
+let badgesShowAll = false;
 
 // ── Profile render ────────────────────────────────────────────────────────────
 // ── Recadrage de la photo : déplacer (doigt, souris ou flèches) et zoomer ─────

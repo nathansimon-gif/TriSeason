@@ -1240,7 +1240,7 @@ async function main() {
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
     await v.page.click('text=+ Nouvelle séance');
     const painShown = await v.page.locator('#painGroup').isVisible();
-    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(500);
+    await v.page.goto(`${BASE}/forme.html#healthCard`); await v.page.waitForTimeout(500);
     await v.page.check('#hpConsent');
     await v.page.click('#hpEnableBtn'); await v.page.waitForTimeout(300);
     const after = await v.page.evaluate(() => ({ on: TS.healthEnabled(), cloud: window.__cloud('testeur').health,
@@ -1312,7 +1312,7 @@ async function main() {
 
   await test('Cycle menstruel : accord à part, durée moyenne, phase, prévision, comparaison, calendrier, modes, effacement', async () => {
     const v = await newUser({ ctxOpts: { viewport: { width: 375, height: 760 }, isMobile: true, hasTouch: true } });
-    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(700);
+    await v.page.goto(`${BASE}/forme.html#cycleCard`); await v.page.waitForTimeout(700);
     const off = await v.page.evaluate(() => { let err = ''; try { TS.addPeriodStart(TS.localDateStr()); } catch (e) { err = e.message; }
       return { err, consent: !!document.getElementById('cyConsent'), btn: document.getElementById('cyEnableBtn').disabled }; });
     await v.page.check('#cyConsent'); await v.page.click('#cyEnableBtn'); await v.page.waitForTimeout(200);
@@ -2128,6 +2128,35 @@ async function main() {
     assert(modal.open && modal.drop && edit && hash, 'fenêtre importer / modifier : ' + JSON.stringify({ modal, edit, hash }));
     assert(/140 bpm/.test(velo.avg) && /W/.test(velo.avg) && /W\/kg moyen : 2,/.test(velo.wkg) && velo.power && velo.fc, 'Sports vélo : ' + JSON.stringify(velo));
     assert(/140 bpm/.test(run.avg) && run.power === 'none', 'Sports course : ' + JSON.stringify(run));
+  });
+
+  await test('Forme, Profil, Paramètres simplifiés : forme en premier, options santé repliées, badges repliés, zone sensible à part', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(900);
+    const f1 = await v.page.evaluate(() => ({
+      order: [...document.querySelectorAll('.container > .card')].filter(c => getComputedStyle(c).display !== 'none').map(c => (c.querySelector('.card__title') || {}).textContent.trim().split('\n')[0].trim()),
+      head: document.querySelector('#tsbInterpretation .tsb-head__t') ? document.querySelector('#tsbInterpretation .tsb-head__t').textContent : '',
+      badges: document.querySelectorAll('.confidence-badge').length,
+      opts: getComputedStyle(document.getElementById('healthOptsCard')).display, health: getComputedStyle(document.getElementById('healthCard')).display,
+      overflow: document.documentElement.scrollWidth - innerWidth }));
+    await v.page.click('#optRowCycle button'); await v.page.waitForTimeout(200);
+    const f2 = await v.page.evaluate(() => ({ cycle: getComputedStyle(document.getElementById('cycleCard')).display, row: getComputedStyle(document.getElementById('optRowCycle')).display, consent: !!document.getElementById('cyConsent') }));
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const p1 = await v.page.evaluate(() => ({ tiles: document.querySelectorAll('#badgesAll > *').length, more: document.getElementById('badgesMore').hidden ? '' : document.getElementById('badgesMore').textContent }));
+    if (p1.more) { await v.page.click('#badgesMore'); await v.page.waitForTimeout(150); }
+    const p2 = await v.page.evaluate(() => document.querySelectorAll('#badgesAll > *').length);
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(800);
+    const set = await v.page.evaluate(() => ({ danger: [...document.querySelectorAll('.set-danger .set-row')].map(r => r.textContent.trim().split('\n')[0].trim()),
+      oldBtns: document.querySelectorAll('[data-ptab-panel="parametres"] .data-export-btn').length, email: document.getElementById('accountEmail').textContent,
+      options: document.getElementById('options-sante').textContent.replace(/\s+/g, ' '), overflow: document.documentElement.scrollWidth - innerWidth }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(f1.order[0] === 'Ta forme' && /Nutrition et performance/.test(f1.order[1]) && /Observations/.test(f1.order[2]) && f1.order.includes('Options santé') && f1.head && !f1.badges && f1.health === 'none' && f1.overflow <= 0,
+      'Forme : ' + JSON.stringify(f1));
+    assert(f2.cycle !== 'none' && f2.row === 'none' && f2.consent, 'Découvrir le cycle : ' + JSON.stringify(f2));
+    assert(p1.tiles <= 7 && /^Voir les \d+ badges$/.test(p1.more) && p2 > p1.tiles, 'badges : ' + JSON.stringify({ p1, p2 }));
+    assert(set.danger.length === 2 && /Effacer toutes mes données/.test(set.danger[0]) && /Supprimer mon compte/.test(set.danger[1]) && !set.oldBtns && /Blessures/.test(set.options) && /Cycle/.test(set.options) && set.overflow <= 0,
+      'Paramètres : ' + JSON.stringify(set));
   });
 
   await browser.close();
