@@ -2071,6 +2071,18 @@ async function main() {
     assert(/69,8 kg/.test(p2.latest) && p2.cloud === 3 && /69,8 kg/.test(p2.sub), 'nouvelle pesée : ' + JSON.stringify(p2));
   });
 
+  await test('Sports décochés : « Ce que Strava ne te montre pas » prend la dernière séance d’un sport suivi', async () => {
+    const data = sampleData(); data.profile.sports = ['run'];
+    data.sessions.push({ id: 'v0', date: day(0), sport: 'velo', duration: 1, distance: 30 });
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => ({ ins: document.querySelector('#insightBody .ins-session').textContent.replace(/\s+/g, ' '),
+      tiles: [...document.querySelectorAll('#heroStrip .hero-sport__sport')].map(e => e.textContent).join(), trend: Chart.getChart('chartTrend').data.datasets.map(x => x.label).join() }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/Course/.test(r.ins) && !/Vélo/.test(r.ins) && r.tiles === 'Course' && r.trend === 'Course', JSON.stringify(r));
+  });
+
   await browser.close();
   server.close();
 

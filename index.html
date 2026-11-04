@@ -490,7 +490,8 @@ function renderInsight() {
   const nutri = data.nutrition || {};
   const today = TS.localDateStr();
   const shift = (d, n) => { const x = TS.parseLocalDate(d); x.setDate(x.getDate() + n); return TS.localDateStr(x); };
-  const sessions = (data.sessions || []).filter(s => s.date && s.date <= today).sort((a, b) => a.date.localeCompare(b.date));
+  // Sports suivis seulement (Profil → Mes sports)
+  const sessions = (data.sessions || []).filter(s => s.date && s.date <= today && TS.sportOn(s.sport, data)).sort((a, b) => a.date.localeCompare(b.date));
   const last = sessions[sessions.length - 1];
   const fmtL = (ml) => (ml / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' L';
   const n0 = (v) => Math.round(v).toLocaleString('fr-FR');
