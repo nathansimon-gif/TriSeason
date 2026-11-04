@@ -132,6 +132,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - **Dashboard** : bandeau prochaine course (`#raceBanner`), tuiles de la semaine (`#heroStrip`, une par sport suivi),
   défis + lien badges, graphique unique « Évolution » (`chartTrend`, choix gardés dans `localStorage.triseason_trend`),
   calendrier, nutrition du jour, derniers records. Le **poids** est saisi dans Profil → Mon profil (`#poids`).
+- **Forme** : « Ta forme » (résumé `#tsbInterpretation` en grand), nutrition × séances, observations, ligne muscu,
+  temps de course estimés, puis options santé : tant qu'une option n'est pas activée, une ligne dans `#healthOptsCard`
+  (`renderHealthOpts`, « Découvrir » ou `forme.html#healthCard` / `#cycleCard` ouvre sa carte).
+- **Profil → Paramètres** : lignes `.set-row`, options santé regroupées (`#options-sante`), « Zone sensible » à part en bas.
 - **Séances** : liste `.ses-row` (30 puis « Voir plus »), fenêtre `#importModal` (fichiers + archive Strava,
   ouverte aussi par `sessions.html#historique-strava`), filtres repliés. FC, puissance, W/kg et moyennes par
   séance : page Sports (`#perSessionCard`, `#muscuAvgs`).

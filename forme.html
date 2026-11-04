@@ -88,6 +88,14 @@
     .hp-sports { display:flex; gap:12px; flex-wrap:wrap; font-size:13px; }
     .hp-sports label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
     .hp-sports input { accent-color:var(--accent); }
+      /* Ta forme : le résumé en grand, les chiffres en dessous */
+    .tsb-head { margin:2px 0 14px; }
+    .tsb-head__t { font-size:20px; font-weight:600; letter-spacing:-.01em; }
+    .tsb-head__s { font-size:13px; color:var(--text-2); margin-top:2px; line-height:1.5; }
+    .opt-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--border); }
+    .opt-row:first-of-type { border-top:0; }
+    .opt-row b { display:block; font-size:13.5px; font-weight:600; }
+    .opt-row span { display:block; font-size:12.5px; color:var(--text-2); margin-top:1px; }
   </style>
 </head>
 <body>
@@ -117,81 +125,26 @@
     <p>Ta forme du moment, ta charge d'entraînement et tes temps de course estimés</p>
   </div>
 
-  <!-- ── Prédicteur de temps (Riegel) ── -->
-  <div class="card" style="margin-bottom:12px" id="predCard">
-    <div class="card__title" style="display:flex;align-items:center;gap:8px">
-      <span>Prédicteur de temps de course</span>
-      <span class="confidence-badge confidence-badge--high">Fiabilité élevée</span>
-      <span class="tip-icon" data-tip="Formule de Riegel : T2 = T1 × (D2/D1)^1.06. Valide surtout en course à pied, à utiliser avec prudence en natation/vélo.">?</span>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <div class="form-group" style="flex:1;min-width:160px">
-        <label class="form-label">Sport</label>
-        <select class="form-select" id="predSport" onchange="populatePredSource();renderPrediction()">
-          <option value="run">Course à pied</option>
-          <option value="nat">Natation</option>
-          <option value="velo">Vélo</option>
-        </select>
-      </div>
-      <div class="form-group" style="flex:1;min-width:200px">
-        <label class="form-label">Record de référence</label>
-        <select class="form-select" id="predSource" onchange="renderPrediction()"></select>
-      </div>
-    </div>
-    <div id="predictionResults"></div>
-  </div>
-
   <!-- ── Charge d'entraînement (CTL/ATL/TSB) ── -->
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
-      <span>Charge d'entraînement & Forme</span>
-      <span class="confidence-badge confidence-badge--high">Méthode établie</span>
-      <span class="tip-icon" data-tip="Trois indicateurs pour suivre ta forme : ta condition de fond (CTL), ta fatigue récente (ATL), et ton niveau de fraîcheur du moment (TSB). Survole chaque case pour le détail.">?</span>
+      <span>Ta forme</span>
+      <span class="tip-icon" data-tip="Méthode reconnue (modèle de Banister), calculée avec la durée et l'effort ressenti de tes séances. Trois indicateurs : ta condition de fond (CTL), ta fatigue récente (ATL) et ta fraîcheur du moment (TSB = CTL − ATL). Touche le « ? » de chaque case pour le détail.">?</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px" id="tsbTiles"></div>
+    <div id="tsbInterpretation" class="tsb-head"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px" id="tsbTiles"></div>
     <div style="position:relative;height:220px;overflow:hidden">
       <canvas id="chartPMC"></canvas>
     </div>
     <div id="pmcBandsNote" style="display:none;margin-top:6px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(240,185,65,.25);vertical-align:-1px;margin-right:5px"></span>Fond jaune : blessure, maladie ou arrêt noté (Blessures, maladie et reprise)</div>
     <div id="pmcCycleNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:var(--cycle-dim);border:1px solid var(--cycle);box-sizing:border-box;vertical-align:-1px;margin-right:5px"></span>Fond rose : règles notées (Cycle menstruel)</div>
-    <div id="tsbInterpretation" style="margin-top:12px;font-size:12px;color:var(--text-2)"></div>
-  </div>
-
-  <!-- ── Musculation : une ligne (la carte du corps complète est dans Sports → Muscu) ── -->
-  <div class="card" style="margin-bottom:12px;display:none" id="bodyMapCard">
-    <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <span style="display:flex;align-items:center;gap:8px"><span><span class="sport-dot sport-dot--muscu"></span>Musculation · 4 dernières semaines</span>
-        <span class="tip-icon" data-tip="Les muscles qui ont le plus travaillé (en séries) ces 4 dernières semaines. La carte du corps complète, avec la période et le détail par exercice, est dans Sports → Muscu.">?</span></span>
-      <a href="sport.html?sport=muscu#carte-du-corps" style="font-size:12px;font-weight:500;color:var(--accent)">Carte du corps</a>
-    </div>
-    <div id="bodyMapLine" style="font-size:13px;color:var(--text-2);line-height:1.6"></div>
-  </div>
-
-  <!-- ── Blessures, maladie, reprise (option avec accord séparé) ── -->
-  <div class="card" style="margin-bottom:12px" id="healthCard">
-    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>Blessures, maladie et reprise</span>
-      <span class="tip-icon" data-tip="Option facultative. Pendant un arrêt (blessure, maladie, grossesse ou pause), tes défis de la semaine s'adaptent et ta série est mise en pause. À la reprise, tu vois ta progression semaine après semaine, sans comparaison avec ton niveau d'avant. Pour une blessure, la douleur notée sur tes séances s'affiche à côté de ton volume d'entraînement.">?</span>
-      <button class="btn btn--sm" id="hpAddBtn" style="margin-left:auto;display:none" onclick="openHealthModal()">+ Ajouter</button>
-    </div>
-    <div id="healthBody"></div>
-  </div>
-
-  <!-- ── Cycle menstruel (option avec accord séparé) ── -->
-  <div class="card" style="margin-bottom:12px" id="cycleCard">
-    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>Cycle menstruel</span>
-      <span class="tip-icon" data-tip="Option facultative. Note le début de tes règles : l'appli calcule la durée moyenne de ton cycle et la phase du moment (estimation), montre tes prochaines règles prévues dans le calendrier et compare ton ressenti et ton effort pendant les règles et le reste du temps. Tu peux aussi noter des signes du jour (crampes, fatigue, sommeil…). Contraception hormonale, cycle irrégulier, grossesse ou ménopause : l'appli s'adapte et n'invente pas de phases. Des faits sur tes données, jamais un avis médical.">?</span>
-    </div>
-    <div id="cycleBody"></div>
   </div>
 
   <!-- ── Nutrition × performance ── -->
   <div class="card" style="margin-bottom:12px" id="nutriImpactCard">
     <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span>Nutrition et performance</span>
-      <span class="confidence-badge confidence-badge--low">Tendance — non causal</span>
-      <span class="tip-icon" data-tip="Compare tes séances selon ce que tu as mangé ou bu autour. Le seuil « plus / moins » est ta propre médiane, pas une norme. Une différence ici n'est pas une preuve : le type de séance, le sommeil ou la météo jouent aussi.">?</span>
+      <span class="tip-icon" data-tip="Compare tes séances selon ce que tu as mangé ou bu autour. Le seuil « plus / moins » est ta propre médiane, pas une norme. Une tendance dans tes données, pas une preuve : le type de séance, le sommeil ou la météo jouent aussi.">?</span>
     </div>
     <div class="ni-controls">
       <label class="ni-control"><span>Facteur</span>
@@ -226,10 +179,75 @@
   <div class="card" style="margin-bottom:12px">
     <div class="card__title" style="display:flex;align-items:center;gap:8px">
       <span>Observations sur tes données</span>
-      <span class="confidence-badge confidence-badge--low">Descriptif — non causal</span>
       <span class="tip-icon" data-tip="Ces observations décrivent des tendances dans tes données seulement. Elles ne prouvent aucun lien de cause à effet et reposent souvent sur peu d'exemples.">?</span>
     </div>
     <div id="observations"></div>
+  </div>
+
+  <!-- ── Musculation : une ligne (la carte du corps complète est dans Sports → Muscu) ── -->
+  <div class="card" style="margin-bottom:12px;display:none" id="bodyMapCard">
+    <div class="card__title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:8px"><span><span class="sport-dot sport-dot--muscu"></span>Musculation · 4 dernières semaines</span>
+        <span class="tip-icon" data-tip="Les muscles qui ont le plus travaillé (en séries) ces 4 dernières semaines. La carte du corps complète, avec la période et le détail par exercice, est dans Sports → Muscu.">?</span></span>
+      <a href="sport.html?sport=muscu#carte-du-corps" style="font-size:12px;font-weight:500;color:var(--accent)">Carte du corps</a>
+    </div>
+    <div id="bodyMapLine" style="font-size:13px;color:var(--text-2);line-height:1.6"></div>
+  </div>
+
+  <!-- ── Prédicteur de temps (Riegel) ── -->
+  <div class="card" style="margin-bottom:12px" id="predCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px">
+      <span>Temps de course estimés</span>
+      <span class="tip-icon" data-tip="Temps estimés sur d'autres distances à partir d'un de tes records (formule de Riegel : T2 = T1 × (D2/D1)^1,06). Fiable surtout en course à pied, à prendre avec prudence en natation et en vélo.">?</span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="form-group" style="flex:1;min-width:160px">
+        <label class="form-label">Sport</label>
+        <select class="form-select" id="predSport" onchange="populatePredSource();renderPrediction()">
+          <option value="run">Course à pied</option>
+          <option value="nat">Natation</option>
+          <option value="velo">Vélo</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;min-width:200px">
+        <label class="form-label">Record de référence</label>
+        <select class="form-select" id="predSource" onchange="renderPrediction()"></select>
+      </div>
+    </div>
+    <div id="predictionResults"></div>
+  </div>
+
+  <!-- ── Options santé facultatives : une ligne chacune tant qu'elles ne sont pas activées ── -->
+  <div class="card" style="margin-bottom:12px" id="healthOptsCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px">Options santé
+      <span class="tip-icon" data-tip="Deux options facultatives, désactivées au départ. Chacune demande ton accord à part et peut être retirée à tout moment (tout est alors effacé). Ces informations ne sont montrées à personne d'autre.">?</span></div>
+    <div class="opt-row" id="optRowHealth">
+      <div><b>Blessures, maladie et reprise</b><span>Tes défis s'adaptent pendant un arrêt.</span></div>
+      <button class="btn btn--ghost btn--sm" onclick="openHealthOpt('healthCard')">Découvrir</button>
+    </div>
+    <div class="opt-row" id="optRowCycle">
+      <div><b>Cycle menstruel</b><span>Suis ton cycle et compare-le à tes séances.</span></div>
+      <button class="btn btn--ghost btn--sm" onclick="openHealthOpt('cycleCard')">Découvrir</button>
+    </div>
+  </div>
+
+  <!-- ── Blessures, maladie, reprise (option avec accord séparé) ── -->
+  <div class="card" style="margin-bottom:12px" id="healthCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Blessures, maladie et reprise</span>
+      <span class="tip-icon" data-tip="Option facultative. Pendant un arrêt (blessure, maladie, grossesse ou pause), tes défis de la semaine s'adaptent et ta série est mise en pause. À la reprise, tu vois ta progression semaine après semaine, sans comparaison avec ton niveau d'avant. Pour une blessure, la douleur notée sur tes séances s'affiche à côté de ton volume d'entraînement.">?</span>
+      <button class="btn btn--sm" id="hpAddBtn" style="margin-left:auto;display:none" onclick="openHealthModal()">+ Ajouter</button>
+    </div>
+    <div id="healthBody"></div>
+  </div>
+
+  <!-- ── Cycle menstruel (option avec accord séparé) ── -->
+  <div class="card" style="margin-bottom:12px" id="cycleCard">
+    <div class="card__title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Cycle menstruel</span>
+      <span class="tip-icon" data-tip="Option facultative. Note le début de tes règles : l'appli calcule la durée moyenne de ton cycle et la phase du moment (estimation), montre tes prochaines règles prévues dans le calendrier et compare ton ressenti et ton effort pendant les règles et le reste du temps. Tu peux aussi noter des signes du jour (crampes, fatigue, sommeil…). Contraception hormonale, cycle irrégulier, grossesse ou ménopause : l'appli s'adapte et n'invente pas de phases. Des faits sur tes données, jamais un avis médical.">?</span>
+    </div>
+    <div id="cycleBody"></div>
   </div>
 
 </div></div>
@@ -331,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBodyMapCard();
   renderNutritionImpact();
   renderObservations();
+  openOptFromHash();
   TS.initTooltips();
 });
 
@@ -508,7 +527,11 @@ function renderPMC() {
   else if (last.tsb > -10) msg = "Charge équilibrée : tu t'entraînes sans trop de fatigue accumulée.";
   else if (last.tsb > -25) msg = "Fatigue marquée : tu es en phase de charge, la récupération compte aussi.";
   else msg = "Fatigue élevée : si ça dure, le risque de surentraînement augmente. Une semaine plus légère peut aider.";
-  document.getElementById('tsbInterpretation').innerHTML = `<b>En résumé :</b> ${msg}`;
+  // « Charge équilibrée : tu t'entraînes… » → titre en grand + phrase dessous
+  const cut = msg.indexOf(' : ');
+  document.getElementById('tsbInterpretation').innerHTML = cut > 0
+    ? `<div class="tsb-head__t">${msg.slice(0, cut)}</div><div class="tsb-head__s">${msg.charAt(cut + 3).toUpperCase() + msg.slice(cut + 4)}</div>`
+    : `<div class="tsb-head__s">${msg}</div>`;
 
   // Chart — last 90 days max for readability
   const recent = series.slice(-90);
@@ -567,7 +590,27 @@ function renderPMC() {
 
 // ── Cycle menstruel (option avec accord séparé) ──────────────────────────────
 let cyDay = null;   // jour choisi pour les signes (aujourd'hui par défaut)
+// Options santé : tant qu'une option n'est pas activée, elle tient en une ligne dans « Options santé » ;
+// « Découvrir » (ou un lien forme.html#healthCard / #cycleCard) ouvre sa carte avec le texte d'accord.
+const optOpen = { healthCard: false, cycleCard: false };
+function openHealthOpt(id) { optOpen[id] = true; renderHealthOpts(); const el = document.getElementById(id); if (el) el.scrollIntoView({ block: 'start' }); }
+function renderHealthOpts() {
+  const on = { healthCard: TS.healthEnabled(), cycleCard: TS.cycleEnabled() };
+  ['healthCard', 'cycleCard'].forEach(id => {
+    const show = on[id] || optOpen[id];
+    document.getElementById(id).style.display = show ? '' : 'none';
+    document.getElementById(id === 'healthCard' ? 'optRowHealth' : 'optRowCycle').style.display = show ? 'none' : '';
+  });
+  document.getElementById('healthOptsCard').style.display = (on.healthCard || optOpen.healthCard) && (on.cycleCard || optOpen.cycleCard) ? 'none' : '';
+}
+function openOptFromHash() {
+  const id = location.hash.slice(1);
+  if (id === 'healthCard' || id === 'cycleCard') openHealthOpt(id);
+}
+window.addEventListener('hashchange', openOptFromHash);
+
 function renderCycle() {
+  renderHealthOpts();
   const body = document.getElementById('cycleBody');
   if (!body) return;
   if (!TS.cycleEnabled()) {
@@ -683,6 +726,7 @@ function hpRow(p) {
 }
 
 function renderHealth() {
+  renderHealthOpts();
   const body = document.getElementById('healthBody');
   if (!body) return;
   const on = TS.healthEnabled();
