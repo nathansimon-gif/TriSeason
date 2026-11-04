@@ -1316,17 +1316,25 @@ function saveProfile(profile) {
 // centre et réduite sur l'appareil avant l'envoi. Affichée à la place de l'icône Profil
 // (.nav__profile) sur toutes les pages, et sur la page Profil. Visible seulement par l'utilisateur.
 const PROFILE_PHOTO_PX = 192;
-function setProfilePhoto(file) {
+// crop (facultatif) : { x, y, side } en pixels de l'image d'origine (recadrage choisi dans Profil) ;
+// sans recadrage : le plus grand carré centré.
+function setProfilePhoto(file, crop) {
   return new Promise((resolve, reject) => {
     if (!file || !/^image\//.test(file.type || 'image/')) return reject(new Error('Choisis une image (photo).'));
     if (file.size > 25 * 1024 * 1024) return reject(new Error('Image trop lourde (25 Mo au plus).'));
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const W = img.naturalWidth, H = img.naturalHeight;
+      let side = Math.min(W, H), sx = (W - side) / 2, sy = (H - side) / 2;
+      if (crop && crop.side > 0) {   // recadrage gardé dans l'image
+        side = Math.min(crop.side, W, H);
+        sx = Math.max(0, Math.min(W - side, crop.x || 0));
+        sy = Math.max(0, Math.min(H - side, crop.y || 0));
+      }
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = PROFILE_PHOTO_PX;
-      canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, PROFILE_PHOTO_PX, PROFILE_PHOTO_PX);
+      canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, PROFILE_PHOTO_PX, PROFILE_PHOTO_PX);
       URL.revokeObjectURL(url);
       const photo = canvas.toDataURL('image/jpeg', 0.82);
       // Enregistrement direct (une page peut avoir sa propre fonction saveProfile, qui masque celle d'app.js)

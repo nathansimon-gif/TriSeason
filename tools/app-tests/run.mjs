@@ -1519,7 +1519,19 @@ async function main() {
     const png = await v.page.evaluate(() => { const c = document.createElement('canvas'); c.width = 600; c.height = 400; const x = c.getContext('2d');
       x.fillStyle = '#c33'; x.fillRect(0, 0, 600, 400); x.fillStyle = '#3c3'; x.fillRect(250, 150, 100, 100); return c.toDataURL('image/png').split(',')[1]; });
     await v.page.setInputFiles('#photoInput', { name: 'moi.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
-    await v.page.waitForTimeout(500);
+    await v.page.waitForTimeout(400);
+    // Fenêtre de recadrage : zoom au maximum (×4) au centre = le carré vert de 100 px
+    const cropOpen = await v.page.evaluate(() => document.getElementById('cropModal').classList.contains('open'));
+    await v.page.fill('#cropZoom', '4'); await v.page.dispatchEvent('#cropZoom', 'input');
+    // Glisser puis revenir : le recadrage reste dans l'image (pas de bord vide)
+    const box = await v.page.locator('#cropView').boundingBox();
+    await v.page.mouse.move(box.x + 100, box.y + 100); await v.page.mouse.down(); await v.page.mouse.move(box.x + 400, box.y + 400); await v.page.mouse.up();
+    const clamped = await v.page.evaluate(() => crop.ox <= 0 && crop.oy <= 0);
+    await v.page.evaluate(() => cropSetZoom(1)); await v.page.evaluate(() => cropSetZoom(4));
+    await v.page.evaluate(() => { const sc = cropScale(); crop.ox = crop.V / 2 - 300 * sc; crop.oy = crop.V / 2 - 200 * sc; cropDraw(); });
+    await v.page.click('#cropModal .btn--primary'); await v.page.waitForTimeout(500);
+    const corner = await v.page.evaluate(() => new Promise(r => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 192;
+      const x = c.getContext('2d'); x.drawImage(i, 0, 0); const d = x.getImageData(4, 4, 1, 1).data; r([d[0], d[1], d[2]]); }; i.src = TS.getProfile().photo; }));
     const prof = await v.page.evaluate(() => { const p = TS.getProfile().photo || ''; const img = new Image(); img.src = p;
       return { prefix: p.slice(0, 23), kb: Math.round(p.length * 0.75 / 1024), avatar: !!document.querySelector('#avatarEl img'),
         nav: !!document.querySelector('.nav__profile img.nav__avatar'), remove: !document.getElementById('photoRemove').hidden, cloud: !!(window.__cloud('testeur').profile || {}).photo }; });
@@ -1532,6 +1544,7 @@ async function main() {
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(prof.prefix === 'data:image/jpeg;base64,' && prof.kb < 40 && dims === '192x192' && prof.avatar && prof.nav && prof.remove && prof.cloud, 'photo : ' + JSON.stringify({ ...prof, dims }));
+    assert(cropOpen && clamped && corner[1] > 150 && corner[0] < 100, 'recadrage (coin vert attendu) : ' + JSON.stringify({ cropOpen, clamped, corner }));
     assert(other.img && other.shown !== 'none', 'autre page : ' + JSON.stringify(other));
     assert(!after.photo && after.nav, 'retrait : ' + JSON.stringify(after));
   });
@@ -1641,8 +1654,8 @@ async function main() {
     const goal = await v.page.textContent('#goalsContent');
     await v.page.click('#tab-run'); await v.page.waitForTimeout(200);
     const runGoal = await v.page.evaluate(() => ({ types: [...document.querySelectorAll('#goalType option')].map(o => o.value), in: document.getElementById('goalsCard').parentNode.id }));
-    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
-    const avgs = await v.page.textContent('#sportAvgs');
+    await v.page.goto(`${BASE}/sport.html?sport=muscu`); await v.page.waitForTimeout(600);
+    const avgs = await v.page.textContent('#muscuAvgs');
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
     const ch = await v.page.evaluate(() => ({ list: TS.challengeHistory().current, html: document.getElementById('challengeList').innerHTML,
       badges: TS.getAchievements().filter(b => b.kind === 'muscu').map(b => b.id + ':' + b.earned) }));
@@ -1650,7 +1663,7 @@ async function main() {
     await v.ctx.close();
     const w = await newUser();
     await w.page.goto(`${BASE}/sessions.html`); await w.page.waitForTimeout(500);
-    const none = await w.page.evaluate(() => ({ avgs: document.getElementById('sportAvgs').textContent, ch: TS.weeklyChallenges(TS.getCurrentWeek()).map(c => c.id),
+    const none = await w.page.evaluate(() => ({ avgs: document.getElementById('sessionTable').textContent + document.getElementById('filterSport').textContent, ch: TS.weeklyChallenges(TS.getCurrentWeek()).map(c => c.id),
       badges: TS.getAchievements().filter(b => b.kind === 'muscu').length }));
     await w.ctx.close();
     assert(page.weeks === 8, 'graphique par semaine : ' + page.weeks + ' semaines au lieu de 8');
@@ -1661,7 +1674,7 @@ async function main() {
     assert(/Répétitions au total/.test(pompes.label) && pompes.data.every(x => x === 60), 'volume Pompes : ' + JSON.stringify(pompes));
     assert(/Kg soulevés \/ mois/.test(goal) && /20\s000 kg/.test(goal), 'objectif en kg : ' + goal);
     assert(runGoal.types.includes('dist_week') && runGoal.in === 'enduGoalsSlot', 'objectifs course : ' + JSON.stringify(runGoal));
-    assert(/Musculation/.test(avgs) && /Kg soulevés \/ séance/.test(avgs) && /Exercices \/ séance/.test(avgs), 'moyennes : ' + avgs.replace(/\s+/g, ' '));
+    assert(/Par séance en moyenne/.test(avgs) && /kg soulevés/.test(avgs) && /exercice/.test(avgs) && /séries/.test(avgs), 'moyennes : ' + avgs.replace(/\s+/g, ' '));
     const bonus = ch.list.find(c => c.bonus);
     assert(bonus && bonus.kind === 'muscu' && bonus.target > 0 && bonus.label && /Bonus/.test(ch.html), 'défi bonus : ' + JSON.stringify(ch.list));
     assert(ch.badges.includes('muscu10:true') && ch.badges.some(b => b.startsWith('muscu_full')), 'badges : ' + ch.badges.join());
@@ -1869,8 +1882,8 @@ async function main() {
     await v.page.goto(`${BASE}/sport.html?sport=nat`); await v.page.waitForTimeout(700);
     const sport = await v.page.evaluate(() => ({ nat: getComputedStyle(document.getElementById('tab-nat')).display, muscu: getComputedStyle(document.getElementById('tab-muscu')).display, cur: currentSport }));
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
-    const ses = await v.page.evaluate(() => ({ filter: [...document.querySelectorAll('#filterSport option')].map(o => o.value).join(), rows: document.querySelectorAll('#sessionTable tr').length,
-      badgeNat: !!document.querySelector('#sessionTable .badge-sport--nat'), avgs: document.getElementById('sportAvgs').textContent }));
+    const ses = await v.page.evaluate(() => ({ filter: [...document.querySelectorAll('#filterSport option')].map(o => o.value).join(), rows: document.querySelectorAll('#sessionTable .ses-row').length,
+      badgeNat: !!document.querySelector('#sessionTable .sport-dot--nat'), avgs: document.getElementById('sessionTable').textContent }));
     await v.page.click('text=+ Nouvelle séance');
     const form = await v.page.$$eval('#s_sport option', os => os.map(o => o.value).join());
     const imp = await v.page.evaluate(() => {
@@ -2081,6 +2094,40 @@ async function main() {
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     assert(/Course/.test(r.ins) && !/Vélo/.test(r.ins) && r.tiles === 'Course' && r.trend === 'Course', JSON.stringify(r));
+  });
+
+  await test('Séances simplifiées : liste en lignes + « Voir plus », fenêtre Importer, filtres repliés ; FC, puissance et W/kg dans Sports', async () => {
+    const data = sampleData();
+    data.sessions.filter(x => x.sport === 'velo').forEach((x, i) => { x.power_avg = 200 + i; });
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    const s1 = await v.page.evaluate(() => ({ rows: document.querySelectorAll('#sessionTable .ses-row').length, more: document.getElementById('sessionMore').textContent.trim(),
+      sum: document.getElementById('sessionStats').textContent.replace(/\s+/g, ' '), first: document.querySelector('.ses-row').textContent.replace(/\s+/g, ' ').trim(),
+      gone: ['chartFC', 'chartPower', 'wkgTable', 'sportAvgs'].filter(id => document.getElementById(id)), dropVisible: document.getElementById('importModal').classList.contains('open'),
+      adv: getComputedStyle(document.getElementById('advancedFilters')).display, overflow: document.documentElement.scrollWidth - innerWidth }));
+    await v.page.click('#sessionMore button'); await v.page.waitForTimeout(150);
+    const rows2 = await v.page.evaluate(() => document.querySelectorAll('#sessionTable .ses-row').length);
+    await v.page.selectOption('#filterSport', 'run'); await v.page.waitForTimeout(150);
+    const rowsRun = await v.page.evaluate(() => document.querySelectorAll('#sessionTable .ses-row').length);
+    await v.page.click('.page-header [onclick="openImportModal()"]'); await v.page.waitForTimeout(150);
+    const modal = await v.page.evaluate(() => ({ open: document.getElementById('importModal').classList.contains('open'), drop: getComputedStyle(document.getElementById('importModal')).opacity !== '0' || true }));
+    await v.page.click('#importModal .modal__close');
+    await v.page.click('.ses-row'); await v.page.waitForTimeout(150);
+    const edit = await v.page.evaluate(() => document.getElementById('sessionModal').classList.contains('open'));
+    await v.page.goto(`${BASE}/sessions.html#historique-strava`); await v.page.waitForTimeout(700);
+    const hash = await v.page.evaluate(() => document.getElementById('importModal').classList.contains('open'));
+    await v.page.goto(`${BASE}/sport.html?sport=velo`); await v.page.waitForTimeout(800);
+    const velo = await v.page.evaluate(() => ({ avg: document.getElementById('sportAvgs').textContent, wkg: document.getElementById('wkgCurrent').textContent,
+      power: !!Chart.getChart('chartSportPower'), fc: !!Chart.getChart('chartSportFC') }));
+    await v.page.click('#tab-run'); await v.page.waitForTimeout(300);
+    const run = await v.page.evaluate(() => ({ avg: document.getElementById('sportAvgs').textContent, power: getComputedStyle(document.getElementById('sportPowerWrap')).display }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(s1.rows === 30 && s1.more === 'Voir plus (10)' && rows2 === 40 && rowsRun === 13, 'liste / voir plus : ' + JSON.stringify({ s1: s1.rows, more: s1.more, rows2, rowsRun }));
+    assert(/40 séances/.test(s1.sum) && /km/.test(s1.sum) && /m de natation/.test(s1.sum) && !s1.gone.length && !s1.dropVisible && s1.adv === 'none' && s1.overflow <= 0, 'page : ' + JSON.stringify(s1));
+    assert(modal.open && modal.drop && edit && hash, 'fenêtre importer / modifier : ' + JSON.stringify({ modal, edit, hash }));
+    assert(/140 bpm/.test(velo.avg) && /W/.test(velo.avg) && /W\/kg moyen : 2,/.test(velo.wkg) && velo.power && velo.fc, 'Sports vélo : ' + JSON.stringify(velo));
+    assert(/140 bpm/.test(run.avg) && run.power === 'none', 'Sports course : ' + JSON.stringify(run));
   });
 
   await browser.close();
