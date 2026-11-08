@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261122a"></script>
+  <script src="theme.js?v=20261123a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261122a"></script>
+  <script src="auth-guard.js?v=20261123a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261122a">
+  <link rel="stylesheet" href="style.css?v=20261123a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -47,8 +47,12 @@
     .ses-sum { font-size:13px; color:var(--text-2); margin:0 2px 8px; }
     .ses-sum b { color:var(--text); font-weight:600; }
     .ses-card { padding:6px 0; }
-    .ses-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:4px 12px; align-items:center; width:100%;
-      padding:10px 16px; border:0; border-bottom:1px solid var(--border); background:none; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+    .ses-row { position:relative; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:4px 12px; align-items:center; width:100%; box-sizing:border-box;
+      padding:10px 16px; border-bottom:1px solid var(--border); color:inherit; text-align:left; }
+    .ses-row__hit { position:absolute; inset:0; width:100%; background:none; border:0; padding:0; cursor:pointer; }
+    .ses-row__hit:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+    .ses-strava { position:relative; z-index:1; display:block; margin-top:3px; font-size:11px; font-weight:600; color:#fc5200; text-decoration:none; }
+    .ses-strava:hover { text-decoration:underline; }
     .ses-row:last-child { border-bottom:0; }
     .ses-row:hover { background:var(--surface2); }
     .ses-row__date { font-size:12px; color:var(--text-2); min-width:62px; line-height:1.3; }
@@ -361,9 +365,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261122a"></script>
-<script src="import.js?v=20261122a"></script>
-<script src="app.js?v=20261122a"></script>
+<script src="fit-parser.js?v=20261123a"></script>
+<script src="import.js?v=20261123a"></script>
+<script src="app.js?v=20261123a"></script>
 <script>
 
 
@@ -538,14 +542,15 @@ function sessionRowHtml(s) {
     s.kcal ? s.kcal + ' kcal' : '',
   ].filter(Boolean).join(' · ');
   const tags = (s.comp_id ? '<span class="ses-tag">Course</span>' : '');
-  return `<button type="button" class="ses-row" onclick="editSession('${s.id}')" aria-label="${escHtml(title)}, ${d ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : ''} : ouvrir">
+  // La ligne entière ouvre la séance (bouton invisible posé dessus) ; le lien Strava reste un vrai lien à part
+  return `<div class="ses-row"><button type="button" class="ses-row__hit" onclick="editSession('${s.id}')" aria-label="${escHtml(title)}, ${d ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : ''} : ouvrir"></button>
     <span class="ses-row__date">${d ? `<b>${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</b>${d.toLocaleDateString('fr-FR', { weekday: 'short' })}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}` : '—'}</span>
     <span class="ses-row__main">
       <span class="ses-row__title"><span class="sport-dot sport-dot--${s.sport}"></span><span class="t">${escHtml(title)}</span>${tags}</span>
       <span class="ses-row__meta" style="display:block">${s.notes ? sp.label + ' · ' : ''}${meta || '—'}</span>
     </span>
-    <span class="ses-row__big">${big}${s.strava_id ? '<small>Strava</small>' : ''}</span>
-  </button>`;
+    <span class="ses-row__big">${big}${s.strava_id ? `<a class="ses-strava" href="https://www.strava.com/activities/${encodeURIComponent(s.strava_id)}" target="_blank" rel="noopener">Voir sur Strava</a>` : ''}</span>
+  </div>`;
 }
 
 function renderSessionStats(sessions) {

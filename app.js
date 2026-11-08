@@ -580,6 +580,15 @@ if (window.TS_USER) syncFromCloud(window.TS_USER.uid);
 
 // Graphiques : nombres au format français (« 5 000 », « 1,5 ») sur toutes les pages
 if (window.Chart) Chart.defaults.locale = 'fr-FR';
+// Graphiques en courbes et en barres : glisser le doigt (ou la souris) le long du graphique montre
+// l'infobulle du point le plus proche de cette position, sans devoir viser le point exactement.
+// Le nuage de points (Forme) garde le comportement « point touché ».
+if (window.Chart) {
+  ['line', 'bar'].forEach(t => {
+    const o = Chart.overrides[t];
+    if (o) o.interaction = Object.assign({}, o.interaction, { mode: 'index', intersect: false, axis: 'x' });
+  });
+}
 
 function saveData(data) {
   // Déconnexion en cours : une minuterie en retard ne doit pas réécrire les données effacées

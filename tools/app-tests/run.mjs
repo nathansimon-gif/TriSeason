@@ -2159,6 +2159,33 @@ async function main() {
       'Paramètres : ' + JSON.stringify(set));
   });
 
+  await test('Séances : lien « Voir sur Strava » sur les séances venues de Strava ; graphiques : l’infobulle suit le doigt', async () => {
+    const data = sampleData();
+    data.sessions[0].strava_id = 12345678;
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(800);
+    const link = await v.page.evaluate(() => { const a = document.querySelector('.ses-row .ses-strava');
+      return a ? { href: a.getAttribute('href'), target: a.target, n: document.querySelectorAll('.ses-strava').length, text: a.textContent } : null; });
+    // Toucher le lien n'ouvre pas la fenêtre de la séance ; toucher ailleurs sur la ligne, si
+    await v.page.evaluate(() => { document.querySelector('.ses-strava').addEventListener('click', e => e.preventDefault(), { once: true }); });
+    await v.page.tap('.ses-strava'); await v.page.waitForTimeout(150);
+    const afterLink = await v.page.evaluate(() => document.getElementById('sessionModal').classList.contains('open'));
+    await v.page.tap('.ses-row .ses-row__hit', { position: { x: 30, y: 20 } }); await v.page.waitForTimeout(150);
+    const afterRow = await v.page.evaluate(() => document.getElementById('sessionModal').classList.contains('open'));
+    // Graphique du Dashboard : un point du graphique sans viser une barre montre l'infobulle de la semaine la plus proche
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
+    await v.page.evaluate(() => Chart.getChart('chartTrend').canvas.scrollIntoView({ block: 'center', behavior: 'instant' })); await v.page.waitForTimeout(400);
+    const box = await v.page.evaluate(() => { const ch = Chart.getChart('chartTrend'); const a = ch.chartArea;
+      const r = ch.canvas.getBoundingClientRect(); return { x: r.left + a.left + (a.right - a.left) * 0.9, y: r.top + a.top + 4, touch: getComputedStyle(ch.canvas).touchAction }; });
+    await v.page.touchscreen.tap(box.x, box.y); await v.page.waitForTimeout(200);
+    const tip = await v.page.evaluate(() => { const ch = Chart.getChart('chartTrend'); return { active: ch.getActiveElements().length, op: ch.tooltip.opacity, mode: ch.options.interaction.mode }; });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(link && link.href === 'https://www.strava.com/activities/12345678' && link.target === '_blank' && link.n === 1 && /Voir sur Strava/.test(link.text), 'lien Strava : ' + JSON.stringify(link));
+    assert(!afterLink && afterRow, 'clic lien / ligne : ' + JSON.stringify({ afterLink, afterRow }));
+    assert(box.touch === 'pan-y' && tip.active > 0 && tip.op > 0 && tip.mode === 'index', 'infobulle au doigt : ' + JSON.stringify({ box, tip }));
+  });
+
   await browser.close();
   server.close();
 
