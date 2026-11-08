@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261122a"></script>
+  <script src="theme.js?v=20261123a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261122a"></script>
+  <script src="auth-guard.js?v=20261123a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261122a">
+  <link rel="stylesheet" href="style.css?v=20261123a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     /* Ta semaine : une rangée de petites tuiles (une par sport suivi) */
@@ -402,7 +402,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261122a"></script>
+<script src="app.js?v=20261123a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -1123,7 +1123,8 @@ function renderCharts() {
       plugins: { ...CO.plugins, tooltip: { callbacks: { label: c => c.dataset.label + ' : ' + fmt(c.raw) } } },
       scales: { x: { ...CO.scales.x, stacked: true, grid: { display: false } },
         y: { ...CO.scales.y, stacked: true, beginAtZero: true, ticks: { ...CO.scales.y.ticks, precision: 0, callback: v => trendWhat === 'dur' ? TS.formatHours(v) : v + unit } } },
-      onClick: (e, el, ch) => { if (el.length) goToSport(ch.data.datasets[el[0].datasetIndex].sport); } }
+      // Ouvrir un sport seulement quand on touche vraiment une barre (pas quand on glisse le doigt pour lire l'infobulle)
+      onClick: (e, el, ch) => { const hit = ch.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false); if (hit.length) goToSport(ch.data.datasets[hit[0].datasetIndex].sport); } }
   });
   // Répartition de la saison (heures), en une ligne
   const stats = TS.getSeasonStats();

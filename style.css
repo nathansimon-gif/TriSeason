@@ -825,3 +825,7 @@ html.ts-loading-data .page .card::after, html.ts-loading-data .page .section-car
 .ts-sync--saved { color: var(--green); }
 .ts-sync--offline { color: var(--yellow); border-color: var(--yellow); }
 .ts-sync--error { color: var(--red); }
+
+/* Graphiques : un glissé horizontal du doigt parcourt le graphique (infobulle qui suit le doigt)
+   au lieu de faire défiler la page ; un glissé vertical fait toujours défiler la page. */
+canvas { touch-action: pan-y; }

@@ -136,7 +136,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   temps de course estimés, puis options santé : tant qu'une option n'est pas activée, une ligne dans `#healthOptsCard`
   (`renderHealthOpts`, « Découvrir » ou `forme.html#healthCard` / `#cycleCard` ouvre sa carte).
 - **Profil → Paramètres** : lignes `.set-row`, options santé regroupées (`#options-sante`), « Zone sensible » à part en bas.
-- **Séances** : liste `.ses-row` (30 puis « Voir plus »), fenêtre `#importModal` (fichiers + archive Strava,
+- **Graphiques** (app.js) : courbes et barres en `interaction` `index` / `intersect: false` (l'infobulle suit le doigt),
+  `canvas { touch-action: pan-y }` (style.css) ; un clic qui ouvre une page doit vérifier un vrai toucher
+  (`getElementsAtEventForMode(e, 'nearest', { intersect: true })`).
+- **Séances** : liste `.ses-row` (bouton invisible `.ses-row__hit` sur la ligne + lien `.ses-strava` « Voir sur Strava ») (30 puis « Voir plus »), fenêtre `#importModal` (fichiers + archive Strava,
   ouverte aussi par `sessions.html#historique-strava`), filtres repliés. FC, puissance, W/kg et moyennes par
   séance : page Sports (`#perSessionCard`, `#muscuAvgs`).
 - **Profil** : onglets « Mon profil » et « Paramètres » (`profile.html#parametres`, ou l'id d'une section :
