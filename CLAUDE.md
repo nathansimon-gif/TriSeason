@@ -49,6 +49,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   séance : `session_id` + moment `timing` (minutes, saisi et affiché en « 1h15 » : `parseFuelTime` /
   `fuelTimeText`) ou `km` (`sessionFuel` / `sessionFuelSummary` :
   glucides par heure, facteur `fuel_hour` de `getNutritionImpact`) ;
+  **totaux du jour** : `dayIntake(day)` = repas + ravitaillements (`fuelTotals` : glucides, prot., kcal 4/g) et eau
+  notée + boissons (`fuelWater` : `f.ml` par unité, 500 ml par défaut pour `boisson-iso`) ; `dailyWater()` pour tous les jours ;
+  à utiliser partout au lieu de relire `hydration` ou les repas seuls ;
+  objectifs (`data.goals[sport]`) : `goalPeriodValue` / `goalStreak` (série de semaines ou de mois atteints d'affilée) ;
   `getPlans` / `savePlan` / `planStatuses` : séances prévues (`data.plans`), reconnues
   toutes seules quand une séance du même sport existe le même jour ;
   `weeklyChallenges` / `challengeHistory` / `getAchievements` : défis de la

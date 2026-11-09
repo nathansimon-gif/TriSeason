@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261123a"></script>
+  <script src="theme.js?v=20261124a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261123a"></script>
+  <script src="auth-guard.js?v=20261124a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261123a">
+  <link rel="stylesheet" href="style.css?v=20261124a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -186,6 +186,7 @@
         <div class="nutri-kpi__label">Hydratation (ml)</div>
       </div>
     </div>
+    <div id="kpiFuelNote" style="font-size:12px;color:var(--text-2);margin-top:10px"></div>
     <!-- Macro bar -->
     <div style="margin-top:12px">
       <div class="macro-bar" id="macroBar">
@@ -224,6 +225,7 @@
             <div class="hydro-ring__val" id="hydroVal">0</div>
           </div>
           <div style="flex:1">
+            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:4px" id="hydroFuelNote"></div>
             <div style="font-size:12px;color:var(--text-2);margin-bottom:8px" id="hydroGoalLine">Objectif : <span id="hydroTarget">1,5 L</span>
               <button type="button" class="link-btn" onclick="editHydroGoal()">Modifier</button></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -436,6 +438,10 @@
         </div>
         <div style="font-size:11px;color:var(--text-3);margin-top:4px">Valeurs indicatives des fabricants : le chiffre exact est sur l'emballage.</div>
       </div>
+      <div class="form-group" id="f_ml_row">
+        <label class="form-label" for="f_ml">Eau bue <span style="font-weight:400;color:var(--text-3)">(ml par unité, comptée dans ton hydratation du jour)</span></label>
+        <input class="form-input" type="number" min="0" step="50" id="f_ml" placeholder="ml" style="width:110px">
+      </div>
       <div class="form-group">
         <label class="form-label">Marque / nom</label>
         <input class="form-input" type="text" id="f_name" placeholder="ex: SIS Go, Maurten 100...">
@@ -466,7 +472,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261123a"></script>
+<script src="app.js?v=20261124a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -580,8 +586,9 @@ function getDayFuel(day) {
   return getNutrition().fuel.filter(f => f.date === day);
 }
 
+// Eau du jour : ce que tu as noté + les boissons de tes ravitaillements
 function getDayHydro(day) {
-  return getNutrition().hydration[day] || 0;
+  return TS.dayIntake(day).water;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -596,23 +603,18 @@ function renderAll() {
 }
 
 function renderDayKPIs() {
-  const meals = getDayMeals(currentDay);
-  const totals = meals.reduce((acc, m) => ({
-    glucides:  acc.glucides  + (m.glucides  || 0),
-    proteines: acc.proteines + (m.proteines || 0),
-    lipides:   acc.lipides   + (m.lipides   || 0),
-    kcal:      acc.kcal      + (m.kcal      || 0),
-  }), {glucides:0,proteines:0,lipides:0,kcal:0});
-
-  // Auto-compute kcal if not set
-  const autoKcal = totals.glucides*4 + totals.proteines*4 + totals.lipides*9;
-  const displayKcal = totals.kcal || autoKcal;
+  // Repas + ravitaillements du jour (TS.dayIntake)
+  const d = TS.dayIntake(currentDay);
+  const totals = { glucides: Math.round(d.glucides), proteines: Math.round(d.proteines), lipides: Math.round(d.lipides) };
+  const displayKcal = d.kcal;
 
   document.getElementById('kpiKcal').textContent      = displayKcal ? Math.round(displayKcal) : '—';
   document.getElementById('kpiGlucides').textContent  = totals.glucides  || '—';
   document.getElementById('kpiProtéines').textContent = totals.proteines || '—';
   document.getElementById('kpiLipides').textContent   = totals.lipides   || '—';
-  document.getElementById('kpiHydro').textContent     = getDayHydro(currentDay) || '—';
+  document.getElementById('kpiHydro').textContent     = d.water || '—';
+  const fuelNote = document.getElementById('kpiFuelNote');
+  if (fuelNote) fuelNote.textContent = d.fuel ? `Dont ravitaillements : ${Math.round(d.fuelCarbs)} g de glucides, ${Math.round(d.fuelKcal)} kcal` + (d.fuelMl ? `, ${d.fuelMl.toLocaleString('fr-FR')} ml d’eau` : '') + '.' : '';
 
   // Macro bar
   const total = totals.glucides + totals.proteines + totals.lipides;
@@ -799,7 +801,7 @@ function renderFuelList() {
     <div class="fuel-row fuel-row--click" onclick="if (!event.target.closest('button')) openFuelModal('${f.id}')" title="Modifier">
       <div class="fuel-row__icon">${FUEL_ICONS[f.type]||'📦'}</div>
       <div class="fuel-row__label">${f.qty > 1 ? f.qty+'× ' : ''}${escHtml(TS.fuelLabel(f))}${act ? `<span class="fuel-row__act">${escHtml(act)}</span>` : ''}</div>
-      <div class="fuel-row__val">${(() => { const c = TS.fuelCarbs(f); return (c.estimated ? '≈ ' : '') + Math.round(c.carbs) + ' g gluc.' + (c.prot ? ' · ' + Math.round(c.prot) + ' g prot.' : ''); })()}</div>
+      <div class="fuel-row__val">${(() => { const c = TS.fuelCarbs(f); const ml = TS.fuelWater(f); return (c.estimated ? '≈ ' : '') + Math.round(c.carbs) + ' g gluc.' + (c.prot ? ' · ' + Math.round(c.prot) + ' g prot.' : '') + (ml ? ' · ' + ml.toLocaleString('fr-FR') + ' ml' : ''); })()}</div>
       <button class="btn btn--danger btn--sm btn--icon" onclick="deleteFuel('${f.id}')" aria-label="Supprimer">×</button>
     </div>`;
   }).join('');
@@ -810,7 +812,10 @@ function renderHydration() {
   const target = TS.hydroGoal();
   const pct = Math.min(100, Math.round(ml / target * 100));
   document.getElementById('hydroRing').style.setProperty('--pct', pct+'%');
-  document.getElementById('hydroVal').textContent = ml >= 1000 ? (ml/1000).toFixed(1).replace('.', ',')+' L' : ml+'ml';
+  document.getElementById('hydroVal').textContent = ml >= 1000 ? (ml/1000).toFixed(1).replace('.', ',')+' L' : ml+' ml';
+  const fromFuel = TS.dayIntake(currentDay).fuelMl;
+  const hn = document.getElementById('hydroFuelNote');
+  if (hn) hn.textContent = fromFuel ? 'Dont ' + fromFuel.toLocaleString('fr-FR') + ' ml de boissons de ravitaillement' : '';
   document.getElementById('hydroGoalLine').innerHTML = 'Objectif : <span id="hydroTarget">' + TS.formatLiters(target) + '</span> '
     + '<button type="button" class="link-btn" onclick="editHydroGoal()">Modifier</button>';
 }
@@ -914,8 +919,7 @@ function mealsChartMode() { try { return localStorage.getItem(MEALS_CHART_KEY) =
 function setMealsChartMode(v) { try { localStorage.setItem(MEALS_CHART_KEY, v); } catch {} renderCharts(); }
 // Kcal des repas d'un jour (même calcul que la carte « Besoins énergétiques »).
 function dayKcalEaten(day) {
-  return (getNutrition().meals || []).filter(m => m.date === day)
-    .reduce((a, m) => a + (m.kcal || (m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9), 0);
+  return TS.dayIntake(day).kcal;   // repas + ravitaillements
 }
 // Besoin d'un jour : objectif manuel de ce jour, sinon calcul automatique ; null sans profil complet.
 function dayKcalNeed(day) {
@@ -1895,6 +1899,8 @@ function openFuelModal(id, sessionId)  {
   renderFuelPresets();
   const set = (k, v) => { document.getElementById(k).value = v == null ? '' : v; };
   set('f_carbs', f ? f.carbs : ''); set('f_prot', f ? f.prot : '');
+  set('f_ml', f && f.ml != null ? f.ml : '');
+  updateFuelMl();
   set('f_qty', f ? f.qty || 1 : 1); set('f_name', f ? f.name : ''); set('f_notes', f ? f.notes : '');
   set('f_timing', f && f.timing != null ? TS.fuelTimeText(f.timing).replace(' min', 'min') : ''); set('f_km', f ? f.km : '');
   const list = fillFuelSessions(f ? f.session_id : sessionId);
@@ -1906,8 +1912,18 @@ function openFuelModal(id, sessionId)  {
 
 // Cases à cliquer : tailles génériques puis produits courants, selon le type choisi.
 let fuelPresetPicked = null, fuelAutoName = '';
+// Boisson isotonique et flasque : on note l'eau bue (500 ml par bidon par défaut), comptée dans l'hydratation
+const FUEL_DRINKS = { 'boisson-iso': 500, flasque: '' };
+function updateFuelMl() {
+  const type = document.getElementById('f_type').value;
+  const row = document.getElementById('f_ml_row'), ml = document.getElementById('f_ml');
+  const drink = type in FUEL_DRINKS;
+  row.style.display = drink ? '' : 'none';
+  if (drink && ml.value === '' && FUEL_DRINKS[type] !== '') ml.value = FUEL_DRINKS[type];
+}
 function renderFuelPresets() {
   const type = document.getElementById('f_type').value;
+  updateFuelMl();
   const P = TS.FUEL_PRESETS[type] || { generic: [], brands: [] };
   document.getElementById('f_unit').textContent = P.unit ? '(' + P.unit + ')' : '';
   const chip = (list, kind) => list.map((x, i) => `<button type="button" class="fuel-chip" data-k="${kind}${i}" onclick="pickFuelPreset('${kind}', ${i})">${x[0]} <b>${x[1]} g</b>${x[2] ? ' · ' + x[2] + ' g prot.' : ''}</button>`).join('');
@@ -1964,12 +1980,14 @@ function saveFuelForm() {
   const prot = parseFloat(document.getElementById('f_prot').value);
   if (isFinite(carbs) && carbs >= 0) fuel.carbs = carbs;  // g par unité
   if (isFinite(prot) && prot > 0) fuel.prot = prot;
+  const ml = parseFloat(document.getElementById('f_ml').value);
+  if (fuel.type in FUEL_DRINKS && isFinite(ml) && ml >= 0) fuel.ml = ml;   // ml par unité
   const nutri = getNutrition();
   const i = nutri.fuel.findIndex(x => x.id === fuel.id);
   if (i >= 0) nutri.fuel[i] = fuel; else nutri.fuel.push(fuel);
   saveNutrition(nutri);
   closeFuelModal();
-  renderFuelList();
+  renderAll();
   TS.toast(i >= 0 ? 'Ravitaillement modifié' : 'Ravitaillement ajouté' + (sessionId ? ' à ta séance' : ''));
 }
 
@@ -1977,7 +1995,7 @@ function deleteFuel(id) {
   const nutri = getNutrition();
   nutri.fuel = nutri.fuel.filter(f=>f.id!==id);
   saveNutrition(nutri);
-  renderFuelList();
+  renderAll();
   TS.toast('Supprimé');
 }
 
@@ -2000,10 +2018,7 @@ function renderEnergyBalance() {
   var kcalBurned = sessions.reduce(function(a,s){ return a+(s.kcal||0); }, 0);
   var nutri  = getNutrition();
   var meals  = (nutri.meals||[]).filter(function(m){ return m.date === currentDay; });
-  var kcalEaten = meals.reduce(function(a,m){
-    if (m.kcal) return a+m.kcal;
-    return a + (m.glucides||0)*4 + (m.proteines||0)*4 + (m.lipides||0)*9;
-  }, 0);
+  var kcalEaten = Math.round(TS.dayIntake(currentDay).kcal);   // repas + ravitaillements
 
   var need        = energyNeeds(bmr, kcalBurned, cfg);
   var autoTotal   = need.total;
@@ -2155,7 +2170,7 @@ function renderPerfComparison() {
   var card = document.getElementById('raceNutriCard');
   var nutri    = getNutrition();
   var allMeals = nutri.meals    || [];
-  var allHydro = nutri.hydration || {};
+  var allHydro = TS.dailyWater();   // eau notée + boissons des ravitaillements
   var out = '';
   // Analyse préparation nutritionnelle avant les courses associées
   // De la plus récente à la plus ancienne
@@ -2181,8 +2196,7 @@ function renderPerfComparison() {
       var avgHydro = 0, avgKcal = 0, count = 0;
       dayKeys.forEach(function(d){
         avgHydro += (allHydro[d]||0);
-        avgKcal  += allMeals.filter(function(m){return m.date===d;})
-          .reduce(function(a,m){return a+(m.kcal||(m.glucides||0)*4+(m.proteines||0)*4+(m.lipides||0)*9);},0);
+        avgKcal  += TS.dayIntake(d).kcal;   // repas + ravitaillements
         count++;
       });
       if (count === 0) return;

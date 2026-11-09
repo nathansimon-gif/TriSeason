@@ -335,7 +335,7 @@ async function main() {
     const empty = await w.page.textContent('#insightBody');
     await v.ctx.close(); await w.ctx.close();
     assert(full.includes('hier') && /la veille 230 g de glucides/i.test(full) && full.includes('2 L d’eau'), 'avec données : ' + full.slice(0, 260));
-    assert(mixed.includes('≈ 80 g de glucides') && mixed.includes('≈ 40 g par heure') && mixed.includes('300 g de glucides les jours d’entraînement') && mixed.includes('200 g les jours de repos'),
+    assert(mixed.includes('≈ 80 g de glucides') && mixed.includes('≈ 40 g par heure') && mixed.includes('327 g de glucides les jours d’entraînement') && /le jour même 380 g de glucides/i.test(mixed)   /* ravitaillements compris */ && mixed.includes('200 g les jours de repos'),
       'entraînement / repos : ' + mixed.slice(0, 400));
     assert(empty.includes('Importe une séance'), 'sans données : ' + empty.slice(0, 200));
   });
@@ -2184,6 +2184,43 @@ async function main() {
     assert(link && link.href === 'https://www.strava.com/activities/12345678' && link.target === '_blank' && link.n === 1 && /Voir sur Strava/.test(link.text), 'lien Strava : ' + JSON.stringify(link));
     assert(!afterLink && afterRow, 'clic lien / ligne : ' + JSON.stringify({ afterLink, afterRow }));
     assert(box.touch === 'pan-y' && tip.active > 0 && tip.op > 0 && tip.mode === 'index', 'infobulle au doigt : ' + JSON.stringify({ box, tip }));
+  });
+
+  await test('Ravitaillements comptés dans la journée (glucides, kcal, eau des boissons) ; séries des objectifs de semaine et de mois', async () => {
+    const data = sampleData();
+    const today = day(0);
+    data.nutrition.meals.push({ id: 'mt', date: today, type: 'déjeuner', glucides: 100, proteines: 30, lipides: 10 });
+    data.nutrition.hydration[today] = 1000;
+    data.nutrition.fuel = [{ id: 'f1', date: today, type: 'gel', qty: 2, carbs: 25 },
+      { id: 'f2', date: today, type: 'boisson-iso', qty: 1, carbs: 35 },
+      { id: 'f3', date: today, type: 'flasque', qty: 1, carbs: 50, ml: 300 }];
+    // Objectif course : 9 km / semaine (une course de 9 km tous les 3 jours) et 3 séances / semaine
+    data.goals = { run: [{ id: 'g1', type: 'dist_week', target: 9 }, { id: 'g2', type: 'sessions_week', target: 3 }, { id: 'g3', type: 'dist_year', target: 500 }] };
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(800);
+    const n1 = await v.page.evaluate(() => ({ intake: TS.dayIntake(TS.localDateStr()), gl: document.getElementById('kpiGlucides').textContent,
+      kcal: document.getElementById('kpiKcal').textContent, hydro: document.getElementById('kpiHydro').textContent,
+      note: document.getElementById('kpiFuelNote').textContent, ring: document.getElementById('hydroFuelNote').textContent }));
+    // Nouveau ravitaillement « boisson » : 500 ml proposés d'office, le total du jour se met à jour tout de suite
+    await v.page.evaluate(() => openFuelModal());
+    await v.page.selectOption('#f_type', 'boisson-iso'); await v.page.waitForTimeout(100);
+    const mlDefault = await v.page.inputValue('#f_ml');
+    await v.page.fill('#f_carbs', '40');
+    await v.page.click('#fuelModal .btn--primary'); await v.page.waitForTimeout(300);
+    const n2 = await v.page.evaluate(() => ({ gl: document.getElementById('kpiGlucides').textContent, hydro: document.getElementById('kpiHydro').textContent,
+      saved: TS.getData().nutrition.fuel.slice(-1)[0], ch: TS.weeklyChallenges(TS.getCurrentWeek()).find(c => c.id === 'hydro') }));
+    await v.page.goto(`${BASE}/sport.html?sport=run`); await v.page.waitForTimeout(800);
+    const g = await v.page.evaluate(() => ({ st: TS.getGoals('run').map(x => TS.goalStreak('run', x)), text: document.getElementById('goalsContent').textContent.replace(/\s+/g, ' ') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // 100 (repas) + 50 (2 gels) + 35 (boisson) + 50 (flasque) = 235 g ; eau : 1 000 + 500 + 300 = 1 800 ml
+    assert(n1.intake.glucides === 235 && n1.intake.water === 1800 && n1.intake.fuelMl === 800 && n1.gl === '235' && n1.hydro === '1800'
+      && n1.kcal === String(Math.round(100 * 4 + 30 * 4 + 10 * 9 + 135 * 4)) && /Dont ravitaillements : 135 g de glucides/.test(n1.note) && /800 ml/.test(n1.ring),
+      'totaux du jour : ' + JSON.stringify(n1));
+    assert(mlDefault === '500' && n2.gl === '275' && n2.hydro === '2300' && n2.saved.ml === 500, 'nouveau ravitaillement : ' + JSON.stringify({ mlDefault, n2 }));
+    const [dist, ses, year] = g.st;
+    assert(dist && dist.per === 'week' && dist.streak >= 5 && ses && ses.streak === 0 && year === null && /Série : \d+ semaines d'affilée/.test(g.text) && /Pas de série en cours/.test(g.text),
+      'séries : ' + JSON.stringify(g));
   });
 
   await browser.close();

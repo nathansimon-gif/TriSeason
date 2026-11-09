@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261123a"></script>
+  <script src="theme.js?v=20261124a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261123a"></script>
+  <script src="auth-guard.js?v=20261124a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261123a">
+  <link rel="stylesheet" href="style.css?v=20261124a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -35,6 +35,8 @@
     @media(max-width:600px){ .goal-add-row { grid-template-columns:1fr 1fr; } }
       .avg-line { font-size:13px; color:var(--text-2); line-height:1.6; }
     .avg-line b { color:var(--text); font-weight:600; }
+      .goal-streak { font-size:12px; color:var(--text-2); margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .goal-streak b { font-weight:600; }
   </style>
 </head>
 <body>
@@ -240,7 +242,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261123a"></script>
+<script src="app.js?v=20261124a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -911,11 +913,25 @@ function renderGoals(s) {
         <div class="goal-val">${prog.unit === 'h' ? TS.formatHours(prog.current) + ' / ' + TS.formatHours(g.target)
           : prog.unit === 'kg' ? Math.round(prog.current).toLocaleString('fr-FR') + ' / ' + g.target.toLocaleString('fr-FR') + ' kg'
           : prog.current.toFixed(g.type.startsWith('sessions')?0:1).replace('.', ',') + ' ' + prog.unit + ' / ' + String(g.target).replace('.', ',') + ' ' + prog.unit}</div>
+        ${goalStreakHtml(s, g)}
       </div>
       <div class="goal-pct" style="color:${barColor}">${pct}%</div>
       <button class="btn btn--ghost btn--sm btn--icon" onclick="askDeleteGoal('${g.id}')">×</button>
     </div>`;
   }).join('');
+}
+
+// Série d'un objectif de semaine ou de mois (calculée à partir de tes séances)
+function goalStreakHtml(sport, g) {
+  const st = TS.goalStreak(sport, g);
+  if (!st) return '';
+  const unit = n => st.per === 'week' ? (n > 1 ? 'semaines' : 'semaine') : 'mois';
+  const best = st.best > st.streak ? ` · record : ${st.best} ${unit(st.best)}` : '';
+  const txt = st.streak
+    ? `<b style="color:var(--accent)">Série : ${st.streak} ${unit(st.streak)} d'affilée</b>${best}`
+    : `Pas de série en cours${best}`;
+  const tip = `Nombre de ${st.per === 'week' ? 'semaines' : 'mois'} d'affilée où tu as atteint cet objectif. ${st.per === 'week' ? 'La semaine' : 'Le mois'} en cours compte dès que l'objectif est atteint ; si ${st.per === 'week' ? 'une semaine se termine' : 'un mois se termine'} sans l'atteindre, la série retombe à 0.`;
+  return `<div class="goal-streak">${txt} <span class="tip-icon" data-tip="${tip}">?</span></div>`;
 }
 
 function addGoal() {

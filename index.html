@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261123a"></script>
+  <script src="theme.js?v=20261124a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261123a"></script>
+  <script src="auth-guard.js?v=20261124a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="TriSeason">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>TriSeason Tracker — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261123a">
+  <link rel="stylesheet" href="style.css?v=20261124a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     /* Ta semaine : une rangée de petites tuiles (une par sport suivi) */
@@ -402,7 +402,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261123a"></script>
+<script src="app.js?v=20261124a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -474,15 +474,10 @@ function renderGearAlert() {
 // ── Ce que Strava ne te montre pas : ta dernière séance avec ce que tu as mangé
 // et bu autour, puis tes glucides les jours d'entraînement et de repos.
 // Des faits sur tes données, jamais un conseil.
+// Repas + ravitaillements du jour, eau notée + boissons des ravitaillements (TS.dayIntake)
 function dayNutrition(nutri, day) {
-  const meals = (nutri.meals || []).filter(m => m.date === day);
-  return {
-    meals: meals.length,
-    carbs: meals.reduce((a, m) => a + (m.glucides || 0), 0),
-    kcal: meals.reduce((a, m) => a + (m.kcal || ((m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9)), 0),
-    prot: meals.reduce((a, m) => a + (m.proteines || 0), 0),
-    water: (nutri.hydration || {})[day] || 0,
-  };
+  const d = TS.dayIntake(day);
+  return { meals: d.meals, carbs: d.glucides, kcal: d.kcal, prot: d.proteines, water: d.water };
 }
 function renderInsight() {
   const el = document.getElementById('insightBody');
@@ -1199,7 +1194,7 @@ function quickHydro(ml) {
   data.nutrition.hydration[today] = (data.nutrition.hydration[today] || 0) + ml;
   TS.saveData(data);
   renderNutriWidget();
-  TS.toast('+' + ml + ' ml — ' + data.nutrition.hydration[today] + ' ml aujourd’hui');
+  TS.toast('+' + ml + ' ml — ' + TS.dayIntake(today).water.toLocaleString('fr-FR') + ' ml aujourd’hui');
 }
 
 function renderNutriWidget() {
@@ -1208,18 +1203,16 @@ function renderNutriWidget() {
   const data  = TS.getData();
   const nutri = data.nutrition || { meals: [], hydration: {} };
   const today = TS.localDateStr();
-  const meals = (nutri.meals || []).filter(m => m.date === today);
-  const hydro = (nutri.hydration || {})[today] || 0;
+  // Repas + ravitaillements, eau notée + boissons des ravitaillements
+  const d = TS.dayIntake(today, data);
+  const hydro = d.water;
 
-  if (!meals.length && !hydro) {
+  if (!d.meals && !d.fuel && !hydro) {
     el.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-3)">Aucune donnée nutrition aujourd\u2019hui. <a href="nutrition.html" style="color:var(--accent2)">Ajouter \u2192</a></div>';
     return;
   }
 
-  const kcal = meals.reduce((a, m) => a + (m.kcal || (m.glucides||0)*4 + (m.proteines||0)*4 + (m.lipides||0)*9), 0);
-  const g    = meals.reduce((a, m) => a + (m.glucides||0), 0);
-  const p    = meals.reduce((a, m) => a + (m.proteines||0), 0);
-  const l    = meals.reduce((a, m) => a + (m.lipides||0), 0);
+  const kcal = d.kcal, g = Math.round(d.glucides), p = Math.round(d.proteines), l = Math.round(d.lipides);
 
   const tile = (val, label, color) =>
     '<div style="text-align:center;padding:10px;background:var(--surface2);border-radius:var(--r-sm)">'
@@ -1228,7 +1221,7 @@ function renderNutriWidget() {
     + '</div>';
 
   el.innerHTML =
-      tile(meals.length, 'Repas', 'var(--text)')
+      tile(d.meals, 'Repas', 'var(--text)')
     + tile(Math.round(kcal) || '\u2014', 'Kcal', 'var(--accent2)')
     + tile(g || '\u2014', 'Glucides (g)', 'var(--run)')
     + tile(hydro ? (hydro >= 1000 ? (hydro/1000).toFixed(1).replace('.', ',')+' L' : hydro+'ml') : '\u2014', 'Hydratation', 'var(--nat)');
