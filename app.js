@@ -1516,9 +1516,9 @@ function getNutritionImpact(filters = {}) {
   const data = getData();
   const nutri = data.nutrition || {};
   const meals = nutri.meals || [];
-  const hydration = nutri.hydration || {};
+  const hydration = dailyWater(data);   // eau notée + boissons des ravitaillements
 
-  // Totaux par jour (seulement les jours où au moins un repas est saisi)
+  // Totaux par jour (seulement les jours où au moins un repas est saisi), ravitaillements compris
   const daily = {};
   meals.forEach(m => {
     if (!m.date) return;
@@ -1527,6 +1527,7 @@ function getNutritionImpact(filters = {}) {
     d.kcal  += m.kcal || ((m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9);
     d.meals += 1;
   });
+  (nutri.fuel || []).forEach(f => { const d = daily[f.date]; if (!d) return; const t = fuelTotals(f); d.carbs += t.carbs; d.kcal += t.kcal; });
 
   let sessions = data.sessions || [];
   if (filters.from) sessions = sessions.filter(s => s.date >= filters.from);
@@ -1650,6 +1651,43 @@ function fuelCarbs(f) {
   const unit = per != null && isFinite(per) ? per : (FUEL_DEFAULT_CARBS[f.type] || 20);
   return { carbs: unit * (f.qty || 1), prot: (Number(f.prot) || 0) * (f.qty || 1), estimated: per == null };
 }
+// Eau d'un ravitaillement (ml, quantité comprise) : f.ml par unité si saisi, sinon 500 ml
+// pour une boisson isotonique (« par bidon de 500 ml »), rien pour le reste.
+const FUEL_DEFAULT_ML = { 'boisson-iso': 500 };
+function fuelWater(f) {
+  const per = f.ml != null && f.ml !== '' && isFinite(Number(f.ml)) ? Number(f.ml) : (FUEL_DEFAULT_ML[f.type] || 0);
+  return Math.max(0, per) * (f.qty || 1);
+}
+// Ce qu'apporte un ravitaillement : glucides, protéines, kcal (4 kcal/g) et eau
+function fuelTotals(f) {
+  const c = fuelCarbs(f);
+  return { carbs: c.carbs, prot: c.prot, kcal: c.carbs * 4 + c.prot * 4, ml: fuelWater(f), estimated: c.estimated };
+}
+// Tout ce qui a été mangé et bu un jour : repas + ravitaillements (glucides, kcal…) et
+// eau notée + boissons des ravitaillements. Utilisé partout pour les totaux du jour.
+function dayIntake(day, data = getData()) {
+  const nutri = data.nutrition || {};
+  const meals = (nutri.meals || []).filter(m => m.date === day);
+  const fuel = (nutri.fuel || []).filter(f => f.date === day);
+  const r = { meals: meals.length, fuel: fuel.length, glucides: 0, proteines: 0, lipides: 0, kcal: 0,
+    fuelCarbs: 0, fuelKcal: 0, fuelMl: 0, waterNoted: (nutri.hydration || {})[day] || 0 };
+  meals.forEach(m => {
+    r.glucides += m.glucides || 0; r.proteines += m.proteines || 0; r.lipides += m.lipides || 0;
+    r.kcal += m.kcal || ((m.glucides || 0) * 4 + (m.proteines || 0) * 4 + (m.lipides || 0) * 9);
+  });
+  fuel.forEach(f => { const t = fuelTotals(f); r.fuelCarbs += t.carbs; r.proteines += t.prot; r.fuelKcal += t.kcal; r.fuelMl += t.ml; });
+  r.glucides += r.fuelCarbs; r.kcal += r.fuelKcal;
+  r.water = r.waterNoted + r.fuelMl;
+  return r;
+}
+// Eau du jour (notée + boissons des ravitaillements), pour chaque jour qui en a
+function dailyWater(data = getData()) {
+  const nutri = data.nutrition || {}, w = {};
+  Object.entries(nutri.hydration || {}).forEach(([d, v]) => { if (v) w[d] = (w[d] || 0) + v; });
+  (nutri.fuel || []).forEach(f => { const ml = fuelWater(f); if (f.date && ml) w[f.date] = (w[f.date] || 0) + ml; });
+  return w;
+}
+
 // Ravitaillement relié à une séance : f.session_id, et le moment où il a été pris, en
 // minutes depuis le départ (f.timing) ou au kilomètre (f.km). Une course (compétition)
 // voit les ravitaillements des séances qui lui sont reliées.
@@ -2008,7 +2046,7 @@ function activityIndex(data) {
   });
   const nutri = data.nutrition || {};
   (nutri.meals || []).forEach(m => { if (m.date) mealDays.add(m.date); });
-  Object.entries(nutri.hydration || {}).forEach(([d, v]) => { hydro[d] = v || 0; });
+  Object.assign(hydro, dailyWater(data));   // eau notée + boissons des ravitaillements
   return { byWeek, mealDays, hydro };
 }
 
@@ -3266,6 +3304,43 @@ function getGoals(sport) {
   return (data.goals || {})[sport] || [];
 }
 
+// Valeur d'un objectif sur une période [from, to] (jours inclus) : distance, durée, séances ou kg soulevés
+function goalPeriodValue(sport, type, from, to, data = getData()) {
+  const list = getSessions({ sport, from, to });
+  if (type.startsWith('dist')) return list.reduce((a, x) => a + (x.distance || 0), 0);
+  if (type.startsWith('dur')) return list.reduce((a, x) => a + (x.duration || 0), 0);
+  if (type.startsWith('sessions')) return list.length;
+  if (type.startsWith('kg')) return list.reduce((a, x) => a + muscuVolume(x), 0);
+  return 0;
+}
+// Série d'un objectif de semaine ou de mois : nombre de semaines (ou mois) d'affilée où
+// l'objectif est atteint. La période en cours compte si elle est déjà réussie ; sinon la série
+// continue tant qu'elle n'est pas finie (elle retombe à 0 si la période se termine sans réussite).
+// best = plus longue série sur les 2 dernières années. Les objectifs à l'année n'ont pas de série.
+function goalStreak(sport, goal, data = getData()) {
+  const per = goal.type.endsWith('_week') ? 'week' : goal.type.endsWith('_month') ? 'month' : null;
+  if (!per) return null;
+  const today = localDateStr();
+  const range = n => {   // n = 0 : période en cours, 1 : la précédente…
+    if (per === 'week') {
+      const mon = getWeekMonday(prevWeekKey(getCurrentWeek(), n));
+      return [localDateStr(mon), addDaysStr(localDateStr(mon), 6)];
+    }
+    const t = parseLocalDate(today);
+    const a = new Date(t.getFullYear(), t.getMonth() - n, 1), b = new Date(t.getFullYear(), t.getMonth() - n + 1, 0);
+    return [localDateStr(a), localDateStr(b)];
+  };
+  const done = n => { const [f, t] = range(n); return goalPeriodValue(sport, goal.type, f, t, data) >= goal.target - 1e-9; };
+  const max = per === 'week' ? 104 : 24;
+  const ok = []; for (let n = 0; n <= max; n++) ok.push(done(n));
+  const currentDone = ok[0];
+  let streak = 0;
+  for (let n = currentDone ? 0 : 1; n <= max && ok[n]; n++) streak++;
+  let best = 0, run = 0;
+  for (let n = max; n >= 0; n--) { run = ok[n] ? run + 1 : 0; if (run > best) best = run; }
+  return { per, streak, best, currentDone };
+}
+
 function saveGoal(sport, goal) {
   const data = getData();
   if (!data.goals) data.goals = {};
@@ -3469,7 +3544,7 @@ window.TS = {
   cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,
   cycleInfo, cyclePhaseOn, cyclePredicted, cyclePeriodDays, cycleImpact, CYCLE_MODES, CYCLE_SIGNS, CYCLE_PHASES, CYCLE_CONSENT_VERSION,
   healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
-  formatHours, FUEL_PRESETS, fuelCarbs, fuelMomentText, fuelTimeText, parseFuelTime, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
+  formatHours, FUEL_PRESETS, fuelCarbs, fuelWater, fuelTotals, dayIntake, dailyWater, goalStreak, goalPeriodValue, fuelMomentText, fuelTimeText, parseFuelTime, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
