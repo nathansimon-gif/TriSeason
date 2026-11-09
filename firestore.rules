@@ -1,4 +1,4 @@
-// Règles de sécurité Firestore de TriSeason — copie de référence.
+// Règles de sécurité Firestore de ORKA — copie de référence.
 // Elles ne s'appliquent PAS depuis ce fichier : les coller dans la console Firebase
 // (Firestore Database → onglet « Règles » → remplacer tout → « Publier »).
 //

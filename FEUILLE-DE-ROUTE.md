@@ -1,4 +1,4 @@
-# Feuille de route TriSeason
+# Feuille de route ORKA (anciennement TriSeason)
 
 Ce qui reste à faire, classé par échéance. Mise à jour à chaque pull request.
 Les cases cochées passent dans « Fait » en bas de page.
@@ -9,24 +9,13 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [x] 🤖🧑 **Rendre l'appli plus lisible** (les 5 étapes sont faites, novembre 2026 ; suite prévue : le résumé du mois) (revue page par page du 4 novembre 2026 : schéma interactif envoyé à Nathan ; environ 43 écrans de téléphone à faire défiler pour tout voir, objectif ~23). Six règles : une carte = un titre + le chiffre ou le graphique ; les explications dans le « ? » ; ce qui sert rarement est replié ; un graphique par question ; une information à une seule place ; toujours « tu ». En 5 étapes, dans cet ordre :
-  - [x] **1. Les textes** : fait (voir « Fait »)
-  - [x] **2. Les doublons** : fait (voir « Fait »)
-  - [x] **3. Le Dashboard** : fait (voir « Fait »)
-  - [x] **4. Séances** : fait (voir « Fait »)
-  - [x] **5. Forme, Profil et Paramètres** : fait (voir « Fait »)
-- [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu, records aussi pour les exercices tenus en charge (gainage lesté)
-- [ ] 🧑 *Facultatif, plus tard* : pour avoir aussi les lectures / écritures Firebase dans le rapport et ses graphiques, il faut activer la facturation (forfait Blaze, gratuit en dessous des quotas) — à décider ensemble
-- [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
-
-## Bientôt (dans le mois)
-
-**Prochaines tâches, dans cet ordre :**
-
-- [x] 🤖🧑 **1. Ranger les données en plusieurs tiroirs** : fait (PR #43, en service depuis le 24 octobre 2026 : compte de Nathan vérifié, 841 séances et 56 repas identiques à la copie de secours, plus gros document 58 Ko au lieu de 182 Ko). Séances par année, repas et ravitaillements par mois, le reste dans le document principal ; en général **une seule lecture** par ouverture (seuls les tiroirs modifiés sont relus) et un seul envoi par enregistrement ; tout l'historique Strava tient (testé avec 9 000 séances). Plus tard : **parcours** (un tiroir par sortie, ouvert seulement quand on regarde la séance)
-- [ ] 🤖🧑 **2. Tests automatiques sur GitHub avant chaque fusion** : à chaque pull request, GitHub lance les tests et affiche une coche verte (tout passe) ou une croix rouge (ne pas fusionner) à côté du bouton de fusion. Gratuit. Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
-- [ ] 🤖 **3. Partage en story** (Instagram, WhatsApp…) : bouton « Partager » qui crée une image verticale des résultats, fabriquée sur le téléphone, rien envoyé à un service extérieur. **Le contenu des stories sera précisé ensemble plus tard**, avant de commencer (pistes : une séance, une compétition, le bilan de la semaine, avec ce que Strava ne montre pas : glucides par heure, ressenti, repas notés 7/7). Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
-- [ ] 🤖🧑 **Résumé du mois** (idée de Nathan, validée le 4 novembre 2026 ; **à faire après les étapes 3 à 5 de lisibilité**) : à la première ouverture de l'appli à partir du 1er du mois, un résumé du mois écoulé s'affiche en plein écran, une seule fois par mois et par compte (comme les messages de nouveautés), seulement s'il y a eu des séances ce mois-là. Proposition : **4 à 6 pages qu'on fait défiler** (comme Strava), une idée par page, en gros chiffres :
+- [ ] 🧑 **Nouveau nom ORKA, la suite** (l'appli affiche déjà ORKA partout) :
+  - choisir le logo (pistes dessinées le 6 novembre : aileron, élan, de zéro au sommet, tache de l'orque), puis Claude met l'icône dans l'appli
+  - vérifier que le nom est libre : INPI et EUIPO (marques), App Store / Google Play, nom de site, Instagram
+  - sur strava.com/settings/api : changer le **nom de l'application** en ORKA (c'est le nom que les gens voient en connectant Strava)
+  - *facultatif* : une adresse e-mail au nouveau nom (aujourd'hui tri.season.tracker@gmail.com, gardée en attendant), et le nom du projet dans la console Firebase / l'e-mail de mot de passe oublié
+  - *plus tard, avec Claude* : changer l'adresse du site (aujourd'hui …github.io/TriSeason/). Attention : il faut aussi mettre à jour Firebase (domaines autorisés) et Strava (domaine de retour), sinon la connexion casse ; les applis installées sur les téléphones devront être réinstallées
+- [ ] 🤖🧑 **Résumé du mois** (idée de Nathan, validée le 4 novembre 2026 ; les 5 étapes de lisibilité sont faites : **c'est la prochaine tâche**) : à la première ouverture de l'appli à partir du 1er du mois, un résumé du mois écoulé s'affiche en plein écran, une seule fois par mois et par compte (comme les messages de nouveautés), seulement s'il y a eu des séances ce mois-là. Proposition : **4 à 6 pages qu'on fait défiler** (comme Strava), une idée par page, en gros chiffres :
   1. le mois en un coup d'œil : heures, séances, distance par sport, comparé au mois d'avant
   2. ta meilleure semaine et ta plus longue séance
   3. records battus et badges gagnés (sinon la page est sautée)
@@ -36,6 +25,16 @@ Les cases cochées passent dans « Fait » en bas de page.
   - bouton « Passer » à tout moment, et le résumé reste consultable ensuite (lien dans le Dashboard, et les mois précédents) ; tout est calculé à partir des données, rien de plus n'est enregistré à part le mois déjà vu
   - limite : pas de notification sur le téléphone (il faudrait un serveur qui envoie des messages) ; le résumé apparaît à la prochaine ouverture de l'appli
   - à relier au **partage en story** (tâche 3) : chaque page pourra devenir une image à partager
+- [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu (le défi de la semaine « Battre un de tes records de charge » existe déjà), records aussi pour les exercices tenus en charge (gainage lesté)
+- [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
+
+## Bientôt (dans le mois)
+
+**Prochaines tâches, dans cet ordre :**
+
+- [x] 🤖🧑 **1. Ranger les données en plusieurs tiroirs** : fait (PR #43, en service depuis le 24 octobre 2026 : compte de Nathan vérifié, 841 séances et 56 repas identiques à la copie de secours, plus gros document 58 Ko au lieu de 182 Ko). Séances par année, repas et ravitaillements par mois, le reste dans le document principal ; en général **une seule lecture** par ouverture (seuls les tiroirs modifiés sont relus) et un seul envoi par enregistrement ; tout l'historique Strava tient (testé avec 9 000 séances). Plus tard : **parcours** (un tiroir par sortie, ouvert seulement quand on regarde la séance)
+- [ ] 🤖🧑 **2. Tests automatiques sur GitHub avant chaque fusion** : à chaque pull request, GitHub lance les tests et affiche une coche verte (tout passe) ou une croix rouge (ne pas fusionner) à côté du bouton de fusion. Gratuit. Aujourd'hui ils tournent chaque lundi et à chaque modification faite par Claude
+- [ ] 🤖 **3. Partage en story** (Instagram, WhatsApp…) : bouton « Partager » qui crée une image verticale des résultats, fabriquée sur le téléphone, rien envoyé à un service extérieur. **Le contenu des stories sera précisé ensemble plus tard**, avant de commencer (pistes : une séance, une compétition, le bilan de la semaine, avec ce que Strava ne montre pas : glucides par heure, ressenti, repas notés 7/7). Vérifier si Strava demande sa mention sur l'image pour les séances venues de Strava
 
 **Forme : prendre en compte la santé** (tâches 4 et 5 ; deux options séparées, chacune activée par la personne elle-même dans Profil, désactivée au départ, avec son propre accord coché ; à écrire dans *Confidentialité* ; jamais partagées par défaut avec un futur coach ou nutritionniste ; effaçables d'un coup ; uniquement des faits tirés des données de la personne, **jamais de conseil médical**) :
 
@@ -44,7 +43,7 @@ Les cases cochées passent dans « Fait » en bas de page.
   - [ ] 🤖 Si l'accès coach / nutritionniste arrive : case à part pour partager (ou non) ces informations, jamais par défaut
 - [ ] 🧑 Montrer l'option « Cycle menstruel » à une ou deux testeuses : ce qui leur manque, ce qui les gêne (à faire maintenant qu'une première version existe)
 - [x] 🤖 **5. Cycle menstruel** : fait (02/11/2026, voir « Fait »). Reste à faire plus tard :
-  - [ ] 🤖 Phases en couleur de fond sur les autres graphiques (aujourd'hui : règles en gris sur le graphique de forme) et comparaison par phase (folliculaire / lutéale) quand il y aura assez de séances
+  - [ ] 🤖 Phases en couleur de fond sur les autres graphiques (aujourd'hui : règles en rose sur le graphique de forme et dans le calendrier) et comparaison par phase (folliculaire / lutéale) quand il y aura assez de séances
   - [ ] 🤖 Si l'accès coach / nutritionniste arrive : jamais partagé par défaut
 
 **Ensuite :**
@@ -58,7 +57,7 @@ Les cases cochées passent dans « Fait » en bas de page.
   - **infos utiles aux calculs** : poids, FC max ou âge (W/kg, zones, besoins caloriques), suivi nutritionnel souhaité ou non
   - **montre / Strava** : proposer tout de suite la connexion Strava ou l'import des fichiers
   - court (2 à 3 écrans), chaque question **facultative** avec « Passer », tout modifiable ensuite dans Profil ; à écrire dans *Confidentialité* (poids et FC = données de santé, déjà couvertes par l'accord)
-- [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries, séries détaillées (charges différentes à chaque série)
+- [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries (les séries détaillées, avec une charge différente à chaque série, sont faites : PR #55)
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
   1. 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets »), les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload ») et prévenir Claude
@@ -138,6 +137,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 09/11/2026 | #73 | **TriSeason devient ORKA** : nouveau nom dans toute l'appli (barre du haut, titres des pages, nom de l'appli installée, connexion, aide, confidentialité « ORKA (anciennement TriSeason) », messages, rapport du lundi). Message « TriSeason devient ORKA » une seule fois pour les comptes qui utilisaient déjà l'appli. Rien ne change pour les données : les noms internes gardent l'ancien préfixe |
+| 09/11/2026 | #73 | Feuille de route remise à jour : chantier lisibilité retiré de « Maintenant » (fait, voir plus bas), résumé du mois remonté en prochaine tâche, Blaze noté une seule fois, séries détaillées de musculation signalées comme faites, règles du cycle en rose |
 | 09/11/2026 | #72 | **Ravitaillements comptés dans la journée** : leurs glucides, protéines et calories s'ajoutent au bilan du jour (Nutrition, Dashboard, besoins du jour, graphique des 7 jours, Forme, « Avant tes courses »), et l'eau des boissons (500 ml par bidon de boisson isotonique, réglable ; flasque : à indiquer) s'ajoute à l'hydratation du jour et au défi d'eau. **Séries sur les objectifs** (Sports) : pour un objectif de semaine ou de mois, « Série : 3 semaines d'affilée » (la semaine en cours compte dès qu'il est atteint, la série retombe à 0 si une semaine se termine sans) et le record |
 | 08/11/2026 | #71 | Séances : lien « **Voir sur Strava** » remis sur chaque séance venue de Strava (sous la distance, la ligne s'ouvre toujours en la touchant ailleurs). **Graphiques** : en glissant le doigt le long d'une courbe ou de barres, l'infobulle suit le doigt et montre la semaine, le mois ou la séance la plus proche, sans viser le point exactement ; un glissé vertical fait toujours défiler la page. Dashboard : le graphique « Évolution » n'ouvre un sport que si on touche vraiment une barre |
 | 04/11/2026 | #70 | Nutrition : carte « **Repères nutritionnels** » retirée (un écran de texte général, le même pour tout le monde). Idée gardée pour l'espace pro : des repères écrits par le nutritionniste pour chaque client |

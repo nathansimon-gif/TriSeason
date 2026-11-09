@@ -1,4 +1,4 @@
-// TriSeason Tracker — Garde d'authentification Firebase
+// ORKA — Garde d'authentification Firebase
 // Inclus sur CHAQUE page, après les 3 scripts Firebase compat (app/auth/firestore).
 // - Redirige vers login.html si personne n'est connecté.
 // - Redirige loin de login.html si quelqu'un est déjà connecté.
@@ -17,7 +17,7 @@
   };
 
   if (!window.firebase || !firebase.apps) {
-    console.error('[TriSeason] SDK Firebase non chargé — vérifie les balises <script> compat.');
+    console.error('[ORKA] SDK Firebase non chargé — vérifie les balises <script> compat.');
     return;
   }
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -35,7 +35,7 @@
     var sp = document.createElement('div');
     sp.id = 'tsSplash';
     sp.setAttribute('role', 'status');
-    sp.innerHTML = '<div class="ts-splash__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>'
+    sp.innerHTML = '<div class="ts-splash__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> ORKA</div>'
       + '<span class="spinner spinner--lg" aria-hidden="true"></span><div class="ts-splash__txt">Ouverture…</div>';
     document.body.appendChild(sp);
   }
@@ -53,7 +53,7 @@
   var settled = false;
   var failSafeTimer = setTimeout(function () {
     if (settled) return;
-    console.warn('[TriSeason] Connexion au service de compte trop lente ou indisponible — affichage sans confirmation.');
+    console.warn('[ORKA] Connexion au service de compte trop lente ou indisponible — affichage sans confirmation.');
     reveal();
   }, 8000);
 

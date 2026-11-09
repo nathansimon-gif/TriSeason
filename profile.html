@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261124a"></script>
+  <script src="theme.js?v=20261125a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261124a"></script>
+  <script src="auth-guard.js?v=20261125a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="TriSeason">
+  <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>TriSeason — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261124a">
+  <title>ORKA — Profil</title>
+  <link rel="stylesheet" href="style.css?v=20261125a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -120,7 +120,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> ORKA</div>
     <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link ">Dashboard</a>
     <a href="sport.html"        class="nav__link ">Sports</a>
@@ -218,7 +218,7 @@
   <!-- ── Équipement ── -->
   <div class="section-card" id="equipement">
     <div class="section-card__title" style="justify-content:space-between">
-      <span style="display:flex;align-items:center;gap:8px">Équipement <span class="tip-icon" data-tip="Ajoute tes chaussures, ton vélo ou ta combinaison avec leur date de première utilisation : TriSeason compte les kilomètres et les sorties faites avec, t'alerte au seuil que tu choisis et prévoit quand tu l'atteindras.">?</span></span>
+      <span style="display:flex;align-items:center;gap:8px">Équipement <span class="tip-icon" data-tip="Ajoute tes chaussures, ton vélo ou ta combinaison avec leur date de première utilisation : ORKA compte les kilomètres et les sorties faites avec, t'alerte au seuil que tu choisis et prévoit quand tu l'atteindras.">?</span></span>
       <button class="btn btn--sm" onclick="openGearModal()">+ Ajouter</button>
     </div>
     <div id="gearList"></div>
@@ -247,7 +247,7 @@
 
   <!-- ── Strava ── -->
   <div class="section-card" id="stravaCard" hidden>
-    <div class="section-card__title">Strava <span class="tip-icon" data-tip="Ta montre (Garmin, Coros, Polar…) doit déjà envoyer ses séances à Strava. TriSeason lit seulement tes activités, ne publie rien sur Strava, et tu peux te déconnecter à tout moment.">?</span></div>
+    <div class="section-card__title">Strava <span class="tip-icon" data-tip="Ta montre (Garmin, Coros, Polar…) doit déjà envoyer ses séances à Strava. ORKA lit seulement tes activités, ne publie rien sur Strava, et tu peux te déconnecter à tout moment.">?</span></div>
     <div id="stravaBody"></div>
   </div>
 
@@ -287,7 +287,7 @@
   </div><!-- /parametres -->
 
   <div style="text-align:center;font-size:11px;color:var(--text-3);padding:16px 0">
-    TriSeason · Tes données sont enregistrées dans ton compte
+    ORKA · Tes données sont enregistrées dans ton compte
   </div>
 
 </div></div>
@@ -437,7 +437,7 @@
 </div>
 
 
-<script src="app.js?v=20261124a"></script>
+<script src="app.js?v=20261125a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -542,7 +542,7 @@ function renderStrava() {
   const last = st.last_sync ? new Date(st.last_sync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'jamais';
   body.innerHTML = `<div class="strava-note">Connecté${st.name ? ' en tant que <b style="color:var(--text)">' + st.name.replace(/</g, '&lt;') + '</b>' : ''}.
       ${n} séance${n > 1 ? 's' : ''} liée${n > 1 ? 's' : ''} à Strava · dernière vérification : ${last}.<br>
-      Les nouvelles séances arrivent quand tu ouvres TriSeason. La marche et la musculation ne sont pas importées.</div>
+      Les nouvelles séances arrivent quand tu ouvres ORKA. La marche et la musculation ne sont pas importées.</div>
     <div class="strava-actions">
       <button class="btn btn--sm" onclick="stravaCheckNow(false)" ${stravaBusy ? 'disabled' : ''}>${stravaBusy ? '<span class="spinner"></span>' + stravaBusy : 'Vérifier maintenant'}</button>
       <a class="btn btn--ghost btn--sm" href="sessions.html#historique-strava" title="Voir les séances avant de les importer">Récupérer tout l’historique</a>
@@ -575,7 +575,7 @@ async function stravaCheckNow(full) {
 
 async function stravaDisconnectAsk() {
   if (!confirm('Déconnecter Strava ? Les nouvelles séances n’arriveront plus toutes seules.')) return;
-  const del = confirm('Supprimer aussi de TriSeason les séances venues de Strava ?\n\nOK : les supprimer · Annuler : les garder');
+  const del = confirm('Supprimer aussi de ORKA les séances venues de Strava ?\n\nOK : les supprimer · Annuler : les garder');
   stravaBusy = 'Déconnexion…'; renderStrava();
   await TS.stravaDisconnect({ deleteSessions: del });
   stravaBusy = ''; renderStrava(); renderSeasonStats();

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261124a"></script>
+  <script src="theme.js?v=20261125a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261124a"></script>
-  <title>TriSeason — Connexion</title>
-  <link rel="stylesheet" href="style.css?v=20261124a">
+  <script src="auth-guard.js?v=20261125a"></script>
+  <title>ORKA — Connexion</title>
+  <link rel="stylesheet" href="style.css?v=20261125a">
   <style>
     body {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -68,9 +68,9 @@
   <div class="auth-box">
     <div class="auth-logo">
       <span class="nav__logo-icon auth-logo__icon" aria-hidden="true"><i></i></span>
-      <div class="auth-logo__text">TriSeason</div>
+      <div class="auth-logo__text">ORKA</div>
     </div>
-    <p class="auth-pitch">Strava et Garmin suivent tes séances. TriSeason les relie à ce que tu manges et à ta forme, pour voir ce qui te fait progresser.</p>
+    <p class="auth-pitch">Strava et Garmin suivent tes séances. ORKA les relie à ce que tu manges et à ta forme, pour voir ce qui te fait progresser.</p>
 
     <div class="auth-title" id="authTitle">Connexion</div>
     <div class="auth-sub" id="authSub">Accède à ton suivi de saison</div>
@@ -80,7 +80,7 @@
 
     <label class="auth-consent" id="authConsent">
       <input type="checkbox" id="authConsentCheck">
-      <span>J'accepte que TriSeason enregistre et utilise mes données de santé (poids, fréquence cardiaque, nutrition…) pour me fournir mon suivi. <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></span>
+      <span>J'accepte que ORKA enregistre et utilise mes données de santé (poids, fréquence cardiaque, nutrition…) pour me fournir mon suivi. <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></span>
     </label>
 
     <button class="btn--google" onclick="signInGoogle()">
@@ -122,7 +122,7 @@ function toggleMode() {
   mode = mode === 'signin' ? 'signup' : 'signin';
   const isSignup = mode === 'signup';
   document.getElementById('authTitle').textContent = isSignup ? 'Créer un compte' : 'Connexion';
-  document.getElementById('authSub').textContent = isSignup ? 'Rejoins TriSeason en quelques secondes' : 'Accède à ton suivi de saison';
+  document.getElementById('authSub').textContent = isSignup ? 'Rejoins ORKA en quelques secondes' : 'Accède à ton suivi de saison';
   document.getElementById('authSubmitBtn').textContent = isSignup ? 'Créer mon compte' : 'Se connecter';
   document.getElementById('authForm').querySelector('input[type=password]').autocomplete = isSignup ? 'new-password' : 'current-password';
   document.getElementById('authConsent').style.display = isSignup ? 'flex' : 'none';

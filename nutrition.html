@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261124a"></script>
+  <script src="theme.js?v=20261125a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261124a"></script>
+  <script src="auth-guard.js?v=20261125a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="TriSeason">
+  <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>TriSeason Tracker — Nutrition</title>
-  <link rel="stylesheet" href="style.css?v=20261124a">
+  <title>ORKA — Nutrition</title>
+  <link rel="stylesheet" href="style.css?v=20261125a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .macro-bar { display:flex; height:10px; border-radius:6px; overflow:hidden; margin:6px 0; gap:2px; }
@@ -117,7 +117,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> ORKA</div>
     <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link ">Dashboard</a>
     <a href="sport.html"        class="nav__link ">Sports</a>
@@ -472,7 +472,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261124a"></script>
+<script src="app.js?v=20261125a"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentDay = (() => {
@@ -1036,7 +1036,7 @@ async function offSearch() {
   if (/^\d{8,14}$/.test(q)) return offLookup(q);
   offStatus('<span class="spinner"></span>Recherche…');
   try {
-    // Par le serveur TriSeason s'il est en place (nouvelle recherche, plus rapide),
+    // Par le serveur ORKA s'il est en place (nouvelle recherche, plus rapide),
     // sinon directement l'ancienne recherche d'Open Food Facts.
     const url = TS.SERVER_URL
       ? TS.SERVER_URL + '/off/search?q=' + encodeURIComponent(q)

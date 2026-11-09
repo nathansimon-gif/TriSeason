@@ -1,4 +1,4 @@
-// Rapport hebdomadaire d'activité TriSeason — lecture seule sur Firebase.
+// Rapport hebdomadaire d'activité ORKA — lecture seule sur Firebase.
 //
 // Identifiants : une clé de compte de service Google (JSON), fournie par
 //   - FIREBASE_SA_KEY : le contenu JSON de la clé, ou
@@ -206,7 +206,7 @@ function trend(cur, prev) {
 
 export function toMarkdown(r) {
   const L = [];
-  L.push(`# TriSeason — rapport du ${fmtDay(r.weekStart)} au ${fmtDay(r.weekEnd)}`);
+  L.push(`# ORKA — rapport du ${fmtDay(r.weekStart)} au ${fmtDay(r.weekEnd)}`);
   L.push('');
   // Santé de l'appli : résultat des tests automatiques (tools/app-tests), lancés juste avant.
   L.push('## Santé de l’appli (tests automatiques)');
@@ -349,7 +349,7 @@ export function markdownToHtml(md) {
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1b1f27;max-width:640px;line-height:1.5">${out.join('\n')}</div>`;
 }
 
-export async function sendReportEmail({ subject, markdown, to, apiKey, from = 'TriSeason <onboarding@resend.dev>', fetchImpl = fetch }) {
+export async function sendReportEmail({ subject, markdown, to, apiKey, from = 'ORKA <onboarding@resend.dev>', fetchImpl = fetch }) {
   const res = await fetchImpl('https://api.resend.com/emails', {
     method: 'POST',
     headers: { ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}), 'Content-Type': 'application/json' },
@@ -501,7 +501,7 @@ async function main() {
       console.error('\nE-mail non envoyé : il manque l’adresse REPORT_EMAIL_TO.');
     } else {
       try {
-        await sendReportEmail({ subject: `TriSeason — rapport de la semaine du ${fmtDay(weekStart)}`, markdown: md, to, apiKey, from: process.env.REPORT_EMAIL_FROM });
+        await sendReportEmail({ subject: `ORKA — rapport de la semaine du ${fmtDay(weekStart)}`, markdown: md, to, apiKey, from: process.env.REPORT_EMAIL_FROM });
         console.error(`\nE-mail envoyé à ${to}.`);
       } catch (e) {
         console.error(`\nE-mail non envoyé : ${e.message}`);

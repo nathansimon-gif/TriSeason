@@ -1,5 +1,5 @@
-// TriSeason Tracker — Import GPX / FIT
-// Parses activity files and converts to TriSeason session format
+// ORKA — Import GPX / FIT
+// Parses activity files and converts to ORKA session format
 
 // ── Elevation gain — hysteresis-based, matches GPS device methodology ─────────
 // Naive point-to-point summation is unreliable: raw altitude readings are noisy

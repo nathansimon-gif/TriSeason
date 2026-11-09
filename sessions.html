@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261124a"></script>
+  <script src="theme.js?v=20261125a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261124a"></script>
+  <script src="auth-guard.js?v=20261125a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="TriSeason">
+  <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>TriSeason Tracker — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261124a">
+  <title>ORKA — Séances</title>
+  <link rel="stylesheet" href="style.css?v=20261125a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -68,7 +68,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> ORKA</div>
     <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link ">Dashboard</a>
     <a href="sport.html"        class="nav__link ">Sports</a>
@@ -365,9 +365,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261124a"></script>
-<script src="import.js?v=20261124a"></script>
-<script src="app.js?v=20261124a"></script>
+<script src="fit-parser.js?v=20261125a"></script>
+<script src="import.js?v=20261125a"></script>
+<script src="app.js?v=20261125a"></script>
 <script>
 
 
@@ -1090,7 +1090,7 @@ function renderArchivePlan() {
     archiveActs.length + (archiveSource === 'strava' ? ' activités sur ton compte Strava' : ' activités dans l’archive') + (years.length ? ' (' + years[0] + (years.length > 1 ? '–' + years[years.length - 1] : '') + ')' : '') + '.',
     plan.add.length ? '<b style="color:var(--text)">' + plan.add.length + ' séance' + (plan.add.length > 1 ? 's' : '') + ' à ajouter</b> : '
       + ['nat', 'velo', 'run', 'muscu'].filter(k => by[k]).map(k => by[k] + ' ' + TS.SPORTS[k].label.toLowerCase()).join(', ') + '.' : 'Aucune nouvelle séance à ajouter.',
-    plan.already + plan.link.length ? (plan.already + plan.link.length) + ' déjà dans TriSeason (pas de doublon).' : '',
+    plan.already + plan.link.length ? (plan.already + plan.link.length) + ' déjà dans ORKA (pas de doublon).' : '',
     plan.ignored ? plan.ignored + ' ignorée' + (plan.ignored > 1 ? 's' : '') + ' (marche, autres sports, sports que tu ne suis pas).' : '',
     plan.before ? plan.before + ' plus ancienne' + (plan.before > 1 ? 's' : '') + ' que la période choisie.' : '',
     plan.dropped ? '<span style="color:var(--velo)">' + plan.dropped + ' séance' + (plan.dropped > 1 ? 's' : '') + ' plus ancienne' + (plan.dropped > 1 ? 's' : '')
