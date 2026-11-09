@@ -1,4 +1,4 @@
-// Petit serveur TriSeason (Cloudflare Workers, offre gratuite).
+// Petit serveur ORKA (Cloudflare Workers, offre gratuite).
 //
 // Rôle : garder la clé secrète de l'appli Strava hors du site. Il échange le
 // code d'autorisation contre des jetons, les renouvelle et retire l'accès.
@@ -42,7 +42,7 @@ export default {
       const body = await request.json().catch(() => ({}));
 
       if (path === '/strava/token' || path === '/strava/refresh') {
-        if (!env.STRAVA_CLIENT_ID || !env.STRAVA_CLIENT_SECRET) return json({ error: 'Serveur TriSeason pas encore configuré (clés Strava).' }, 500);
+        if (!env.STRAVA_CLIENT_ID || !env.STRAVA_CLIENT_SECRET) return json({ error: 'Serveur ORKA pas encore configuré (clés Strava).' }, 500);
         const isCode = path === '/strava/token';
         const value = isCode ? body.code : body.refresh_token;
         if (!value || typeof value !== 'string') return json({ error: 'Demande incomplète.' }, 400);
@@ -79,7 +79,7 @@ export default {
       }
       return json({ error: 'Adresse inconnue.' }, 404);
     } catch (err) {
-      return json({ error: 'Erreur du serveur TriSeason.' }, 500);
+      return json({ error: 'Erreur du serveur ORKA.' }, 500);
     }
   },
 };
@@ -125,6 +125,6 @@ async function fetchWithTimeout(url, ms) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'TriSeason/1.0 (tri.season.tracker@gmail.com)' } });
+    return await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'ORKA/1.0 (tri.season.tracker@gmail.com)' } });
   } finally { clearTimeout(timer); }
 }

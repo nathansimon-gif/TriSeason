@@ -2,7 +2,7 @@
   "name": "triseason-weekly-report",
   "private": true,
   "type": "module",
-  "description": "Rapport hebdomadaire d'activité TriSeason (lecture seule sur Firebase)",
+  "description": "Rapport hebdomadaire d'activité ORKA (lecture seule sur Firebase)",
   "scripts": {
     "report": "node report.mjs",
     "test": "node test.mjs"

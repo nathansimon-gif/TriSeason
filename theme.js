@@ -1,4 +1,4 @@
-// TriSeason — thème clair / sombre.
+// ORKA — thème clair / sombre.
 // Préférence de l'appareil (pas du compte) : localStorage 'triseason_theme' =
 // 'dark' (par défaut), 'light' ou 'auto' (comme le téléphone). Chargé en premier
 // dans le <head> de chaque page pour éviter un flash de la mauvaise couleur.

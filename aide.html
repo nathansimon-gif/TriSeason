@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261124a"></script>
+  <script src="theme.js?v=20261125a"></script>
   <meta name="theme-color" content="#0d1016">
-  <title>TriSeason — Aide et contact</title>
-  <link rel="stylesheet" href="style.css?v=20261124a">
+  <title>ORKA — Aide et contact</title>
+  <link rel="stylesheet" href="style.css?v=20261125a">
   <style>
     .help { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; color: var(--text-2); font-size: 14px; line-height: 1.65; }
     .help h1 { color: var(--text); font-size: 26px; font-weight: 600; margin-bottom: 4px; }
@@ -31,7 +31,7 @@
 </head>
 <body>
 <main class="help">
-  <a class="back" href="index.html">← Retour à TriSeason</a>
+  <a class="back" href="index.html">← Retour à ORKA</a>
   <h1>Aide et contact</h1>
   <p class="lead">Les réponses aux questions fréquentes, et un moyen d'écrire directement si tu as une question,
   un problème ou une idée.</p>
@@ -39,8 +39,8 @@
   <h2>Questions fréquentes</h2>
   <div class="faq">
     <details>
-      <summary>J'utilise déjà Strava ou Garmin : à quoi sert TriSeason ?</summary>
-      <div>Garde-les. Strava et Garmin suivent tes séances ; TriSeason les <b>relie à ce que tu manges et à ta forme</b>
+      <summary>J'utilise déjà Strava ou Garmin : à quoi sert ORKA ?</summary>
+      <div>Garde-les. Strava et Garmin suivent tes séances ; ORKA les <b>relie à ce que tu manges et à ta forme</b>
       (charge d'entraînement, fatigue), pour voir par exemple si tes meilleures séances suivent les jours où tu as assez mangé
       de glucides. Tu importes tes séances depuis ta montre ou Strava, et tu notes tes repas.</div>
     </details>
@@ -93,7 +93,7 @@
     <details>
       <summary>Suivre l'usure de mes chaussures ou de mon vélo</summary>
       <div>Page <b>Profil</b> → carte « Équipement » → « + Ajouter ». Choisis le sport, donne un nom, la date de <b>première utilisation</b>
-      et, si tu veux, un <b>seuil d'alerte</b> en km (700 km proposé pour des chaussures). TriSeason compte les km, les sorties et les heures
+      et, si tu veux, un <b>seuil d'alerte</b> en km (700 km proposé pour des chaussures). ORKA compte les km, les sorties et les heures
       faites depuis cette date, montre une barre de progression et prévoit quand le seuil sera atteint à ton rythme actuel.
       Quand tu ajoutes une nouvelle paire, l'ancienne s'arrête la veille et tes séances suivantes vont sur la nouvelle.
       Le Dashboard te prévient quand un seuil est proche ou atteint.</div>
@@ -116,7 +116,7 @@
       <summary>J'ai oublié mon mot de passe</summary>
       <div>Sur la page de connexion, saisis ton adresse e-mail puis clique sur <b>« Mot de passe oublié ? »</b>.
       Tu recevras un lien pour en choisir un nouveau (regarde dans les spams). Si tu te connectes avec Google,
-      pas de mot de passe TriSeason : utilise « Continuer avec Google ».</div>
+      pas de mot de passe ORKA : utilise « Continuer avec Google ».</div>
     </details>
     <details>
       <summary>Mes données sont-elles sur tous mes appareils ?</summary>
@@ -124,7 +124,7 @@
       ton ordinateur. Si une page semble vide ou ancienne, <b>recharge la page</b> (ou ferme et rouvre l'appli).</div>
     </details>
     <details>
-      <summary>Installer TriSeason sur mon téléphone</summary>
+      <summary>Installer ORKA sur mon téléphone</summary>
       <div><b>iPhone</b> : ouvre le site dans Safari → bouton Partager → « Sur l'écran d'accueil ».
       <b>Android</b> : ouvre le site dans Chrome → menu ⋮ → « Installer l'application » (ou « Ajouter à l'écran d'accueil »).
       Dans l'appli installée, pour <b>actualiser</b> (nouvelles séances Strava, données de tes autres appareils) :
@@ -138,13 +138,13 @@
       Voir aussi la <a href="confidentialite.html">politique de confidentialité</a>.</div>
     </details>
     <details>
-      <summary>TriSeason peut-il me conseiller sur mon entraînement ou mon alimentation ?</summary>
-      <div>Non. TriSeason affiche et compare <b>tes propres données</b> (statistiques descriptives), mais ne donne
+      <summary>ORKA peut-il me conseiller sur mon entraînement ou mon alimentation ?</summary>
+      <div>Non. ORKA affiche et compare <b>tes propres données</b> (statistiques descriptives), mais ne donne
       ni avis médical ni conseil nutritionnel. Pour cela, adresse-toi à un professionnel de santé ou à un nutritionniste.</div>
     </details>
   </div>
 
-  <h2 id="contact">Écrire à TriSeason</h2>
+  <h2 id="contact">Écrire à ORKA</h2>
   <div class="contact">
     <div class="form-group">
       <label class="form-label">C'est à propos de…</label>
@@ -200,7 +200,7 @@ function mailtoUrl() {
     + '\nNavigateur : ' + navigator.userAgent
     + '\nÉcran : ' + window.innerWidth + '×' + window.innerHeight
     + '\nDate : ' + new Date().toLocaleString('fr-FR');
-  const subject = '[TriSeason] ' + kind + ' — ' + msg.split('\n')[0].slice(0, 60);
+  const subject = '[ORKA] ' + kind + ' — ' + msg.split('\n')[0].slice(0, 60);
   return 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 

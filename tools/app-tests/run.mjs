@@ -1,4 +1,4 @@
-// Tests automatiques de TriSeason.
+// Tests automatiques de ORKA.
 //
 // Ouvre le site dans un navigateur invisible (Chromium), avec un faux Firebase
 // et des données de test : aucune vraie donnée n'est lue ni modifiée.
@@ -117,7 +117,7 @@ function sampleData() {
   }
   const meals = [];
   for (let i = 1; i <= 30; i++) meals.push({ id: 'm' + i, date: day(-i), type: 'déjeuner', desc: 'riz + poulet', glucides: 150 + (i % 5) * 40, proteines: 40, lipides: 20 });
-  return { profile: { name: 'Test', fcmax: 190 }, weeks: {}, _migrated: true, news_seen: ['muscu', 'sports'], weight: [{ date: day(-10), value: 70 }], records: [],
+  return { profile: { name: 'Test', fcmax: 190 }, weeks: {}, _migrated: true, news_seen: ['muscu', 'sports', 'orka'], weight: [{ date: day(-10), value: 70 }], records: [],
     competitions: [{ id: 'c1', date: day(-20), name: '10 km test', type: 'RUN', distance: '10', goal_time: '0:42:00', actual_time: '0:41:07' },
                    { id: 'c2', date: day(30), name: 'Triathlon test', type: 'TRI', distance: '51.5', goal_time: '2:30:00' }],
     sessions, nutrition: { meals, hydration: { [day(-1)]: 2000 }, fuel: [] } };
@@ -141,7 +141,7 @@ async function main() {
   // Ouvre un contexte « utilisateur connecté » avec des données de test.
   async function newUser({ uid = 'testeur', data = sampleData(), consent = true, external, ctxOpts = {} } = {}) {
     // Messages de nouveauté déjà vus, sauf si le test le précise (news_seen: [] pour les voir)
-    if (data && !('news_seen' in data)) data = { ...data, news_seen: ['muscu', 'sports'] };
+    if (data && !('news_seen' in data)) data = { ...data, news_seen: ['muscu', 'sports', 'orka'] };
     const ctx = await browser.newContext({ serviceWorkers: 'block', timezoneId: TZ, viewport: { width: 1280, height: 900 }, ...ctxOpts });
     let currentUid = uid;
     await ctx.route(/gstatic\.com/, r => r.request().url().includes('app-compat')
@@ -435,7 +435,7 @@ async function main() {
     return 'recherche, code-barres et enregistrement';
   });
 
-  // Strava (faux Strava et faux serveur TriSeason : aucun vrai compte n'est utilisé)
+  // Strava (faux Strava et faux serveur ORKA : aucun vrai compte n'est utilisé)
   async function stravaUser() {
     const v = await newUser();
     const calls = [];
@@ -513,7 +513,7 @@ async function main() {
     assert(!r.st && r.card.includes('pas encore ouverte à tout le monde') && r.card.includes('Importer mon archive Strava'), 'carte : ' + r.card.slice(0, 200));
   });
 
-  await test('Strava : connexion refusée si le lien ne vient pas de TriSeason', async () => {
+  await test('Strava : connexion refusée si le lien ne vient pas de ORKA', async () => {
     const v = await stravaUser();
     await v.ctx.addInitScript(() => sessionStorage.setItem('triseason_strava_state', 'etat-ok'));
     await v.page.goto(`${BASE}/profile.html?state=autre&code=code-pirate&scope=read,activity:read_all`);
@@ -748,7 +748,7 @@ async function main() {
       `${after.length} séances après validation`);
   });
 
-  await test('Serveur TriSeason : limite de comptes Strava signalée', async () => {
+  await test('Serveur ORKA : limite de comptes Strava signalée', async () => {
     const { default: worker } = await import('../server/worker.js');
     const realFetch = globalThis.fetch;
     globalThis.fetch = async () => new Response(JSON.stringify({ message: 'Forbidden', errors: [{ resource: 'Athlete', code: 'limit of connected athletes exceeded' }] }), { status: 403 });
@@ -760,7 +760,7 @@ async function main() {
     } finally { globalThis.fetch = realFetch; }
   });
 
-  await test('Serveur TriSeason : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
+  await test('Serveur ORKA : site non autorisé refusé, clé secrète jamais renvoyée', async () => {
     const { default: worker } = await import('../server/worker.js');
     const env = { STRAVA_CLIENT_ID: '12345', STRAVA_CLIENT_SECRET: 'SECRET-XYZ', ALLOWED_ORIGIN: 'https://site.test' };
     const realFetch = globalThis.fetch;
@@ -1707,7 +1707,7 @@ async function main() {
   });
 
   await test('Musculation : message de nouveauté une seule fois par compte, pas pour un nouveau compte', async () => {
-    const data = sampleData(); data.news_seen = ['sports'];
+    const data = sampleData(); data.news_seen = ['sports', 'orka'];
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
     const first = await v.page.evaluate(() => { const m = document.getElementById('newsModal'); return m && m.classList.contains('open') && m.textContent; });
@@ -1860,7 +1860,7 @@ async function main() {
   });
 
   await test('Mes sports : message d’ouverture, choix dans Profil → Paramètres, appli et imports limités aux sports choisis', async () => {
-    const data = sampleData(); data.news_seen = ['muscu'];
+    const data = sampleData(); data.news_seen = ['muscu', 'orka'];
     data.sessions.push({ id: 'mu1', date: day(-2), sport: 'muscu', duration: 1, exercises: [{ name: 'Squat', group: 'Jambes', sets: 3, reps: 5, kg: 80 }] });
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
@@ -2221,6 +2221,29 @@ async function main() {
     const [dist, ses, year] = g.st;
     assert(dist && dist.per === 'week' && dist.streak >= 5 && ses && ses.streak === 0 && year === null && /Série : \d+ semaines d'affilée/.test(g.text) && /Pas de série en cours/.test(g.text),
       'séries : ' + JSON.stringify(g));
+  });
+
+  await test('Nom : ORKA affiché partout, message « TriSeason devient ORKA » une seule fois pour les comptes existants', async () => {
+    const data = sampleData(); data.news_seen = ['muscu', 'sports'];
+    const v = await newUser({ data });
+    const titles = {};
+    for (const p of PAGES) {
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(p === 'index' ? 1500 : 500);
+      titles[p] = await v.page.evaluate(() => ({ title: document.title, logo: (document.querySelector('.nav__logo') || {}).textContent || '', old: /TriSeason/.test(document.body.innerText + document.title) && !/anciennement TriSeason|TriSeason devient/.test(document.body.innerText) }));
+      if (p === 'index') {
+        titles.news = await v.page.evaluate(() => (document.getElementById('newsModal') || {}).textContent || '');
+        if (titles.news) { await v.page.click('#newsModal .btn--primary'); await v.page.waitForTimeout(300); }
+      }
+    }
+    const manifest = await v.page.evaluate(() => fetch('manifest.json').then(r => r.json()));
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
+    const again = await v.page.evaluate(() => ({ modal: !!document.getElementById('newsModal'), seen: TS.getData().news_seen, keys: Object.keys(localStorage).filter(k => k.startsWith('triseason_')).length }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const bad = Object.entries(titles).filter(([k, t]) => k !== 'news' && (!/ORKA/.test(t.title) || !/ORKA/.test(t.logo) || t.old));
+    assert(!bad.length, 'pages : ' + JSON.stringify(bad));
+    assert(/TriSeason devient ORKA/.test(titles.news) && !again.modal && again.seen.includes('orka') && again.keys > 0, 'message : ' + JSON.stringify({ news: titles.news.slice(0, 80), again }));
+    assert(manifest.name === 'ORKA' && manifest.short_name === 'ORKA', 'manifest : ' + JSON.stringify(manifest).slice(0, 120));
   });
 
   await browser.close();

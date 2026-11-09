@@ -1,4 +1,4 @@
-# Tests automatiques TriSeason
+# Tests automatiques ORKA
 
 Ouvre le site dans un navigateur invisible (Chromium), avec un **faux Firebase**
 et des **données de test** : aucune vraie donnée n'est lue ni modifiée.

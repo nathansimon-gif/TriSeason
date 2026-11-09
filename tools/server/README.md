@@ -1,4 +1,4 @@
-# Serveur TriSeason (Cloudflare Workers)
+# Serveur ORKA (Cloudflare Workers)
 
 Un tout petit programme en ligne, gratuit, qui fait deux choses :
 
@@ -13,7 +13,7 @@ Il n'enregistre rien et ne lit aucune séance : ce sont les navigateurs des
 utilisateurs qui lisent leurs séances chez Strava.
 
 Fichier à copier : `worker.js`. Test automatique : dans `tools/app-tests`
-(« Serveur TriSeason… »).
+(« Serveur ORKA… »).
 
 ## Mise en place (une seule fois, environ 10 minutes)
 
@@ -22,10 +22,10 @@ Sur un ordinateur : <https://www.strava.com/settings/api>
 
 | Champ | Valeur |
 |---|---|
-| Nom de l'application | TriSeason |
+| Nom de l'application | ORKA |
 | Catégorie | Analyse des performances |
-| Site web | l'adresse complète de TriSeason |
-| Description | Suivi d'entraînement triathlon et nutrition : TriSeason importe tes séances pour les relier à ce que tu manges et à ta forme. |
+| Site web | l'adresse complète de ORKA |
+| Description | Suivi d'entraînement triathlon et nutrition : ORKA importe tes séances pour les relier à ce que tu manges et à ta forme. |
 | Domaine du rappel d'autorisation | le nom du site seul, ex. `nathansimon-gif.github.io` |
 | Icône | `icon-512.png` (racine du dépôt) |
 
@@ -66,5 +66,5 @@ recherche d'aliments interroge directement Open Food Facts.
   la demande de validation sur la page de l'appli Strava (gratuite, délai non
   garanti). L'abonnement Strava du compte qui a créé l'appli doit rester actif.
 - **Cloudflare (gratuit)** : 100 000 appels par jour, très au-delà des besoins.
-- Les séances arrivent quand l'utilisateur ouvre TriSeason (au plus une
+- Les séances arrivent quand l'utilisateur ouvre ORKA (au plus une
   vérification toutes les 15 minutes par appareil), pas en temps réel.

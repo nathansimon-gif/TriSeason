@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261124a"></script>
+  <script src="theme.js?v=20261125a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261124a"></script>
+  <script src="auth-guard.js?v=20261125a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>TriSeason — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261124a">
+  <title>ORKA — Forme & Prévisions</title>
+  <link rel="stylesheet" href="style.css?v=20261125a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -100,7 +100,7 @@
 </head>
 <body>
 <nav class="nav">
-  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> TriSeason</div>
+  <div class="nav__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> ORKA</div>
   <div class="nav__links" id="navLinks">
     <a href="index.html"        class="nav__link">Dashboard</a>
     <a href="sport.html"        class="nav__link">Sports</a>
@@ -295,7 +295,7 @@
         <label class="form-label" for="hp_notes">Notes (facultatif)</label>
         <textarea class="form-textarea" id="hp_notes" rows="2" placeholder="ex. : conseils du kiné, examens…"></textarea>
       </div>
-      <div id="hpPregnancyNote" class="hp-note" style="display:none;margin-top:0">Pour la reprise après une grossesse, demande l'avis d'un professionnel de santé (sage-femme, médecin, kiné). TriSeason ne te propose pas de programme.</div>
+      <div id="hpPregnancyNote" class="hp-note" style="display:none;margin-top:0">Pour la reprise après une grossesse, demande l'avis d'un professionnel de santé (sage-femme, médecin, kiné). ORKA ne te propose pas de programme.</div>
       <div class="form-actions">
         <button class="btn btn--danger" id="hpDeleteBtn" style="margin-right:auto;display:none" onclick="deleteHealthForm()">Supprimer</button>
         <button class="btn btn--ghost" onclick="closeHealthModal()">Annuler</button>
@@ -314,7 +314,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261124a"></script>
+<script src="app.js?v=20261125a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -617,7 +617,7 @@ function renderCycle() {
     body.innerHTML = `
       <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note tes règles : l'appli calcule ton cycle et le compare à tes séances.</div>
       <label class="hp-consent"><input type="checkbox" id="cyConsent" onchange="document.getElementById('cyEnableBtn').disabled=!this.checked">
-        <span>J'accepte que TriSeason enregistre ces informations de santé (dates de mes règles, type de cycle, signes notés) pour me
+        <span>J'accepte que ORKA enregistre ces informations de santé (dates de mes règles, type de cycle, signes notés) pour me
         les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
         <a href="confidentialite.html#cycle" target="_blank" rel="noopener">En savoir plus</a></span></label>
       <button class="btn btn--primary" id="cyEnableBtn" disabled onclick="TS.enableCycle();renderCycle();TS.toast('Option activée')">Activer cette option</button>
@@ -736,7 +736,7 @@ function renderHealth() {
     body.innerHTML = `
       <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note un arrêt (blessure, maladie, grossesse, pause) : tes défis s'adaptent.</div>
       <label class="hp-consent"><input type="checkbox" id="hpConsent" onchange="document.getElementById('hpEnableBtn').disabled=!this.checked">
-        <span>J'accepte que TriSeason enregistre ces informations de santé (type d'arrêt, zone blessée, dates, notes et douleur
+        <span>J'accepte que ORKA enregistre ces informations de santé (type d'arrêt, zone blessée, dates, notes et douleur
         notée sur mes séances) pour me les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
         <a href="confidentialite.html#sante" target="_blank" rel="noopener">En savoir plus</a></span></label>
       <button class="btn btn--primary" id="hpEnableBtn" disabled onclick="enableHealthOption()">Activer cette option</button>

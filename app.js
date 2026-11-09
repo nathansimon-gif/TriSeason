@@ -1,4 +1,4 @@
-// TriSeason Tracker — Core Data Layer
+// ORKA — Core Data Layer
 // localStorage + export/import JSON
 
 const DB_KEY = 'triseason_data';
@@ -65,7 +65,7 @@ function migrateWeeksToSessions() {
   if (added > 0) {
     data._migrated = true;
     localStorage.setItem('triseason_data', JSON.stringify(data));
-    console.log(`[TriSeason] Migration: ${added} séances importées depuis la saisie hebdomadaire.`);
+    console.log(`[ORKA] Migration: ${added} séances importées depuis la saisie hebdomadaire.`);
   }
 }
 
@@ -151,7 +151,7 @@ async function sendToCloud(ref) {
         else await writeSingleDoc(ref, data);
         if (!cloudPending) syncPill(navigator.onLine ? 'saved' : 'offline');
       } catch (err) {
-        console.warn('[TriSeason] Échec de la synchronisation cloud :', err.message);
+        console.warn('[ORKA] Échec de la synchronisation cloud :', err.message);
         syncPill('error');
       }
     }
@@ -303,7 +303,7 @@ async function writeDrawers(ref, data) {
     if (!isPermissionError(err)) throw err;
     // Règles Firebase pas encore à jour : retour à l'ancien rangement, rien n'est perdu.
     drawersBlocked = true; cloudLayout = 1;
-    console.warn('[TriSeason] Tiroirs refusés par les règles Firebase : ancien rangement gardé.');
+    console.warn('[ORKA] Tiroirs refusés par les règles Firebase : ancien rangement gardé.');
     await writeSingleDoc(ref, data);
   }
 }
@@ -340,10 +340,10 @@ async function migrateToDrawers(ref, data) {
     await ref.set({ data: main, layout: 2, drawers: { ...cloudIndex }, updatedAt: Date.now() },
       { mergeFields: ['data', 'layout', 'drawers', 'updatedAt'] });
     cloudLayout = 2;
-    console.info('[TriSeason] Données rangées en tiroirs.');
+    console.info('[ORKA] Données rangées en tiroirs.');
   } catch (err) {
     if (isPermissionError(err)) drawersBlocked = true;
-    console.warn('[TriSeason] Rangement en tiroirs reporté :', err.message);
+    console.warn('[ORKA] Rangement en tiroirs reporté :', err.message);
   }
 }
 
@@ -382,7 +382,7 @@ function markActiveToday(uid) {
   }, { merge: true }).then(() => {
     try { localStorage.setItem(ACTIVE_KEY, uid + ':' + today); } catch {}
   }).catch(err => {
-    console.warn('[TriSeason] Suivi d’activité non enregistré :', err.message);
+    console.warn('[ORKA] Suivi d’activité non enregistré :', err.message);
   });
 }
 
@@ -431,14 +431,14 @@ function showConsentGate(uid) {
   gate.innerHTML = `
     <div class="consent-gate__box" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
       <div class="consent-gate__title" id="consentTitle">Tes données, ton accord</div>
-      <p>TriSeason enregistre des informations liées à ta santé : poids, taille, fréquence cardiaque,
+      <p>ORKA enregistre des informations liées à ta santé : poids, taille, fréquence cardiaque,
       puissance, ressenti, repas et hydratation. Elles servent uniquement à te fournir ton suivi,
       sont stockées sur ton compte (Google Firebase) et ne sont ni vendues ni partagées.</p>
       <p>Tu peux exporter ou supprimer tes données et ton compte à tout moment depuis ta page Profil.
       <a href="confidentialite.html" target="_blank" rel="noopener">Lire la politique de confidentialité</a></p>
       <label class="consent-gate__check">
         <input type="checkbox" id="consentCheck">
-        <span>J'accepte que TriSeason enregistre et utilise mes données de santé pour me fournir le suivi de mon entraînement et de ma nutrition.</span>
+        <span>J'accepte que ORKA enregistre et utilise mes données de santé pour me fournir le suivi de mon entraînement et de ma nutrition.</span>
       </label>
       <div class="consent-gate__actions">
         <button class="btn btn--ghost btn--sm" id="consentRefuse">Refuser et me déconnecter</button>
@@ -560,7 +560,7 @@ function syncFromCloud(uid) {
     setTimeout(stravaAutoSync, 1500);
   }).catch(err => {
     // cloudLoaded reste à false : pas d'envoi vers le cloud pour ne pas l'écraser.
-    console.warn('[TriSeason] Impossible de récupérer les données cloud :', err.message);
+    console.warn('[ORKA] Impossible de récupérer les données cloud :', err.message);
     if (!hadLocal) setTimeout(() => syncPill(navigator.onLine ? 'error' : 'offline',
       navigator.onLine ? 'Données du compte pas encore chargées : recharge la page' : null), 50);
   }).finally(() => {
@@ -2317,6 +2317,13 @@ function takeNewAchievements() {
 // Seulement pour les comptes qui avaient déjà des séances : un nouveau compte
 // découvre tout avec le guide de démarrage, l'annonce est marquée vue sans s'afficher.
 const NEWS = [{
+  id: 'orka',                                 // changement de nom : comptes qui utilisaient déjà l'appli
+  dot: false,
+  title: 'TriSeason devient ORKA',
+  html: '<p>L’appli change de nom : <b>TriSeason s’appelle maintenant ORKA</b>.</p>'
+    + '<p>Rien d’autre ne change : ton compte, tes séances, tes repas et tes réglages restent les mêmes.</p>'
+    + '<p class="news__note">Sur ton téléphone, l’icône peut garder l’ancien nom : pour voir le nouveau, retire-la de l’écran d’accueil puis ajoute-la à nouveau depuis le navigateur.</p>',
+}, {
   id: 'sports',
   everyone: true,                             // aussi pour un nouveau compte
   skip: data => !!sportsChosen(data),         // déjà choisi : rien à annoncer
@@ -2348,7 +2355,7 @@ function showNews() {
   if (!todo.length) return;
   // Un seul message par ouverture : le premier à montrer ; ceux qui ne concernent pas
   // ce compte sont marqués vus sans s'afficher, les autres attendent la prochaine ouverture.
-  const shows = x => ((data.sessions || []).length || x.everyone) && !x.skip(data);
+  const shows = x => ((data.sessions || []).length || x.everyone) && !(x.skip && x.skip(data));
   const n = todo.find(shows);
   data.news_seen = seen.concat(todo.filter(x => x === n || !shows(x)).map(x => x.id));
   saveData(data);
@@ -2360,8 +2367,8 @@ function showNews() {
     <div class="modal__header"><div class="modal__title" id="newsTitle">${n.dot === false ? '' : '<span class="sport-dot sport-dot--muscu"></span>'}${n.title}</div>
       <button class="modal__close" type="button" data-close aria-label="Fermer">×</button></div>
     <div class="news__body">${n.html}</div>
-    <div class="form-actions"><button class="btn btn--ghost" type="button" data-close>Plus tard</button>
-      <a class="btn btn--primary" href="${n.action.href}">${n.action.label}</a></div></div>`;
+    <div class="form-actions">${n.action ? `<button class="btn btn--ghost" type="button" data-close>Plus tard</button>
+      <a class="btn btn--primary" href="${n.action.href}">${n.action.label}</a>` : '<button class="btn btn--primary" type="button" data-close>OK</button>'}</div></div>`;
   document.body.appendChild(box);
   requestAnimationFrame(() => box.classList.add('open'));
   box.addEventListener('click', e => {
@@ -2371,7 +2378,7 @@ function showNews() {
 
 // ── Strava : les séances arrivent toutes seules ─────────────────────────────
 // Réglages publics (ils ne sont pas secrets). La clé secrète de l'appli Strava
-// est gardée par le petit serveur TriSeason (tools/server, Cloudflare), jamais
+// est gardée par le petit serveur ORKA (tools/server, Cloudflare), jamais
 // dans le site : il échange le code d'autorisation et renouvelle les jetons.
 // Les séances sont lues directement chez Strava par le navigateur, à
 // l'ouverture de l'appli (au plus toutes les 15 minutes par appareil).
@@ -2402,11 +2409,11 @@ async function serverPost(path, body) {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(json.error || ('Serveur TriSeason : erreur ' + res.status)), { code: json.code || null, status: res.status });
+  if (!res.ok) throw Object.assign(new Error(json.error || ('Serveur ORKA : erreur ' + res.status)), { code: json.code || null, status: res.status });
   return json;
 }
 
-// Ouvre la page Strava « Autoriser TriSeason ? » ; Strava renvoie ensuite vers
+// Ouvre la page Strava « Autoriser ORKA ? » ; Strava renvoie ensuite vers
 // la page Profil avec un code (domaine autorisé réglé dans l'appli Strava).
 function stravaConnect() {
   const state = newId();
@@ -2449,7 +2456,7 @@ async function stravaHandleRedirect() {
     tok = await serverPost('/strava/token', { code: q.get('code') });
   } catch (err) {
     // Strava limite le nombre de comptes connectés tant que l'appli n'est pas validée.
-    // (« (403) » : même cas avec une ancienne version du serveur TriSeason)
+    // (« (403) » : même cas avec une ancienne version du serveur ORKA)
     if (err.code === 'athlete_limit' || /\(403\)/.test(err.message)) return { ok: false, limit: true, msg: STRAVA_LIMIT_MSG };
     throw err;
   }
@@ -2478,7 +2485,7 @@ async function stravaAccessToken() {
   return tok.access_token;
 }
 
-// Activité Strava (résumé) → séance TriSeason. null si le sport n'est pas suivi.
+// Activité Strava (résumé) → séance ORKA. null si le sport n'est pas suivi.
 // La date vient de start_date_local (heure locale de la séance) : pas de
 // passage par l'UTC. Durée totale (comme l'import .fit), à la seconde.
 function stravaToSession(a) {
@@ -2696,7 +2703,7 @@ function stravaSyncMessage(r, always) {
 function stravaAutoSync() {
   if (!stravaAvailable() || !getStrava()) return;
   stravaSync().then(r => { const m = stravaSyncMessage(r, false); if (m) toast(m); })
-    .catch(err => console.warn('[TriSeason] Synchro Strava :', err.message));
+    .catch(err => console.warn('[ORKA] Synchro Strava :', err.message));
 }
 
 // Déconnexion : Strava retire l'autorisation ; les séances venues de Strava
@@ -2705,7 +2712,7 @@ async function stravaDisconnect({ deleteSessions = false } = {}) {
   const st = getStrava();
   if (st) {
     try { await serverPost('/strava/deauthorize', { access_token: await stravaAccessToken() }); }
-    catch (err) { console.warn('[TriSeason] Déconnexion Strava :', err.message); }
+    catch (err) { console.warn('[ORKA] Déconnexion Strava :', err.message); }
   }
   const data = getData();
   delete data.strava;

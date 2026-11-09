@@ -65,7 +65,7 @@ assert.match(toMarkdown(computeReport({ weekStart, users, docs, metrics: null, p
 
 // E-mail : conversion HTML et appel à l'API (simulé)
 const html = markdownToHtml(md);
-assert.match(html, /<h1[^>]*>TriSeason — rapport du lun\. 5 oct\./);
+assert.match(html, /<h1[^>]*>ORKA — rapport du lun\. 5 oct\./);
 assert.match(html, /<li>Nouveaux inscrits : <b>2<\/b>/);
 assert.match(html, /<table[^>]*><tr><th[^>]*>Jour<\/th>/);
 assert.doesNotMatch(markdownToHtml('- a <script>'), /<script>/);
@@ -76,7 +76,7 @@ assert.equal(sent.url, 'https://api.resend.com/emails');
 assert.equal(sent.opts.headers.Authorization, 'Bearer cle-test');
 const payload = JSON.parse(sent.opts.body);
 assert.deepEqual(payload.to, ['moi@exemple.fr']);
-assert.equal(payload.from, 'TriSeason <onboarding@resend.dev>');
+assert.equal(payload.from, 'ORKA <onboarding@resend.dev>');
 // Sans clé dans le script (secret réseau injecté par le proxy) : pas d'en-tête Authorization
 await sendReportEmail({ subject: 's', markdown: 'x', to: 't@x.fr',
   fetchImpl: async (url, opts) => { sent = { url, opts }; return { ok: true, json: async () => ({}) }; } });

@@ -1,6 +1,6 @@
 {
-  "name": "TriSeason Tracker",
-  "short_name": "TriSeason",
+  "name": "ORKA",
+  "short_name": "ORKA",
   "description": "Suivi de saison triathlon — natation, vélo, course",
   "start_url": "./index.html",
   "display": "standalone",

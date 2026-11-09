@@ -1,4 +1,4 @@
-# Rapport hebdomadaire TriSeason
+# Rapport hebdomadaire ORKA
 
 Script en **lecture seule** qui résume l'activité de la semaine écoulée (lundi →
 dimanche, heure de Paris) : comptes et nouveaux inscrits, utilisateurs actifs par

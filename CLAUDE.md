@@ -1,4 +1,10 @@
-# TriSeason — notes pour Claude
+# ORKA (anciennement TriSeason) — notes pour Claude
+
+> **Nom** : l'appli s'appelle **ORKA** depuis le 9 novembre 2026 (avant : TriSeason). Tous les textes visibles disent
+> « ORKA ». Les **noms internes gardent l'ancien préfixe** et ne doivent pas être renommés (les données déjà
+> enregistrées sur les téléphones seraient perdues) : clés `localStorage` (`triseason_data`, `triseason_owner`,
+> `triseason_theme`, `triseason_trend`), événement `triseason:update`, cache `triseason-v…` de `sw.js`, adresse du site
+> (`…github.io/TriSeason/`), dépôt GitHub, projet Firebase, adresse e-mail tri.season.tracker@gmail.com.
 
 ## Le produit
 

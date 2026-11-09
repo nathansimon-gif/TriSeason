@@ -1,4 +1,4 @@
-# Feuille de route TriSeason
+# Feuille de route ORKA (anciennement TriSeason)
 
 Ce qui reste à faire, classé par échéance. Mise à jour à chaque pull request.
 Les cases cochées passent dans « Fait » en bas de page.
@@ -9,6 +9,12 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
+- [ ] 🧑 **Nouveau nom ORKA, la suite** (l'appli affiche déjà ORKA partout) :
+  - choisir le logo (pistes dessinées le 6 novembre : aileron, élan, de zéro au sommet, tache de l'orque), puis Claude met l'icône dans l'appli
+  - vérifier que le nom est libre : INPI et EUIPO (marques), App Store / Google Play, nom de site, Instagram
+  - sur strava.com/settings/api : changer le **nom de l'application** en ORKA (c'est le nom que les gens voient en connectant Strava)
+  - *facultatif* : une adresse e-mail au nouveau nom (aujourd'hui tri.season.tracker@gmail.com, gardée en attendant), et le nom du projet dans la console Firebase / l'e-mail de mot de passe oublié
+  - *plus tard, avec Claude* : changer l'adresse du site (aujourd'hui …github.io/TriSeason/). Attention : il faut aussi mettre à jour Firebase (domaines autorisés) et Strava (domaine de retour), sinon la connexion casse ; les applis installées sur les téléphones devront être réinstallées
 - [ ] 🤖🧑 **Résumé du mois** (idée de Nathan, validée le 4 novembre 2026 ; les 5 étapes de lisibilité sont faites : **c'est la prochaine tâche**) : à la première ouverture de l'appli à partir du 1er du mois, un résumé du mois écoulé s'affiche en plein écran, une seule fois par mois et par compte (comme les messages de nouveautés), seulement s'il y a eu des séances ce mois-là. Proposition : **4 à 6 pages qu'on fait défiler** (comme Strava), une idée par page, en gros chiffres :
   1. le mois en un coup d'œil : heures, séances, distance par sport, comparé au mois d'avant
   2. ta meilleure semaine et ta plus longue séance
@@ -131,6 +137,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 09/11/2026 | — | **TriSeason devient ORKA** : nouveau nom dans toute l'appli (barre du haut, titres des pages, nom de l'appli installée, connexion, aide, confidentialité « ORKA (anciennement TriSeason) », messages, rapport du lundi). Message « TriSeason devient ORKA » une seule fois pour les comptes qui utilisaient déjà l'appli. Rien ne change pour les données : les noms internes gardent l'ancien préfixe |
 | 09/11/2026 | #73 | Feuille de route remise à jour : chantier lisibilité retiré de « Maintenant » (fait, voir plus bas), résumé du mois remonté en prochaine tâche, Blaze noté une seule fois, séries détaillées de musculation signalées comme faites, règles du cycle en rose |
 | 09/11/2026 | #72 | **Ravitaillements comptés dans la journée** : leurs glucides, protéines et calories s'ajoutent au bilan du jour (Nutrition, Dashboard, besoins du jour, graphique des 7 jours, Forme, « Avant tes courses »), et l'eau des boissons (500 ml par bidon de boisson isotonique, réglable ; flasque : à indiquer) s'ajoute à l'hydratation du jour et au défi d'eau. **Séries sur les objectifs** (Sports) : pour un objectif de semaine ou de mois, « Série : 3 semaines d'affilée » (la semaine en cours compte dès qu'il est atteint, la série retombe à 0 si une semaine se termine sans) et le record |
 | 08/11/2026 | #71 | Séances : lien « **Voir sur Strava** » remis sur chaque séance venue de Strava (sous la distance, la ligne s'ouvre toujours en la touchant ailleurs). **Graphiques** : en glissant le doigt le long d'une courbe ou de barres, l'infobulle suit le doigt et montre la semaine, le mois ou la séance la plus proche, sans viser le point exactement ; un glissé vertical fait toujours défiler la page. Dashboard : le graphique « Évolution » n'ouvre un sport que si on touche vraiment une barre |
