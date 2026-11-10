@@ -2578,7 +2578,7 @@ function monthSummaryPages(m) {
     ${m.favDay ? line('Ton jour préféré', 'le ' + m.favDay.day + ' <small>(' + m.favDay.n + ' séances)</small>') : ''}
     ${line('Jours de repos', (m.current ? Math.max(0, Number(localDateStr().slice(8, 10)) - m.activeDays) : m.days - m.activeDays))}</div>`));
 
-  // 3. Sport par sport
+  // 3. Distances (et heures) par sport
   const rows = m.sports.filter(x => x.n).map(x => {
     const main = x.sport === 'muscu' ? formatHours(x.h) : km(x.km);
     const diff = x.sport === 'muscu' ? (x.prev.n ? deltaH(x.h, x.prev.h) : '') : (x.prev.km ? ((x.km - x.prev.km) >= 0 ? '+' : '−') + km(Math.abs(x.km - x.prev.km)) : '');
@@ -2586,7 +2586,7 @@ function monthSummaryPages(m) {
       <div class="ms-sport__sub">${x.n} séance${x.n > 1 ? 's' : ''}${x.sport !== 'muscu' ? ' · ' + formatHours(x.h) : ''}${x.pace ? ' · ' + x.pace + (x.sport === 'run' ? ' /km' : x.sport === 'nat' ? ' /100 m' : '') : ''}${diff && diff !== 'autant' ? ' · <span class="ms-diff">' + diff + ' vs ' + prevName + '</span>' : ''}</div></div>`;
   }).join('');
   const extra = (t.elev ? line('Dénivelé positif', num(t.elev) + ' m') : '') + (t.kcal ? line('Calories dépensées', num(t.kcal) + ' kcal') : '');
-  pages.push(page('Sport par sport', rows + (extra ? `<div class="ms-lines">${extra}</div>` : '')));
+  pages.push(page('Tes distances', rows + (extra ? `<div class="ms-lines">${extra}</div>` : '')));
 
   // 4. Temps forts
   const L = [];

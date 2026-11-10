@@ -2299,7 +2299,7 @@ async function main() {
     const last = (() => { const d = new Date(day(0) + 'T12:00:00Z'); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
     assert(/^Ton mois (d’|de )/.test(first.title), 'titre : ' + first.title);
     assert(first.pages >= 5, 'pages : ' + JSON.stringify(first.titles));
-    assert(['Tes jours d’entraînement', 'Sport par sport', 'Tes temps forts', 'Ta nutrition', 'Ta forme'].every(t => first.titles.includes(t)), 'pages : ' + JSON.stringify(first.titles));
+    assert(['Tes jours d’entraînement', 'Tes distances', 'Tes temps forts', 'Ta nutrition', 'Ta forme'].every(t => first.titles.includes(t)), 'pages : ' + JSON.stringify(first.titles));
     assert(!first.overflow && !overflows.some(Boolean), 'défilement latéral : ' + JSON.stringify(overflows));
     assert(lastBtn === 'Terminer', 'dernier bouton : ' + lastBtn);
     assert(closed, 'pas refermé');
