@@ -97,7 +97,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   affiché une fois à l'ouverture du Dashboard pour le mois écoulé (`maybeShowMonthSummary`, appelé par `showNews` quand il n'y a
   pas de nouveauté ; `data.month_seen` = dernier mois vu), par le bouton « Résumé du mois » du calendrier, et par la liste des mois de Profil (`#resumes`, `renderMonthList`) ;
   **comparer deux mois** : `monthCompare(a, b)` / `showMonthCompare(a, b)` (bouton de `#resumes`) : `monthSummary(ym, data, {until})` coupe au même jour
-  quand l'un des deux est le mois en cours ; courbe cumulée en SVG (`wireCompareChart`), calendriers `monthCalHtml` ; sports suivis seulement,
+  quand l'un des deux est le mois en cours ; courbe cumulée en SVG (`wireCompareChart`, filtrable par sport : `c.curve(key, sport)`, `c.sports`, `byDay[d].bySp`), calendriers `monthCalHtml` ; sports suivis seulement,
   jamais les options santé ni le cycle.
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
   plus, enregistrés en une fois avec `TS.saveSessions`) et de l'**archive

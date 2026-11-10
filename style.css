@@ -939,3 +939,6 @@ html.ms-open, html.ms-open body { overflow: hidden; }
 .mc-cal .ms-cal { max-width: none; gap: 4px; }
 .mc-cal .ms-cal > div { font-size: 11px; }
 .mc-row > em small { display: block; font-family: var(--mono); font-size: 11px; }
+.mc__chips--sport { margin: 0 0 8px; }
+.mc__chips--sport .mc__chip { display: inline-flex; align-items: center; }
+.mc__chips--sport .sport-dot { margin-right: 5px; }
