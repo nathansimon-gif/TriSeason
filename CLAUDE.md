@@ -92,7 +92,11 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   séance n'en est pas un) / `muscuSessionRecords` (records d'une séance : annonce, calendrier), `muscuMuscleLoad` + `renderBodyMap`
   (carte du corps SVG dans Sports → Muscu, `#carte-du-corps` ; Forme n'en montre qu'une ligne et un lien) ;
   **nouveautés** : `NEWS` / `showNews`, message une fois par compte (`data.news_seen`),
-  seulement pour les comptes qui avaient déjà des séances).
+  seulement pour les comptes qui avaient déjà des séances) ;
+  **résumé du mois** : `monthSummary(ym)` (calcul) / `monthSummaryPages` / `showMonthSummary(ym)` (pages plein écran `.ms`),
+  affiché une fois à l'ouverture du Dashboard pour le mois écoulé (`maybeShowMonthSummary`, appelé par `showNews` quand il n'y a
+  pas de nouveauté ; `data.month_seen` = dernier mois vu), et par le bouton « Résumé du mois » du calendrier ; sports suivis seulement,
+  jamais les options santé ni le cycle.
 - `import.js` + `fit-parser.js` : import de fichiers .fit / .gpx / .tcx (50 au
   plus, enregistrés en une fois avec `TS.saveSessions`) et de l'**archive
   Strava** (`readStravaArchive` : lit seulement `activities.csv` dans le .zip,

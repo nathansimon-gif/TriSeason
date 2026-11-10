@@ -142,6 +142,8 @@ async function main() {
   async function newUser({ uid = 'testeur', data = sampleData(), consent = true, external, ctxOpts = {} } = {}) {
     // Messages de nouveauté déjà vus, sauf si le test le précise (news_seen: [] pour les voir)
     if (data && !('news_seen' in data)) data = { ...data, news_seen: ['muscu', 'sports', 'orka'] };
+    // Résumé du mois déjà vu, sauf si le test le précise (month_seen: null pour le voir)
+    if (data && !('month_seen' in data)) data = { ...data, month_seen: '9999-12' };
     const ctx = await browser.newContext({ serviceWorkers: 'block', timezoneId: TZ, viewport: { width: 1280, height: 900 }, ...ctxOpts });
     let currentUid = uid;
     await ctx.route(/gstatic\.com/, r => r.request().url().includes('app-compat')
@@ -2034,7 +2036,7 @@ async function main() {
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
     const dash = await v.page.evaluate(() => ({ metrics: !!document.getElementById('metricsGrid'), month: !!document.getElementById('msJoursActifs'),
-      txt: /Métriques clés|Résumé du mois/.test(document.body.innerText), cal: document.getElementById('calGrid').children.length }));
+      txt: /Métriques clés/.test(document.body.innerText), cal: document.getElementById('calGrid').children.length }));
     await v.page.goto(`${BASE}/sport.html`); await v.page.waitForTimeout(800);
     const sport = await v.page.evaluate(() => ({ prog: !!document.getElementById('monthlyProgress'), best: document.getElementById('bestWeeks').children.length }));
     await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
@@ -2269,6 +2271,107 @@ async function main() {
     assert(buttons.some(b => /semaines passées \(2\)/.test(b)) && buttons.some(b => /les 2 autres séances prévues/.test(b)), 'boutons : ' + JSON.stringify(buttons));
     assert(JSON.stringify(allNext) === JSON.stringify([...week, 'n1', 'n2', 'n3', 'n4']), 'toutes à venir : ' + JSON.stringify(allNext));
     assert(JSON.stringify(withOld) === JSON.stringify(['old1', 'old2', ...week, 'n1', 'n2', 'n3', 'n4']), 'avec semaines passées : ' + JSON.stringify(withOld));
+  });
+
+  await test('Résumé du mois : affiché une fois à l’ouverture du Dashboard, pages qu’on fait défiler, sans défilement latéral', async () => {
+    const v = await newUser({ data: { ...sampleData(), month_seen: null }, ctxOpts: { viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true } });
+    await v.page.goto(`${BASE}/index.html`);
+    await v.page.waitForSelector('#monthSummary', { timeout: 5000 });
+    const first = await v.page.evaluate(() => {
+      const b = document.getElementById('monthSummary');
+      return { title: b.querySelector('.ms-page:not([hidden]) .ms-page__title').textContent, pages: b.querySelectorAll('.ms-page').length,
+        titles: [...b.querySelectorAll('.ms-page__title')].map(x => x.textContent),
+        overflow: document.documentElement.scrollWidth > window.innerWidth || b.scrollWidth > b.clientWidth };
+    });
+    const overflows = [];
+    for (let i = 1; i < first.pages; i++) {
+      await v.page.click('#monthSummary [data-ms="next"]'); await v.page.waitForTimeout(60);
+      overflows.push(await v.page.evaluate(() => { const p = document.querySelector('#monthSummary .ms__pages'); return p.scrollWidth > p.clientWidth; }));
+    }
+    const lastBtn = await v.page.textContent('#monthSummary [data-ms="next"]');
+    await v.page.click('#monthSummary [data-ms="next"]'); await v.page.waitForTimeout(300);
+    const closed = await v.page.evaluate(() => !document.getElementById('monthSummary') && !document.documentElement.classList.contains('ms-open'));
+    const seen = await v.page.evaluate(() => TS.getData().month_seen);
+    await v.page.reload(); await v.page.waitForTimeout(1500);
+    const again = await v.page.evaluate(() => !!document.getElementById('monthSummary'));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const last = (() => { const d = new Date(day(0) + 'T12:00:00Z'); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
+    assert(/^Ton mois (d’|de )/.test(first.title), 'titre : ' + first.title);
+    assert(first.pages >= 5, 'pages : ' + JSON.stringify(first.titles));
+    assert(['Tes jours d’entraînement', 'Tes distances', 'Tes temps forts', 'Ta nutrition', 'Ta forme'].every(t => first.titles.includes(t)), 'pages : ' + JSON.stringify(first.titles));
+    assert(!first.overflow && !overflows.some(Boolean), 'défilement latéral : ' + JSON.stringify(overflows));
+    assert(lastBtn === 'Terminer', 'dernier bouton : ' + lastBtn);
+    assert(closed, 'pas refermé');
+    assert(seen === last, 'mois vu : ' + seen + ' au lieu de ' + last);
+    assert(!again, 'réaffiché au rechargement');
+  });
+
+  await test('Résumé du mois : pas sur les autres pages, pas sans séance le mois d’avant, ouvert depuis le calendrier', async () => {
+    const v = await newUser({ data: { ...sampleData(), month_seen: null } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(1500);
+    const onSessions = await v.page.evaluate(() => !!document.getElementById('monthSummary'));
+    await v.ctx.close();
+    // Nouveau compte : séances seulement ce mois-ci → rien à résumer, mois marqué vu quand même
+    const d0 = day(0);
+    const w = await newUser({ data: { ...sampleData(), month_seen: null, sessions: [{ id: 'a', date: d0, sport: 'run', duration: 1, distance: 10 }] } });
+    await w.page.goto(`${BASE}/index.html`); await w.page.waitForTimeout(1500);
+    const shown = await w.page.evaluate(() => !!document.getElementById('monthSummary'));
+    const seen = await w.page.evaluate(() => TS.getData().month_seen);
+    // Bouton du calendrier : mois en cours (une séance) puis mois vide (message, rien d'ouvert)
+    await w.page.click('#calSummaryBtn'); await w.page.waitForTimeout(150);
+    const cur = await w.page.evaluate(() => document.querySelector('#monthSummary .ms-page__kicker').textContent);
+    await w.page.click('#monthSummary [data-ms="close"]'); await w.page.waitForTimeout(300);
+    await w.page.evaluate(() => { changeCalMonth(-1); changeCalMonth(-1); });
+    await w.page.click('#calSummaryBtn'); await w.page.waitForTimeout(150);
+    const empty = await w.page.evaluate(() => ({ open: !!document.getElementById('monthSummary'), toast: [...document.querySelectorAll('.toast')].map(t => t.textContent).join(' | ') }));
+    assert(!w.errors.length, w.errors[0]);
+    await w.ctx.close();
+    assert(!onSessions, 'affiché sur la page Séances');
+    assert(!shown && /^\d{4}-\d{2}$/.test(seen || ''), 'nouveau compte : affiché=' + shown + ' vu=' + seen);
+    assert(/en cours/.test(cur), 'mois en cours : ' + cur);
+    assert(!empty.open && /Aucune séance/.test(empty.toast), 'mois vide : ' + JSON.stringify(empty));
+  });
+
+  await test('Résumé du mois : chiffres justes (séances, série, meilleure journée, records, courses, muscu, nutrition)', async () => {
+    const S = (id, date, sport, h, km, extra = {}) => ({ id, date, sport, duration: h, distance: km, ...extra });
+    const data = { ...sampleData(), sessions: [
+      S('r1', '2025-04-02', 'run', 0.5, 6, { rpe: 6, sensation: 4 }), S('r2', '2025-04-03', 'run', 1, 12, { rpe: 6, sensation: 4 }),
+      S('r3', '2025-04-04', 'run', 0.75, 9, { rpe: 6, sensation: 4 }), S('v1', '2025-04-12', 'velo', 3, 90, { elevation: 800 }),
+      S('n1', '2025-04-15', 'nat', 0.75, 2.5), S('p1', '2025-03-20', 'run', 1, 10),
+      S('m1', '2025-04-20', 'muscu', 1, null, { exercises: [{ name: 'Squat', group: 'Jambes', sets: 3, reps: 10, kg: 60 }] }),
+      S('m0', '2025-03-10', 'muscu', 1, null, { exercises: [{ name: 'Squat', group: 'Jambes', sets: 3, reps: 10, kg: 50 }] }),
+    ], records: [
+      { id: 'x0', sport: 'run', dist: '10 km', time: '0:45:00', date: '2024-10-01' },
+      { id: 'x1', sport: 'run', dist: '10 km', time: '0:44:10', date: '2025-04-27' },
+      { id: 'x2', sport: 'run', dist: '5 km', time: '0:21:00', date: '2025-04-06' },
+    ], competitions: [{ id: 'c1', date: '2025-04-27', name: '10 km d’avril', type: 'RUN', distance: '10', goal_time: '0:45:00', actual_time: '0:44:10' }],
+      nutrition: { meals: [
+        { id: 'a', date: '2025-04-02', glucides: 300, proteines: 100, lipides: 50 }, { id: 'b', date: '2025-04-03', glucides: 400, proteines: 100, lipides: 50 },
+        { id: 'c', date: '2025-04-08', glucides: 200, proteines: 100, lipides: 50 }, { id: 'd', date: '2025-04-09', glucides: 220, proteines: 100, lipides: 50 }],
+        hydration: { '2025-04-02': 2000, '2025-04-03': 1000 }, fuel: [] } };
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => {
+      const m = TS.monthSummary('2025-04');
+      const pages = TS.monthSummaryPages(m);
+      return { n: m.total.n, km: m.total.km, h: m.total.h, prevN: m.prev.n, active: m.activeDays, streak: m.streak, bestDay: m.bestDay, elev: m.total.elev,
+        rec: m.records.map(x => x.dist + ':' + x.pb + ':' + x.first), comp: m.comps.map(c => c.goalOk), muscu: m.muscu && [m.muscu.n, m.muscu.sets, m.muscu.kg],
+        mrec: m.muscuRecords.map(e => e.name + ':' + e.value), train: m.nutrition.train, rest: m.nutrition.rest, water: [m.nutrition.waterDays, m.nutrition.waterAvg, m.nutrition.waterGoalDays],
+        titles: pages.map(h => (h.match(/ms-page__title">([^<]+)/) || [])[1]), oct: TS.monthSummaryPages(TS.monthSummary('2025-04'))[0].includes('Ton mois d’avril') };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.n === 6 && Math.abs(r.km - 119.5) < 1e-9 && r.prevN === 2 && r.active === 6, 'totaux : ' + JSON.stringify(r));
+    assert(r.streak.days === 3 && r.streak.from === '2025-04-02' && r.streak.to === '2025-04-04', 'série : ' + JSON.stringify(r.streak));
+    assert(r.bestDay === '2025-04-12' && r.elev === 800, 'meilleure journée : ' + r.bestDay);
+    assert(JSON.stringify(r.rec) === JSON.stringify(['5 km:true:true', '10 km:true:false']), 'records : ' + JSON.stringify(r.rec));
+    assert(JSON.stringify(r.comp) === '[true]', 'course : ' + JSON.stringify(r.comp));
+    assert(JSON.stringify(r.muscu) === '[1,3,1800]' && JSON.stringify(r.mrec) === '["Squat:60"]', 'muscu : ' + JSON.stringify([r.muscu, r.mrec]));
+    // Jours d'entraînement avec repas : 2 et 3 avril (350 g en moyenne) ; repos : 8 et 9 avril (210 g)
+    assert(r.train && r.train.carbs === 350 && r.rest && r.rest.carbs === 210, 'nutrition : ' + JSON.stringify([r.train, r.rest]));
+    assert(JSON.stringify(r.water) === '[2,1500,1]', 'eau : ' + JSON.stringify(r.water));
+    assert(r.oct && ['Courses et records', 'Ta musculation', 'Ta nutrition'].every(t => r.titles.includes(t)), 'pages : ' + JSON.stringify(r.titles));
   });
 
   await browser.close();
