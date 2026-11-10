@@ -2421,9 +2421,11 @@ function monthSummary(ym, data = getData(), opts = {}) {
   // Jours : volume et sport principal
   const byDay = {};
   ses.forEach(s => {
-    const d = byDay[s.date] = byDay[s.date] || { h: 0, km: 0, n: 0, sp: {} };
+    const d = byDay[s.date] = byDay[s.date] || { h: 0, km: 0, n: 0, sp: {}, bySp: {} };
     d.h += s.duration || 0; d.n++; d.sp[s.sport] = (d.sp[s.sport] || 0) + (s.duration || 0.01);
     if (s.sport !== 'muscu') d.km += s.distance || 0;
+    const e = d.bySp[s.sport] = d.bySp[s.sport] || { h: 0, km: 0, n: 0 };   // même chose, sport par sport
+    e.h += s.duration || 0; e.n++; if (s.sport !== 'muscu') e.km += s.distance || 0;
   });
   Object.values(byDay).forEach(d => {
     const sp = Object.keys(d.sp);
@@ -2746,13 +2748,22 @@ function monthCompare(a, b, data = getData()) {
   const A = monthSummary(a, data, { until }), B = monthSummary(b, data, { until });
   const fullA = until ? monthSummary(a, data) : A, fullB = until ? monthSummary(b, data) : B;
   // Cumul jour par jour (km, heures ou séances) ; le mois en cours s'arrête aujourd'hui
-  const cum = (m, key) => {
+  // sport = '' : tous les sports suivis ; sinon seulement ce sport
+  const cum = (m, key, sport) => {
     const len = m.ym === cur ? dayNow : m.days, out = [];
     let t = 0;
-    for (let i = 1; i <= len; i++) { const x = (m.byDay || {})[m.from.slice(0, 8) + String(i).padStart(2, '0')]; t += x ? x[key] : 0; out.push(t); }
+    for (let i = 1; i <= len; i++) {
+      let x = (m.byDay || {})[m.from.slice(0, 8) + String(i).padStart(2, '0')];
+      if (x && sport) x = x.bySp[sport];
+      t += x ? x[key] : 0; out.push(t);
+    }
     return out;
   };
-  return { a: A, b: B, fullA, fullB, until, curves: { km: [cum(fullA, 'km'), cum(fullB, 'km')], h: [cum(fullA, 'h'), cum(fullB, 'h')], n: [cum(fullA, 'n'), cum(fullB, 'n')] } };
+  const used = m => new Set(Object.values(m.byDay || {}).flatMap(d => Object.keys(d.bySp)));
+  const ua = used(fullA), ub = used(fullB);
+  const sports = sportsShown(data).filter(sp => ua.has(sp) || ub.has(sp));
+  const curve = (key, sport = '') => [cum(fullA, key, sport), cum(fullB, key, sport)];
+  return { a: A, b: B, fullA, fullB, until, sports, curve, curves: { km: curve('km'), h: curve('h'), n: curve('n') } };
 }
 
 function showMonthCompare(a, b) {
@@ -2779,7 +2790,7 @@ function showMonthCompare(a, b) {
     </div></div>`;
   document.body.appendChild(box);
   document.documentElement.classList.add('ms-open');
-  let metric = null;
+  let want = null, sport = '';   // want = choix Km / Heures / Séances, gardé d'un sport à l'autre
   const close = () => { document.removeEventListener('keydown', onKey); box.classList.remove('open'); document.documentElement.classList.remove('ms-open'); setTimeout(() => box.remove(), 200); };
   const onKey = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
@@ -2790,23 +2801,26 @@ function showMonthCompare(a, b) {
       return `<button type="button" class="mc__chip${m === B ? ' on' : ''}" data-mc-b="${m}"${ok ? '' : ' disabled title="Pas de séance ce mois-là"'}>${l}</button>`;
     }).join('');
     const c = monthCompare(A, B);
-    if (!metric) metric = c.a.total.km || c.b.total.km ? 'km' : 'h';
-    box.querySelector('#mcOut').innerHTML = monthCompareHtml(c, metric);
-    wireCompareChart(box, c, metric);
+    if (sport && !c.sports.includes(sport)) sport = '';
+    if (!want) want = c.a.total.km || c.b.total.km ? 'km' : 'h';
+    const metric = want === 'km' && (sport === 'muscu' || !c.curve('km', sport).some(x => x[x.length - 1])) ? 'h' : want;
+    box.querySelector('#mcOut').innerHTML = monthCompareHtml(c, metric, sport);
+    wireCompareChart(box, c, metric, sport);
   };
   box.addEventListener('change', e => { if (e.target.matches('select')) render(); });
   box.addEventListener('click', e => {
-    const t = e.target.closest('[data-mc], [data-mc-b], [data-mc-metric]');
+    const t = e.target.closest('[data-mc], [data-mc-b], [data-mc-metric], [data-mc-sport]');
     if (!t) return;
     if (t.dataset.mc === 'close') return close();
     if (t.dataset.mcB) { box.querySelector('#mcB').value = t.dataset.mcB; render(); }
-    if (t.dataset.mcMetric) { metric = t.dataset.mcMetric; render(); }
+    if (t.dataset.mcMetric) { want = t.dataset.mcMetric; render(); }
+    if (t.dataset.mcSport != null) { sport = t.dataset.mcSport; render(); }
   });
   render();
   requestAnimationFrame(() => box.classList.add('open'));
 }
 
-function monthCompareHtml(c, metric) {
+function monthCompareHtml(c, metric, sport = '') {
   const A = c.a, B = c.b, la = monthLabelShort(A.ym), lb = monthLabelShort(B.ym);
   const num = (v, dec = 0) => Number(v.toFixed(dec)).toLocaleString('fr-FR');
   const km = v => num(v, v < 100 ? 1 : 0) + ' km';
@@ -2825,9 +2839,12 @@ function monthCompareHtml(c, metric) {
     ${t.km || u.km ? row('Distance', km(t.km), km(u.km), sign(t.km - u.km, km) + pct(t.km, u.km)) : ''}
     ${t.elev || u.elev ? row('Dénivelé', num(t.elev) + ' m', num(u.elev) + ' m', sign(t.elev - u.elev, v => num(v) + ' m')) : ''}</div>`;
   // 2. Courbe cumulée
-  const seg = [['km', 'Km'], ['h', 'Heures'], ['n', 'Séances']].filter(([k]) => k !== 'km' || t.km || u.km)
+  const hasKm = c.curve('km', sport).some(x => x[x.length - 1]);
+  const seg = [['km', 'Km'], ['h', 'Heures'], ['n', 'Séances']].filter(([k]) => k !== 'km' || (sport !== 'muscu' && hasKm))
     .map(([k, l]) => `<button type="button" data-mc-metric="${k}" class="${k === metric ? 'on' : ''}">${l}</button>`).join('');
-  h += `<h3 class="mc-h">Au fil du mois</h3><div class="seg mc-seg" role="group" aria-label="Quoi">${seg}</div>
+  const chips = c.sports.length > 1 ? `<div class="mc__chips mc__chips--sport">${[['', 'Tous']].concat(c.sports.map(sp => [sp, SPORTS[sp].label]))
+    .map(([k, l]) => `<button type="button" class="mc__chip${k === sport ? ' on' : ''}" data-mc-sport="${k}">${k ? `<span class="sport-dot sport-dot--${k}"></span>` : ''}${l}</button>`).join('')}</div>` : '';
+  h += `<h3 class="mc-h">Au fil du mois</h3>${chips}<div class="seg mc-seg" role="group" aria-label="Quoi">${seg}</div>
     <div class="mc-chart" id="mcChart"></div><div class="mc-read" id="mcRead"></div>`;
   // 3. Calendriers
   const calBox = (m, k) => `<div class="mc-cal"><div class="mc-cal__name"><i class="mc__key mc__key--${k}"></i>${monthLabelLong(m.ym)}<small>${m.activeDays || 0} jours actifs</small></div>${monthCalHtml(m)}</div>`;
@@ -2856,10 +2873,10 @@ function monthCompareHtml(c, metric) {
 }
 
 // Courbe cumulée en SVG (pas de bibliothèque) ; l'infobulle suit le doigt
-function wireCompareChart(box, c, metric) {
+function wireCompareChart(box, c, metric, sport = '') {
   const el = box.querySelector('#mcChart'), read = box.querySelector('#mcRead');
   if (!el) return;
-  const [sa, sb] = c.curves[metric];
+  const [sa, sb] = c.curve(metric, sport);
   const fmt = v => metric === 'h' ? formatHours(v) : metric === 'km' ? Number(v.toFixed(v < 100 ? 1 : 0)).toLocaleString('fr-FR') + ' km' : v + ' séance' + (v > 1 ? 's' : '');
   const W = 320, H = 170, L = 6, R = 6, T = 10, Bm = 20, days = Math.max(sa.length, sb.length, c.fullA.days, c.fullB.days);
   const max = Math.max(1, ...sa, ...sb) * 1.08;

@@ -2436,6 +2436,38 @@ async function main() {
     assert(prevB === back(1) && closed, 'mois d’avant : ' + prevB);
   });
 
+  await test('Comparer deux mois : courbe par sport (distance, heures, séances du sport choisi)', async () => {
+    const data = sampleData();
+    data.profile.sports = ['nat', 'velo', 'run', 'muscu'];
+    data.sessions.push({ id: 'a1', date: '2024-03-02', sport: 'run', duration: 1, distance: 10 }, { id: 'a2', date: '2024-03-05', sport: 'velo', duration: 2, distance: 60 },
+      { id: 'a3', date: '2024-03-09', sport: 'run', duration: 0.5, distance: 5 }, { id: 'a4', date: '2024-03-12', sport: 'muscu', duration: 1, exercises: [] },
+      { id: 'b1', date: '2023-03-03', sport: 'velo', duration: 1, distance: 30 });
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => {
+      const c = TS.monthCompare('2024-03', '2023-03');
+      const last = x => x[x.length - 1];
+      return { sports: c.sports, run: c.curve('km', 'run').map(last), velo: c.curve('km', 'velo').map(last), runN: c.curve('n', 'run').map(last),
+        muscuH: c.curve('h', 'muscu').map(last), all: c.curve('km').map(last) };
+    });
+    await v.page.evaluate(() => TS.showMonthCompare('2024-03', '2023-03')); await v.page.waitForTimeout(200);
+    const chips = await v.page.evaluate(() => [...document.querySelectorAll('[data-mc-sport]')].map(b => b.textContent.trim()));
+    await v.page.click('[data-mc-metric="n"]'); await v.page.click('[data-mc-sport="run"]'); await v.page.waitForTimeout(100);
+    const runUi = await v.page.evaluate(() => ({ on: document.querySelector('[data-mc-metric].on').dataset.mcMetric, read: document.getElementById('mcRead').textContent }));
+    await v.page.click('[data-mc-metric="km"]'); await v.page.click('[data-mc-sport="muscu"]'); await v.page.waitForTimeout(100);
+    const muscuUi = await v.page.evaluate(() => ({ km: !!document.querySelector('[data-mc-metric="km"]'), on: document.querySelector('[data-mc-metric].on').dataset.mcMetric }));
+    await v.page.click('[data-mc-sport="velo"]'); await v.page.waitForTimeout(100);
+    const veloOn = await v.page.evaluate(() => document.querySelector('[data-mc-metric].on').dataset.mcMetric);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(JSON.stringify(r.sports) === '["velo","run","muscu"]', 'sports : ' + JSON.stringify(r.sports));
+    assert(JSON.stringify(r.run) === '[15,0]' && JSON.stringify(r.velo) === '[60,30]' && JSON.stringify(r.runN) === '[2,0]' && JSON.stringify(r.muscuH) === '[1,0]' && JSON.stringify(r.all) === '[75,30]', 'courbes : ' + JSON.stringify(r));
+    assert(JSON.stringify(chips) === '["Tous","Vélo","Course","Musculation"]', 'boutons : ' + JSON.stringify(chips));
+    assert(runUi.on === 'n' && /2 séances/.test(runUi.read), 'course, séances : ' + JSON.stringify(runUi));
+    assert(!muscuUi.km && muscuUi.on === 'h', 'musculation : ' + JSON.stringify(muscuUi));
+    assert(veloOn === 'km', 'vélo : retour aux km choisis : ' + veloOn);
+  });
+
   await browser.close();
   server.close();
 
