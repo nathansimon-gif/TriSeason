@@ -2374,6 +2374,24 @@ async function main() {
     assert(r.oct && ['Courses et records', 'Ta musculation', 'Ta nutrition'].every(t => r.titles.includes(t)), 'pages : ' + JSON.stringify(r.titles));
   });
 
+  await test('Résumé du mois : liste des mois dans Profil, un mois s’ouvre en le touchant', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const rows = await v.page.evaluate(() => [...document.querySelectorAll('#monthList .month-row')].map(b => b.textContent.replace(/\s+/g, ' ').trim()));
+    const moreShown = await v.page.evaluate(() => { const b = document.getElementById('monthMore'); return b.offsetParent !== null; });
+    await v.page.click('#monthList .month-row >> nth=1'); await v.page.waitForTimeout(200);
+    const r = await v.page.evaluate(() => ({ kicker: (document.querySelector('#monthSummary .ms-page__kicker') || {}).textContent,
+      overflow: document.documentElement.scrollWidth > window.innerWidth }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // Données de test : séances sur les 40 derniers jours → 2 ou 3 mois, le plus récent en premier
+    assert(rows.length >= 2 && /en cours/.test(rows[0]) && /séances? · \d/.test(rows[1]), 'lignes : ' + JSON.stringify(rows));
+    const name = rows[1].split(' ').slice(0, 2).join(' ').toLowerCase();
+    assert(r.kicker && r.kicker.toLowerCase().startsWith(name), 'ouvert : ' + r.kicker + ' attendu ' + name);
+    assert(!r.overflow, 'défilement latéral');
+    assert(!moreShown, 'bouton « Voir les n mois » affiché avec moins de 7 mois');
+  });
+
   await browser.close();
   server.close();
 
