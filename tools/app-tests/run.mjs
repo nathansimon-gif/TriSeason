@@ -2374,6 +2374,33 @@ async function main() {
     assert(r.oct && ['Courses et records', 'Ta musculation', 'Ta nutrition'].every(t => r.titles.includes(t)), 'pages : ' + JSON.stringify(r.titles));
   });
 
+  await test('Résumé du mois : liste des mois dans Profil (2 derniers, puis « Voir tout »), un mois s’ouvre en le touchant', async () => {
+    // Séances sur 4 mois (le mois en cours et les 3 d'avant)
+    const data = sampleData();
+    const m0 = day(0).slice(0, 7);
+    const back = n => { const d = new Date(m0 + '-15T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - n); return d.toISOString().slice(0, 7); };
+    [1, 2, 3].forEach(n => data.sessions.push({ id: 'old' + n, date: back(n) + '-15', sport: 'run', duration: 1, distance: 10 }));
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const rowsOf = () => v.page.evaluate(() => [...document.querySelectorAll('#monthList .month-row')].map(b => b.textContent.replace(/\s+/g, ' ').trim()));
+    const rows = await rowsOf();
+    const btn = await v.page.evaluate(() => { const b = document.getElementById('monthMore'); return b.offsetParent !== null ? b.textContent : null; });
+    await v.page.click('#monthMore'); await v.page.waitForTimeout(100);
+    const all = await rowsOf();
+    await v.page.click('#monthList .month-row >> nth=3'); await v.page.waitForTimeout(200);
+    const r = await v.page.evaluate(() => ({ kicker: (document.querySelector('#monthSummary .ms-page__kicker') || {}).textContent,
+      overflow: document.documentElement.scrollWidth > window.innerWidth }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(rows.length === 2 && /en cours/.test(rows[0]), 'au départ : ' + JSON.stringify(rows));
+    assert(btn === 'Voir tout (4 mois)', 'bouton : ' + btn);
+    assert(all.length === 4 && /séance · 1h/.test(all[3]), 'tout : ' + JSON.stringify(all));
+    const name = all[3].split(' ').slice(0, 2).join(' ').toLowerCase();
+    assert(r.kicker && r.kicker.toLowerCase().startsWith(name), 'ouvert : ' + r.kicker + ' attendu ' + name);
+    assert(!r.overflow, 'défilement latéral');
+  });
+
+
   await browser.close();
   server.close();
 

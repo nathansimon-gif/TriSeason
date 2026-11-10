@@ -105,6 +105,13 @@
     .set-row { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:11px 0; border:0; border-top:1px solid var(--border);
       background:none; color:var(--text); font:inherit; font-size:14px; text-align:left; text-decoration:none; }
     .section-card__title + .set-row { border-top:0; padding-top:2px; }
+    .month-row { display:flex; align-items:center; gap:10px; width:100%; padding:11px 2px; background:none; border:0; border-top:1px solid var(--border); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
+    .month-row:first-child { border-top:0; }
+    .month-row:hover .month-row__name { color:var(--accent); }
+    .month-row__name { flex:1; min-width:0; font-size:14px; font-weight:500; }
+    .month-row__name small { font-size:11px; color:var(--text-3); font-weight:400; margin-left:4px; }
+    .month-row__val { font-size:12.5px; color:var(--text-2); white-space:nowrap; }
+    .month-row__go { color:var(--text-3); font-size:18px; line-height:1; }
     .set-row span { min-width:0; }
     .set-row small { display:block; font-size:12px; color:var(--text-2); margin-top:2px; }
     .set-row b { font-weight:600; overflow-wrap:anywhere; }
@@ -199,6 +206,13 @@
     </div>
     <div class="badge-list" id="badgesAll"></div>
     <button class="btn btn--ghost btn--sm" id="badgesMore" onclick="badgesShowAll=!badgesShowAll;renderBadges()" style="margin-top:10px" hidden></button>
+  </div>
+
+  <!-- ── Résumés du mois : revoir un mois (pages qu'on fait défiler) ── -->
+  <div class="section-card" id="resumes">
+    <div class="section-card__title">Résumés du mois <span class="tip-icon" data-tip="Chaque mois, le résumé s'affiche une fois tout seul sur le Dashboard. Touche un mois pour le revoir.">?</span></div>
+    <div id="monthList"></div>
+    <button class="btn btn--ghost btn--sm" id="monthMore" onclick="monthsShowAll=!monthsShowAll;renderMonthList()" style="margin-top:10px" hidden></button>
   </div>
 
   <!-- ── Saison en cours ── -->
@@ -456,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFCZones();
   renderStrava();
   renderBadges();
+  renderMonthList();
   renderHealthOption();
   renderCycleOption();
   renderGear();
@@ -582,7 +597,7 @@ async function stravaDisconnectAsk() {
   TS.toast(del ? 'Strava déconnecté, séances Strava supprimées' : 'Strava déconnecté, tes séances sont gardées');
 }
 
-window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderWeightCard(); renderHealthOption(); renderCycleOption(); renderGear(); });
+window.addEventListener('triseason:update', () => { if (!stravaBusy) renderStrava(); renderBadges(); renderMonthList(); renderWeightCard(); renderHealthOption(); renderCycleOption(); renderGear(); });
 
 // ── Apparence ───────────────────────────────────────────────────────────────
 function renderThemePick() {
@@ -742,6 +757,35 @@ function disableHealthOption() {
 }
 
 // Tous les badges : obtenus d'abord (du plus récent), puis les plus proches d'être obtenus.
+// Résumés du mois : un mois par ligne (sports suivis), du plus récent au plus ancien
+let monthsShowAll = false;
+const MONTHS_SHOWN = 2;
+function renderMonthList() {
+  const el = document.getElementById('monthList');
+  if (!el) return;
+  const shown = TS.sportsShown();
+  const by = {};
+  TS.getSessions().forEach(s => {
+    if (!s.date || !shown.includes(s.sport)) return;
+    const m = by[s.date.slice(0, 7)] = by[s.date.slice(0, 7)] || { n: 0, h: 0 };
+    m.n++; m.h += s.duration || 0;
+  });
+  const months = Object.keys(by).sort().reverse();
+  const cur = TS.localDateStr().slice(0, 7);
+  const list = monthsShowAll ? months : months.slice(0, MONTHS_SHOWN);
+  el.innerHTML = months.length ? list.map(ym => {
+    const name = TS.monthName(ym).replace(/^./, c => c.toUpperCase()) + ' ' + ym.slice(0, 4);
+    return `<button type="button" class="month-row" onclick="TS.showMonthSummary('${ym}')">
+      <span class="month-row__name">${name}${ym === cur ? ' <small>en cours</small>' : ''}</span>
+      <span class="month-row__val">${by[ym].n} séance${by[ym].n > 1 ? 's' : ''} · ${TS.formatHours(by[ym].h)}</span>
+      <span aria-hidden="true" class="month-row__go">›</span></button>`;
+  }).join('') : '<div style="font-size:13px;color:var(--text-3)">Pas encore de séance : ton premier résumé arrivera à la fin du mois.</div>';
+  const more = document.getElementById('monthMore');
+  more.hidden = months.length <= MONTHS_SHOWN;
+  more.style.display = more.hidden ? 'none' : '';   // .btn impose display : hidden seul ne suffit pas
+  more.textContent = monthsShowAll ? 'Voir moins' : `Voir tout (${months.length} mois)`;
+}
+
 function renderBadges() {
   const badges = TS.getAchievements();
   const earned = badges.filter(b => b.earned).sort((a, b) => b.date.localeCompare(a.date));
