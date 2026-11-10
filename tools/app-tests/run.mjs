@@ -2401,6 +2401,41 @@ async function main() {
   });
 
 
+  await test('Comparer deux mois : chiffres, même date pour le mois en cours, raccourcis « il y a 1 an », sans défilement latéral', async () => {
+    const data = sampleData();
+    const m0 = day(0).slice(0, 7), d0 = Number(day(0).slice(8, 10));
+    const back = n => { const d = new Date(m0 + '-15T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - n); return d.toISOString().slice(0, 7); };
+    const y1 = back(12);
+    // Il y a un an : une sortie le 1er (comptée à la même date) et une le 28 (après la date du jour, sauf en fin de mois)
+    data.sessions.push({ id: 'ya', date: y1 + '-01', sport: 'run', duration: 1, distance: 10 }, { id: 'yb', date: y1 + '-28', sport: 'velo', duration: 2, distance: 60 });
+    // Deux mois passés fixes : comparaison sur le mois entier
+    data.sessions.push({ id: 'p1', date: '2024-01-05', sport: 'run', duration: 1, distance: 12 }, { id: 'p2', date: '2024-01-20', sport: 'run', duration: 0.5, distance: 6 },
+      { id: 'p3', date: '2023-01-31', sport: 'run', duration: 1, distance: 9 });
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => {
+      const c = TS.monthCompare('2024-01', '2023-01');
+      return { until: c.until, a: [c.a.total.n, c.a.total.km], b: [c.b.total.n, c.b.total.km], curve: c.curves.km[0].slice(-1)[0], len: [c.curves.km[0].length, c.curves.km[1].length] };
+    });
+    await v.page.click('#monthCompareBtn'); await v.page.waitForTimeout(200);
+    const ui = await v.page.evaluate(() => ({ a: document.getElementById('mcA').value, b: document.getElementById('mcB').value,
+      note: (document.querySelector('#mcOut .ms-note') || {}).textContent || '', chart: !!document.querySelector('#mcChart svg path.mc-line--a'),
+      cals: document.querySelectorAll('.mc-cal').length, overflow: (() => { const b = document.querySelector('.mc__body'); return b.scrollWidth > b.clientWidth || document.documentElement.scrollWidth > innerWidth; })() }));
+    const same = await v.page.evaluate(() => { const c = TS.monthCompare(document.getElementById('mcA').value, document.getElementById('mcB').value); return [c.until, c.b.total.n]; });
+    await v.page.click('.mc__chip >> text=Mois d’avant'); await v.page.waitForTimeout(100);
+    const prevB = await v.page.evaluate(() => document.getElementById('mcB').value);
+    await v.page.click('#monthCompare [data-mc="close"]'); await v.page.waitForTimeout(300);
+    const closed = await v.page.evaluate(() => !document.getElementById('monthCompare'));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.until === null && JSON.stringify(r.a) === '[2,18]' && JSON.stringify(r.b) === '[1,9]' && r.curve === 18 && r.len[0] === 31 && r.len[1] === 31, 'mois passés : ' + JSON.stringify(r));
+    assert(ui.a === m0 && ui.b === y1, 'mois proposés : ' + JSON.stringify(ui));
+    assert(same[0] === d0 && same[1] === (d0 >= 28 ? 2 : 1), 'même date : ' + JSON.stringify(same));
+    assert(new RegExp('au ' + d0 + ' de chaque mois').test(ui.note), 'note : ' + ui.note);
+    assert(ui.chart && ui.cals === 2 && !ui.overflow, 'écran : ' + JSON.stringify(ui));
+    assert(prevB === back(1) && closed, 'mois d’avant : ' + prevB);
+  });
+
   await browser.close();
   server.close();
 

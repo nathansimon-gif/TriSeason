@@ -2397,8 +2397,10 @@ function monthRange(ym) {
 }
 function shortDate(day) { return parseLocalDate(day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
 
-function monthSummary(ym, data = getData()) {
-  const { from, to, days } = monthRange(ym);
+function monthSummary(ym, data = getData(), opts = {}) {
+  // opts.until = n : seulement jusqu'au n du mois (comparaison « à la même date »)
+  const full = monthRange(ym), from = full.from, days = full.days;
+  const to = opts.until && opts.until < days ? ym + '-' + String(opts.until).padStart(2, '0') : full.to;
   const today = localDateStr();
   const shown = sportsShown(data);
   const inM = d => !!d && d >= from && d <= to;
@@ -2412,7 +2414,7 @@ function monthSummary(ym, data = getData()) {
     a.elev += s.elevation || 0; a.kcal += s.kcal || 0;
     return a;
   }, { n: 0, h: 0, km: 0, elev: 0, kcal: 0 });
-  const r = { ym, from, to, days, current: ym === today.slice(0, 7), prevYm: shiftMonth(ym, -1),
+  const r = { ym, from, to, days, upTo: Number(to.slice(8, 10)), current: ym === today.slice(0, 7), prevYm: shiftMonth(ym, -1),
     total: tot(ses), prev: tot(pses) };
   if (!ses.length) return r;
 
@@ -2539,6 +2541,26 @@ function monthSummary(ym, data = getData()) {
 }
 
 // Pages du résumé (HTML) ; une page sans contenu n'est pas affichée.
+// Calendrier du mois en couleurs (sport du jour, plus foncé = plus long)
+function monthCalHtml(m) {
+  const first = parseLocalDate(m.from).getDay(), byDay = m.byDay || {};
+  const maxH = Math.max(...Object.values(byDay).map(d => d.h), 0.01);
+  let cells = '';
+  ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(x => { cells += `<div class="ms-cal__head">${x}</div>`; });
+  for (let i = 0; i < (first + 6) % 7; i++) cells += '<div></div>';
+  for (let i = 1; i <= m.days; i++) {
+    const d = m.from.slice(0, 8) + String(i).padStart(2, '0'), x = byDay[d];
+    const lvl = x ? Math.max(1, Math.ceil(x.h / maxH * 4)) : 0;
+    cells += `<div class="ms-cal__day${x ? ' ms-cal__day--' + x.sport + ' ms-lvl' + lvl : ''}" title="${x ? shortDate(d) + ' : ' + formatHours(x.h) : ''}">${i}</div>`;
+  }
+  return `<div class="ms-cal">${cells}</div>`;
+}
+function monthCalLegend(list) {
+  const sp = [...new Set(list.flatMap(m => Object.values(m.byDay || {}).map(d => d.sport)))];
+  return `<div class="ms-cal__legend">${sp.map(x => x === 'multi' ? '<span><i class="ms-cal__key ms-cal__day--multi"></i>Plusieurs sports</span>'
+    : `<span><i class="ms-cal__key ms-cal__day--${x}"></i>${(SPORTS[x] || {}).label || x}</span>`).join('')}<span class="ms-cal__more">plus foncé = plus long</span></div>`;
+}
+
 function monthSummaryPages(m) {
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const num = (v, dec = 0) => Number(v.toFixed(dec)).toLocaleString('fr-FR');
@@ -2561,19 +2583,8 @@ function monthSummaryPages(m) {
     <div class="ms-tiles">${tile(t.n, 'séance' + (t.n > 1 ? 's' : ''))}${tile(m.activeDays + '<small> / ' + m.days + '</small>', 'jours actifs')}${t.km ? tile(num(t.km), 'km') : ''}</div>${cmp}`));
 
   // 2. Jours d'entraînement : carte du mois
-  const first = parseLocalDate(m.from).getDay(), maxH = Math.max(...Object.values(m.byDay).map(d => d.h), 0.01);
-  let cells = '';
-  ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(x => { cells += `<div class="ms-cal__head">${x}</div>`; });
-  for (let i = 0; i < (first + 6) % 7; i++) cells += '<div></div>';
-  for (let i = 1; i <= m.days; i++) {
-    const d = m.from.slice(0, 8) + String(i).padStart(2, '0'), x = m.byDay[d];
-    const lvl = x ? Math.max(1, Math.ceil(x.h / maxH * 4)) : 0;
-    cells += `<div class="ms-cal__day${x ? ' ms-cal__day--' + x.sport + ' ms-lvl' + lvl : ''}" title="${x ? esc(shortDate(d) + ' : ' + formatHours(x.h)) : ''}">${i}</div>`;
-  }
   const s = m.streak;
-  pages.push(page('Tes jours d’entraînement', `<div class="ms-cal">${cells}</div>
-    <div class="ms-cal__legend">${[...new Set(Object.values(m.byDay).map(d => d.sport))].map(sp => sp === 'multi'
-      ? '<span><i class="ms-cal__key ms-cal__day--multi"></i>Plusieurs sports</span>' : `<span><i class="ms-cal__key ms-cal__day--${sp}"></i>${label(sp)}</span>`).join('')}<span class="ms-cal__more">plus foncé = plus long</span></div>
+  pages.push(page('Tes jours d’entraînement', `${monthCalHtml(m)}${monthCalLegend([m])}
     <div class="ms-lines">${s.days > 1 ? line('Plus longue série', s.days + ' jours d’affilée <small>(' + shortDate(s.from) + ' → ' + shortDate(s.to) + ')</small>') : ''}
     ${m.favDay ? line('Ton jour préféré', 'le ' + m.favDay.day + ' <small>(' + m.favDay.n + ' séances)</small>') : ''}
     ${line('Jours de repos', (m.current ? Math.max(0, Number(localDateStr().slice(8, 10)) - m.activeDays) : m.days - m.activeDays))}</div>`));
@@ -2716,6 +2727,165 @@ function showMonthSummary(ym) {
   requestAnimationFrame(() => box.classList.add('open'));
   box.querySelector('[data-ms="next"]').focus({ preventScroll: true });
   return true;
+}
+
+// ── Comparer deux mois ───────────────────────────────────────────────────────
+// Profil → Résumés du mois → « Comparer deux mois ». Si l'un des deux est le mois
+// en cours, les chiffres s'arrêtent au même jour pour les deux (comparaison juste).
+function monthLabelShort(ym) { return parseLocalDate(ym + '-01').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }); }
+function monthLabelLong(ym) { return monthName(ym).replace(/^./, c => c.toUpperCase()) + ' ' + ym.slice(0, 4); }
+// Mois qui ont des séances (sports suivis), du plus récent au plus ancien ; le mois en cours toujours inclus
+function monthsWithSessions(data = getData()) {
+  const shown = sportsShown(data), set = new Set([localDateStr().slice(0, 7)]);
+  (data.sessions || []).forEach(s => { if (s.date && shown.includes(s.sport)) set.add(s.date.slice(0, 7)); });
+  return [...set].sort().reverse();
+}
+function monthCompare(a, b, data = getData()) {
+  const today = localDateStr(), cur = today.slice(0, 7), dayNow = Number(today.slice(8, 10));
+  const until = a === cur || b === cur ? dayNow : null;
+  const A = monthSummary(a, data, { until }), B = monthSummary(b, data, { until });
+  const fullA = until ? monthSummary(a, data) : A, fullB = until ? monthSummary(b, data) : B;
+  // Cumul jour par jour (km, heures ou séances) ; le mois en cours s'arrête aujourd'hui
+  const cum = (m, key) => {
+    const len = m.ym === cur ? dayNow : m.days, out = [];
+    let t = 0;
+    for (let i = 1; i <= len; i++) { const x = (m.byDay || {})[m.from.slice(0, 8) + String(i).padStart(2, '0')]; t += x ? x[key] : 0; out.push(t); }
+    return out;
+  };
+  return { a: A, b: B, fullA, fullB, until, curves: { km: [cum(fullA, 'km'), cum(fullB, 'km')], h: [cum(fullA, 'h'), cum(fullB, 'h')], n: [cum(fullA, 'n'), cum(fullB, 'n')] } };
+}
+
+function showMonthCompare(a, b) {
+  if (document.getElementById('monthCompare')) return;
+  const list = monthsWithSessions();
+  if (!a) a = list[0];
+  if (!b) { const y = shiftMonth(a, -12); b = list.includes(y) ? y : (list.find(m => m < a) || shiftMonth(a, -1)); }
+  const box = document.createElement('div');
+  box.className = 'ms mc';
+  box.id = 'monthCompare';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-label', 'Comparer deux mois');
+  const opts = sel => list.map(m => `<option value="${m}"${m === sel ? ' selected' : ''}>${monthLabelLong(m)}</option>`).join('');
+  box.innerHTML = `<div class="ms__inner">
+    <div class="ms__top"><div class="mc__title">Comparer deux mois</div><button type="button" class="ms__close" data-mc="close">Fermer</button></div>
+    <div class="mc__body">
+      <div class="mc__pick">
+        <label class="mc__sel"><span><i class="mc__key mc__key--a"></i>Mois A</span><select class="form-input" id="mcA">${opts(a)}</select></label>
+        <label class="mc__sel"><span><i class="mc__key mc__key--b"></i>Mois B</span><select class="form-input" id="mcB">${opts(b)}</select></label>
+      </div>
+      <div class="mc__chips" id="mcChips"></div>
+      <div id="mcOut"></div>
+    </div></div>`;
+  document.body.appendChild(box);
+  document.documentElement.classList.add('ms-open');
+  let metric = null;
+  const close = () => { document.removeEventListener('keydown', onKey); box.classList.remove('open'); document.documentElement.classList.remove('ms-open'); setTimeout(() => box.remove(), 200); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  const render = () => {
+    const A = box.querySelector('#mcA').value, B = box.querySelector('#mcB').value;
+    box.querySelector('#mcChips').innerHTML = [[-1, 'Mois d’avant'], [-12, 'Il y a 1 an'], [-24, 'Il y a 2 ans']].map(([n, l]) => {
+      const m = shiftMonth(A, n), ok = list.includes(m);
+      return `<button type="button" class="mc__chip${m === B ? ' on' : ''}" data-mc-b="${m}"${ok ? '' : ' disabled title="Pas de séance ce mois-là"'}>${l}</button>`;
+    }).join('');
+    const c = monthCompare(A, B);
+    if (!metric) metric = c.a.total.km || c.b.total.km ? 'km' : 'h';
+    box.querySelector('#mcOut').innerHTML = monthCompareHtml(c, metric);
+    wireCompareChart(box, c, metric);
+  };
+  box.addEventListener('change', e => { if (e.target.matches('select')) render(); });
+  box.addEventListener('click', e => {
+    const t = e.target.closest('[data-mc], [data-mc-b], [data-mc-metric]');
+    if (!t) return;
+    if (t.dataset.mc === 'close') return close();
+    if (t.dataset.mcB) { box.querySelector('#mcB').value = t.dataset.mcB; render(); }
+    if (t.dataset.mcMetric) { metric = t.dataset.mcMetric; render(); }
+  });
+  render();
+  requestAnimationFrame(() => box.classList.add('open'));
+}
+
+function monthCompareHtml(c, metric) {
+  const A = c.a, B = c.b, la = monthLabelShort(A.ym), lb = monthLabelShort(B.ym);
+  const num = (v, dec = 0) => Number(v.toFixed(dec)).toLocaleString('fr-FR');
+  const km = v => num(v, v < 100 ? 1 : 0) + ' km';
+  const pct = (x, y) => !y ? '' : '<small>' + (x >= y ? '+' : '−') + Math.abs(Math.round((x - y) / y * 100)) + ' %</small>';
+  const sign = (d, fmt) => Math.abs(d) < 1e-9 ? '=' : (d > 0 ? '+' : '−') + fmt(Math.abs(d));
+  const row = (label, va, vb, diff) => `<div class="mc-row"><span>${label}</span><b>${va}</b><b>${vb}</b><em>${diff}</em></div>`;
+  const head = `<div class="mc-row mc-row--head"><span></span><b><i class="mc__key mc__key--a"></i>${la}</b><b><i class="mc__key mc__key--b"></i>${lb}</b><em>Écart</em></div>`;
+  if (!A.total.n && !B.total.n) return '<p class="ms-note">Aucune séance ces deux mois-là.</p>';
+  let h = c.until ? `<p class="ms-note">Du 1er au ${c.until} de chaque mois, pour comparer à la même date.</p>` : '';
+  // 1. Chiffres
+  const t = A.total, u = B.total;
+  h += `<h3 class="mc-h">En chiffres</h3><div class="mc-table">${head}
+    ${row('Heures', formatHours(t.h), formatHours(u.h), sign(t.h - u.h, formatHours) + pct(t.h, u.h))}
+    ${row('Séances', t.n, u.n, sign(t.n - u.n, String) + pct(t.n, u.n))}
+    ${row('Jours actifs', A.activeDays || 0, B.activeDays || 0, sign((A.activeDays || 0) - (B.activeDays || 0), String))}
+    ${t.km || u.km ? row('Distance', km(t.km), km(u.km), sign(t.km - u.km, km) + pct(t.km, u.km)) : ''}
+    ${t.elev || u.elev ? row('Dénivelé', num(t.elev) + ' m', num(u.elev) + ' m', sign(t.elev - u.elev, v => num(v) + ' m')) : ''}</div>`;
+  // 2. Courbe cumulée
+  const seg = [['km', 'Km'], ['h', 'Heures'], ['n', 'Séances']].filter(([k]) => k !== 'km' || t.km || u.km)
+    .map(([k, l]) => `<button type="button" data-mc-metric="${k}" class="${k === metric ? 'on' : ''}">${l}</button>`).join('');
+  h += `<h3 class="mc-h">Au fil du mois</h3><div class="seg mc-seg" role="group" aria-label="Quoi">${seg}</div>
+    <div class="mc-chart" id="mcChart"></div><div class="mc-read" id="mcRead"></div>`;
+  // 3. Calendriers
+  const calBox = (m, k) => `<div class="mc-cal"><div class="mc-cal__name"><i class="mc__key mc__key--${k}"></i>${monthLabelLong(m.ym)}<small>${m.activeDays || 0} jours actifs</small></div>${monthCalHtml(m)}</div>`;
+  h += `<h3 class="mc-h">Calendriers</h3><div class="mc-cals">${calBox(c.fullA, 'a')}${calBox(c.fullB, 'b')}</div>${monthCalLegend([c.fullA, c.fullB])}`;
+  // 4. Par sport
+  const sports = sportsShown().filter(sp => (A.sports || []).some(x => x.sport === sp && x.n) || (B.sports || []).some(x => x.sport === sp && x.n));
+  if (sports.length) {
+    h += `<h3 class="mc-h">Par sport</h3><div class="mc-table">${head}` + sports.map(sp => {
+      const x = (A.sports || []).find(s => s.sport === sp && s.n) || { n: 0, h: 0, km: 0 }, y = (B.sports || []).find(s => s.sport === sp && s.n) || { n: 0, h: 0, km: 0 };
+      const name = `<span class="sport-dot sport-dot--${sp}"></span>${SPORTS[sp].label}`;
+      if (sp === 'muscu') return row(name, formatHours(x.h), formatHours(y.h), sign(x.h - y.h, formatHours)) + row('<small>séances</small>', x.n, y.n, sign(x.n - y.n, String));
+      return row(name, km(x.km), km(y.km), sign(x.km - y.km, km) + pct(x.km, y.km))
+        + (x.pace || y.pace ? row(`<small>${SPORTS[sp].paceLabel.toLowerCase()}</small>`, x.pace || '—', y.pace || '—', '') : '');
+    }).join('') + '</div>';
+  }
+  // 5. Nutrition et forme (seulement ce que les deux mois ont)
+  const R = [], na = A.nutrition || {}, nb = B.nutrition || {}, fa = A.forme || {}, fb = B.forme || {};
+  if (na.mealDays || nb.mealDays) R.push(row('Jours de repas notés', na.mealDays || 0, nb.mealDays || 0, sign((na.mealDays || 0) - (nb.mealDays || 0), String)));
+  if (na.train && nb.train) R.push(row('Glucides, jours d’entraînement', num(na.train.carbs) + ' g', num(nb.train.carbs) + ' g', sign(na.train.carbs - nb.train.carbs, v => num(v) + ' g')));
+  if (na.rest && nb.rest) R.push(row('Glucides, jours de repos', num(na.rest.carbs) + ' g', num(nb.rest.carbs) + ' g', sign(na.rest.carbs - nb.rest.carbs, v => num(v) + ' g')));
+  if (na.waterDays && nb.waterDays) R.push(row('Eau par jour noté', formatLiters(na.waterAvg), formatLiters(nb.waterAvg), ''));
+  if (fa.feel && fb.feel) R.push(row('Ressenti moyen', FEEL_WORDS_FR[Math.round(fa.feel)], FEEL_WORDS_FR[Math.round(fb.feel)], ''));
+  if (fa.rpe && fb.rpe) R.push(row('Effort ressenti moyen', num(fa.rpe, 1) + '/10', num(fb.rpe, 1) + '/10', sign(fa.rpe - fb.rpe, v => num(v, 1))));
+  if (R.length) h += `<h3 class="mc-h">Nutrition et forme</h3><div class="mc-table">${head}${R.join('')}</div>`;
+  return h;
+}
+
+// Courbe cumulée en SVG (pas de bibliothèque) ; l'infobulle suit le doigt
+function wireCompareChart(box, c, metric) {
+  const el = box.querySelector('#mcChart'), read = box.querySelector('#mcRead');
+  if (!el) return;
+  const [sa, sb] = c.curves[metric];
+  const fmt = v => metric === 'h' ? formatHours(v) : metric === 'km' ? Number(v.toFixed(v < 100 ? 1 : 0)).toLocaleString('fr-FR') + ' km' : v + ' séance' + (v > 1 ? 's' : '');
+  const W = 320, H = 170, L = 6, R = 6, T = 10, Bm = 20, days = Math.max(sa.length, sb.length, c.fullA.days, c.fullB.days);
+  const max = Math.max(1, ...sa, ...sb) * 1.08;
+  const x = i => L + (i / (days - 1)) * (W - L - R), y = v => T + (1 - v / max) * (H - T - Bm);
+  const path = s => s.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+  const grid = [0.5, 1].map(f => `<line class="mc-grid" x1="${L}" x2="${W - R}" y1="${y(max / 1.08 * f)}" y2="${y(max / 1.08 * f)}"/>`).join('');
+  const ticks = [1, 10, 20, days].map(d => `<text class="mc-tick" x="${x(d - 1)}" y="${H - 5}" text-anchor="${d === 1 ? 'start' : d === days ? 'end' : 'middle'}">${d}</text>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumul jour par jour des deux mois">${grid}${ticks}
+    <path class="mc-line mc-line--b" d="${path(sb)}"/><path class="mc-line mc-line--a" d="${path(sa)}"/>
+    <line class="mc-cursor" id="mcCursor" y1="${T}" y2="${H - Bm}" x1="-10" x2="-10"/>
+    <circle class="mc-dot mc-dot--b" id="mcDotB" r="3.5" cx="-10" cy="-10"/><circle class="mc-dot mc-dot--a" id="mcDotA" r="3.5" cx="-10" cy="-10"/>
+    <rect x="0" y="0" width="${W}" height="${H}" fill="transparent" id="mcHit"/></svg>`;
+  const show = i => {
+    i = Math.max(0, Math.min(days - 1, i));
+    const va = sa[Math.min(i, sa.length - 1)], vb = sb[Math.min(i, sb.length - 1)];
+    const set = (id, a) => { const n = el.querySelector(id); Object.entries(a).forEach(([k, v]) => n.setAttribute(k, v)); };
+    set('#mcCursor', { x1: x(i), x2: x(i) });
+    set('#mcDotA', i < sa.length ? { cx: x(i), cy: y(va) } : { cx: -10, cy: -10 });
+    set('#mcDotB', i < sb.length ? { cx: x(i), cy: y(vb) } : { cx: -10, cy: -10 });
+    read.innerHTML = `Au ${i + 1} : <span><i class="mc__key mc__key--a"></i>${i < sa.length ? fmt(va) : '—'}</span> <span><i class="mc__key mc__key--b"></i>${i < sb.length ? fmt(vb) : '—'}</span>`;
+  };
+  const svg = el.querySelector('svg');
+  const at = e => { const r = svg.getBoundingClientRect(); return Math.round(((e.clientX - r.left) / r.width * W - L) / (W - L - R) * (days - 1)); };
+  svg.addEventListener('pointermove', e => show(at(e)));
+  svg.addEventListener('pointerdown', e => show(at(e)));
+  show(Math.max(sa.length, 1) - 1);   // au départ : le dernier jour du mois A
 }
 
 // À l'ouverture : le mois écoulé, une seule fois (seulement s'il y a eu des séances).
@@ -3913,5 +4083,6 @@ window.TS = {
   MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, shiftMonth, monthName,
+  monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
   SPORTS, COMP_TYPES,
 };
