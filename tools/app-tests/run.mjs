@@ -2246,6 +2246,31 @@ async function main() {
     assert(manifest.name === 'ORKA' && manifest.short_name === 'ORKA', 'manifest : ' + JSON.stringify(manifest).slice(0, 120));
   });
 
+  await test('Séances prévues : 2 prochaines visibles (« Voir les n autres »), semaines passées repliées', async () => {
+    const data = sampleData();
+    // Lundi de la semaine en cours (calendrier de Paris) et quelques séances prévues autour
+    const mondayOffset = (() => { const d = new Date(day(0) + 'T12:00:00Z'); return -((d.getUTCDay() + 6) % 7); })();
+    const mk = (id, off) => ({ id, date: day(off), sport: 'run', distance: 10 });
+    data.plans = [mk('old1', mondayOffset - 9), mk('old2', mondayOffset - 3), mk('n1', 1), mk('n2', 2), mk('n3', 4), mk('n4', 6)];
+    if (mondayOffset < 0) data.plans.push(mk('week', mondayOffset));   // plus tôt cette semaine (sauf si on est lundi)
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const ids = () => v.page.evaluate(() => [...document.querySelectorAll('#planList .plan-row')].map(b => (b.getAttribute('onclick').match(/'([^']+)'\)$/) || [])[1]));
+    const before = await ids();
+    const buttons = await v.page.evaluate(() => [...document.querySelectorAll('#planList .plan-more')].map(b => b.textContent));
+    await v.page.click('#planList .plan-more >> text=autres séances prévues'); await v.page.waitForTimeout(100);
+    const allNext = await ids();
+    await v.page.click('#planList .plan-more >> text=semaines passées'); await v.page.waitForTimeout(100);
+    const withOld = await ids();
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    const week = mondayOffset < 0 ? ['week'] : [];
+    assert(JSON.stringify(before) === JSON.stringify([...week, 'n1', 'n2']), 'au départ : ' + JSON.stringify(before));
+    assert(buttons.some(b => /semaines passées \(2\)/.test(b)) && buttons.some(b => /les 2 autres séances prévues/.test(b)), 'boutons : ' + JSON.stringify(buttons));
+    assert(JSON.stringify(allNext) === JSON.stringify([...week, 'n1', 'n2', 'n3', 'n4']), 'toutes à venir : ' + JSON.stringify(allNext));
+    assert(JSON.stringify(withOld) === JSON.stringify(['old1', 'old2', ...week, 'n1', 'n2', 'n3', 'n4']), 'avec semaines passées : ' + JSON.stringify(withOld));
+  });
+
   await browser.close();
   server.close();
 
