@@ -759,7 +759,7 @@ function disableHealthOption() {
 // Tous les badges : obtenus d'abord (du plus récent), puis les plus proches d'être obtenus.
 // Résumés du mois : un mois par ligne (sports suivis), du plus récent au plus ancien
 let monthsShowAll = false;
-const MONTHS_SHOWN = 6;
+const MONTHS_SHOWN = 2;
 function renderMonthList() {
   const el = document.getElementById('monthList');
   if (!el) return;
@@ -783,7 +783,7 @@ function renderMonthList() {
   const more = document.getElementById('monthMore');
   more.hidden = months.length <= MONTHS_SHOWN;
   more.style.display = more.hidden ? 'none' : '';   // .btn impose display : hidden seul ne suffit pas
-  more.textContent = monthsShowAll ? 'Voir seulement les derniers mois' : `Voir les ${months.length} mois`;
+  more.textContent = monthsShowAll ? 'Voir moins' : `Voir tout (${months.length} mois)`;
 }
 
 function renderBadges() {
