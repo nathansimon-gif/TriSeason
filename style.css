@@ -829,3 +829,71 @@ html.ts-loading-data .page .card::after, html.ts-loading-data .page .section-car
 /* Graphiques : un glissé horizontal du doigt parcourt le graphique (infobulle qui suit le doigt)
    au lieu de faire défiler la page ; un glissé vertical fait toujours défiler la page. */
 canvas { touch-action: pan-y; }
+
+/* ── Résumé du mois (pages qu'on fait défiler, plein écran) ── */
+html.ms-open, html.ms-open body { overflow: hidden; }
+.ms { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: flex; justify-content: center;
+  opacity: 0; transition: opacity .2s; overflow-x: hidden; }
+.ms.open { opacity: 1; }
+.ms__inner { width: 100%; max-width: 480px; display: flex; flex-direction: column; min-height: 0;
+  padding: calc(var(--safe-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 14px); }
+.ms__top { display: flex; align-items: center; gap: 12px; }
+.ms__bars { flex: 1; display: flex; gap: 4px; }
+.ms__bars i { flex: 1; height: 3px; border-radius: 2px; background: var(--surface3); }
+.ms__bars i.on { background: var(--accent); }
+.ms__close { background: none; border: 0; color: var(--text-2); font: 500 13px var(--font); padding: 8px 2px; cursor: pointer; }
+.ms__close:hover { color: var(--text); }
+.ms__pages { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 22px 0 12px; cursor: pointer; }
+.ms__nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.ms__nav .btn { min-width: 112px; justify-content: center; }
+.ms__count { font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+.ms-page__kicker { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.ms-page__title { font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; margin: 0 0 20px; color: var(--text); }
+.ms-big { font-family: var(--mono); font-size: 56px; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--accent); }
+.ms-big__label { font-size: 14px; color: var(--text-2); margin: 6px 0 22px; }
+.ms-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.ms-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; min-width: 0; }
+.ms-tile__val { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -.02em; }
+.ms-tile__val small, .ms-line small { font-size: 12px; color: var(--text-3); font-weight: 400; font-family: var(--font); letter-spacing: 0; }
+.ms-tile__label { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.ms-note { font-size: 13px; color: var(--text-2); line-height: 1.5; margin: 10px 0 0; }
+.ms-lines { display: grid; gap: 0; margin-top: 14px; }
+.ms-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+.ms-line:last-child { border-bottom: 0; }
+.ms-line b { color: var(--text); font-weight: 600; text-align: right; }
+.ms-lines--big .ms-line { padding: 14px 0; font-size: 14px; flex-direction: column; align-items: flex-start; gap: 3px; }
+.ms-lines--big .ms-line b { font-size: 18px; text-align: left; font-family: var(--mono); letter-spacing: -.01em; }
+.ms-lines--big .ms-line small { font-family: var(--font); }
+.ms-q { color: var(--text-3); font-size: 12px; }
+.ms-sport { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.ms-sport__head { display: flex; align-items: center; gap: 2px; font-size: 15px; }
+.ms-sport__main { margin-left: auto; font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--text); }
+.ms-sport__sub { font-size: 12.5px; color: var(--text-2); margin-top: 4px; padding-left: 14px; }
+.ms-diff { color: var(--text); }
+.ms-sub { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 6px; }
+.ms-sub:first-of-type { margin-top: 0; }
+.ms-item { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.ms-item b { color: var(--text); font-weight: 600; }
+.ms-item span { color: var(--text-2); }
+.ms-badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.ms-body .bm-figs { max-width: 300px; margin: 4px auto 0; }
+.ms-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; max-width: 340px; }
+.ms-cal > div { aspect-ratio: 1; display: grid; place-items: center; font-size: 12px; font-family: var(--mono); color: var(--text-3); border-radius: 5px; }
+.ms-cal .ms-cal__head { aspect-ratio: auto; font-family: var(--font); font-size: 11px; padding-bottom: 2px; }
+.ms-cal__day { background: var(--surface); }
+.ms-cal__day--nat { --c: var(--nat); } .ms-cal__day--velo { --c: var(--velo); } .ms-cal__day--run { --c: var(--run); }
+.ms-cal__day--muscu { --c: var(--muscu); } .ms-cal__day--multi { --c: var(--accent2); }
+.ms-cal__day.ms-lvl1 { background: color-mix(in srgb, var(--c) 28%, transparent); color: var(--text); }
+.ms-cal__day.ms-lvl2 { background: color-mix(in srgb, var(--c) 50%, transparent); color: var(--text); }
+.ms-cal__day.ms-lvl3 { background: color-mix(in srgb, var(--c) 75%, transparent); color: var(--bg); }
+.ms-cal__day.ms-lvl4 { background: var(--c); color: var(--bg); }
+.ms-cal__legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--text-2); margin-top: 10px; }
+.ms-cal__legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ms-cal__key { width: 10px; height: 10px; border-radius: 2px; background: var(--c); display: inline-block; }
+.ms-cal__more { color: var(--text-3); }
+.ms-compare { display: grid; gap: 0; margin-top: 4px; font-size: 13px; }
+.ms-compare > div { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+.ms-compare > div > span { color: var(--text-2); }
+.ms-compare b { font-family: var(--mono); font-size: 16px; color: var(--text); }
+.ms-compare .ms-compare__head span { font-size: 11.5px; color: var(--text-3); }
+.cal-summary-btn { font-size: 12px; }

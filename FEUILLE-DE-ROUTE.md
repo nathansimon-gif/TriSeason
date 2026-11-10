@@ -9,22 +9,13 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑 **Nouveau nom ORKA, la suite** (l'appli affiche déjà ORKA partout) :
+- [ ] 🧑 **Nouveau nom, la suite** (l'appli affiche ORKA partout, mais **ORKA est déjà utilisé par une autre appli** : choisir un autre nom, puis Claude le remplace partout) :
   - choisir le logo (pistes dessinées le 6 novembre : aileron, élan, de zéro au sommet, tache de l'orque), puis Claude met l'icône dans l'appli
   - vérifier que le nom est libre : INPI et EUIPO (marques), App Store / Google Play, nom de site, Instagram
   - sur strava.com/settings/api : changer le **nom de l'application** en ORKA (c'est le nom que les gens voient en connectant Strava)
   - *facultatif* : une adresse e-mail au nouveau nom (aujourd'hui tri.season.tracker@gmail.com, gardée en attendant), et le nom du projet dans la console Firebase / l'e-mail de mot de passe oublié
   - *plus tard, avec Claude* : changer l'adresse du site (aujourd'hui …github.io/TriSeason/). Attention : il faut aussi mettre à jour Firebase (domaines autorisés) et Strava (domaine de retour), sinon la connexion casse ; les applis installées sur les téléphones devront être réinstallées
-- [ ] 🤖🧑 **Résumé du mois** (idée de Nathan, validée le 4 novembre 2026 ; les 5 étapes de lisibilité sont faites : **c'est la prochaine tâche**) : à la première ouverture de l'appli à partir du 1er du mois, un résumé du mois écoulé s'affiche en plein écran, une seule fois par mois et par compte (comme les messages de nouveautés), seulement s'il y a eu des séances ce mois-là. Proposition : **4 à 6 pages qu'on fait défiler** (comme Strava), une idée par page, en gros chiffres :
-  1. le mois en un coup d'œil : heures, séances, distance par sport, comparé au mois d'avant
-  2. ta meilleure semaine et ta plus longue séance
-  3. records battus et badges gagnés (sinon la page est sautée)
-  4. défis : semaines réussies, série
-  5. ce que Strava ne montre pas : jours de repas notés, glucides les jours d'entraînement et de repos, eau, effort ressenti moyen
-  6. la suite : prochaine course (J-…) et séances prévues
-  - bouton « Passer » à tout moment, et le résumé reste consultable ensuite (lien dans le Dashboard, et les mois précédents) ; tout est calculé à partir des données, rien de plus n'est enregistré à part le mois déjà vu
-  - limite : pas de notification sur le téléphone (il faudrait un serveur qui envoie des messages) ; le résumé apparaît à la prochaine ouverture de l'appli
-  - à relier au **partage en story** (tâche 3) : chaque page pourra devenir une image à partager
+- [ ] 🧑 **Résumé du mois, la suite** : le regarder sur ton compte (premier résumé : octobre 2026) et dire ce qui manque ou ce qui est de trop ; plus tard, chaque page pourra devenir une image à partager (tâche 3, partage en story)
 - [ ] 🧑🤖 **Records de musculation, suite** (idées à discuter) : records par poids du corps (charge / poids), badge pour un record battu (le défi de la semaine « Battre un de tes records de charge » existe déjà), records aussi pour les exercices tenus en charge (gainage lesté)
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
@@ -137,6 +128,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 10/11/2026 | — | **Résumé du mois** : à la première ouverture du Dashboard à partir du 1er, le mois écoulé s'affiche en pages qu'on fait défiler (une seule fois par compte, seulement s'il y a eu des séances) : heures, séances, jours actifs et km comparés au mois d'avant ; carte du mois (jours colorés par sport, plus foncé = plus long), plus longue série de jours, jour préféré, jours de repos ; sport par sport (km, heures, allure ou vitesse, écart avec le mois d'avant, dénivelé, calories dépensées) ; temps forts (meilleure semaine, meilleure journée, plus longues sorties) ; courses, records (perso ou de la saison), records de musculation et badges du mois ; musculation (séances, séries, tonnes soulevées, carte du corps du mois) ; nutrition (jours notés, glucides et calories des jours d'entraînement et de repos, eau, ravitaillements et glucides par heure) ; forme (condition de fond, charge comparée au mois d'avant, ressenti, effort, défis réussis) ; et la suite (prochaine course, séances prévues). Bouton « Résumé du mois » dans le calendrier du Dashboard pour revoir n'importe quel mois. Rien de plus n'est enregistré que le mois déjà vu ; les options santé n'y figurent pas |
 | 10/11/2026 | #74 | Dashboard, « **Séances prévues** » : seules les **2 prochaines** sont visibles, « Voir les n autres séances prévues » déplie la suite ; les séances des **semaines passées** (réalisées ou non) sont repliées derrière « Voir les séances des semaines passées (n) » ; celles de la semaine en cours restent visibles |
 | 09/11/2026 | #73 | **TriSeason devient ORKA** : nouveau nom dans toute l'appli (barre du haut, titres des pages, nom de l'appli installée, connexion, aide, confidentialité « ORKA (anciennement TriSeason) », messages, rapport du lundi). Message « TriSeason devient ORKA » une seule fois pour les comptes qui utilisaient déjà l'appli. Rien ne change pour les données : les noms internes gardent l'ancien préfixe |
 | 09/11/2026 | #73 | Feuille de route remise à jour : chantier lisibilité retiré de « Maintenant » (fait, voir plus bas), résumé du mois remonté en prochaine tâche, Blaze noté une seule fois, séries détaillées de musculation signalées comme faites, règles du cycle en rose |

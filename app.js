@@ -2352,14 +2352,14 @@ function showNews() {
   const data = getData();
   const seen = data.news_seen || [];
   const todo = NEWS.filter(n => !seen.includes(n.id));
-  if (!todo.length) return;
+  if (!todo.length) return maybeShowMonthSummary();
   // Un seul message par ouverture : le premier à montrer ; ceux qui ne concernent pas
   // ce compte sont marqués vus sans s'afficher, les autres attendent la prochaine ouverture.
   const shows = x => ((data.sessions || []).length || x.everyone) && !(x.skip && x.skip(data));
   const n = todo.find(shows);
   data.news_seen = seen.concat(todo.filter(x => x === n || !shows(x)).map(x => x.id));
   saveData(data);
-  if (!n) return;
+  if (!n) return maybeShowMonthSummary();
   const box = document.createElement('div');
   box.className = 'modal-overlay';
   box.id = 'newsModal';
@@ -2374,6 +2374,360 @@ function showNews() {
   box.addEventListener('click', e => {
     if (e.target === box || e.target.closest('[data-close]')) { box.classList.remove('open'); setTimeout(() => box.remove(), 250); }
   });
+}
+
+// ── Résumé du mois ───────────────────────────────────────────────────────────
+// À la première ouverture à partir du 1er, le mois écoulé s'affiche en quelques
+// pages qu'on fait défiler (une seule fois par compte : data.month_seen = 'AAAA-MM'),
+// seulement s'il y a eu des séances. Consultable ensuite depuis le calendrier du
+// Dashboard (n'importe quel mois). Tout est calculé à partir des données : rien
+// d'autre n'est enregistré. Sports suivis seulement ; jamais les options santé.
+const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const WEEKDAYS_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const FEEL_WORDS_FR = ['', 'très mauvais', 'mauvais', 'neutre', 'bon', 'très bon'];
+function monthName(ym) { return MONTHS_FR[Number(ym.slice(5, 7)) - 1]; }
+function monthOf(ym) { const n = monthName(ym); return (/^[aeiou]/.test(n) ? 'd’' : 'de ') + n; }
+function shiftMonth(ym, n) {
+  const d = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + n, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function monthRange(ym) {
+  const days = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate();
+  return { from: ym + '-01', to: ym + '-' + String(days).padStart(2, '0'), days };
+}
+function shortDate(day) { return parseLocalDate(day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
+
+function monthSummary(ym, data = getData()) {
+  const { from, to, days } = monthRange(ym);
+  const today = localDateStr();
+  const shown = sportsShown(data);
+  const inM = d => !!d && d >= from && d <= to;
+  const all = (data.sessions || []).filter(s => s.date && shown.includes(s.sport));
+  const ses = all.filter(s => inM(s.date));
+  const pr = monthRange(shiftMonth(ym, -1));
+  const pses = all.filter(s => s.date >= pr.from && s.date <= pr.to);
+  const tot = list => list.reduce((a, s) => {
+    a.n++; a.h += s.duration || 0;
+    if (s.sport !== 'muscu') a.km += s.distance || 0;
+    a.elev += s.elevation || 0; a.kcal += s.kcal || 0;
+    return a;
+  }, { n: 0, h: 0, km: 0, elev: 0, kcal: 0 });
+  const r = { ym, from, to, days, current: ym === today.slice(0, 7), prevYm: shiftMonth(ym, -1),
+    total: tot(ses), prev: tot(pses) };
+  if (!ses.length) return r;
+
+  // Jours : volume et sport principal
+  const byDay = {};
+  ses.forEach(s => {
+    const d = byDay[s.date] = byDay[s.date] || { h: 0, km: 0, n: 0, sp: {} };
+    d.h += s.duration || 0; d.n++; d.sp[s.sport] = (d.sp[s.sport] || 0) + (s.duration || 0.01);
+    if (s.sport !== 'muscu') d.km += s.distance || 0;
+  });
+  Object.values(byDay).forEach(d => {
+    const sp = Object.keys(d.sp);
+    d.sport = sp.length > 1 ? 'multi' : sp[0];
+  });
+  r.byDay = byDay;
+  r.activeDays = Object.keys(byDay).length;
+  const dayKeys = Object.keys(byDay).sort();
+  r.bestDay = dayKeys.reduce((b, d) => !b || byDay[d].h > byDay[b].h ? d : b, null);
+  // Plus longue série de jours d'affilée
+  let run = 0, best = 0, bestEnd = null, prevD = null;
+  dayKeys.forEach(d => {
+    run = prevD && addDaysStr(prevD, 1) === d ? run + 1 : 1;
+    if (run > best) { best = run; bestEnd = d; }
+    prevD = d;
+  });
+  r.streak = { days: best, from: bestEnd ? addDaysStr(bestEnd, -(best - 1)) : null, to: bestEnd };
+  // Jour de la semaine le plus fréquent
+  const wd = [0, 0, 0, 0, 0, 0, 0];
+  ses.forEach(s => { wd[parseLocalDate(s.date).getDay()]++; });
+  const top = wd.indexOf(Math.max(...wd));
+  r.favDay = ses.length >= 4 && wd.filter(v => v === wd[top]).length === 1 ? { day: WEEKDAYS_FR[top], n: wd[top] } : null;
+  // Meilleure semaine (séances du mois seulement)
+  const byWeek = {};
+  ses.forEach(s => { const w = getISOWeek(s.date); const x = byWeek[w] = byWeek[w] || { h: 0, n: 0, km: 0 }; x.h += s.duration || 0; x.n++; if (s.sport !== 'muscu') x.km += s.distance || 0; });
+  const bw = Object.keys(byWeek).reduce((b, w) => !b || byWeek[w].h > byWeek[b].h ? w : b, null);
+  r.bestWeek = Object.keys(byWeek).length > 1 ? { monday: localDateStr(getWeekMonday(bw)), ...byWeek[bw] } : null;
+
+  // Par sport
+  r.sports = shown.map(sp => {
+    const l = ses.filter(s => s.sport === sp), p = pses.filter(s => s.sport === sp);
+    if (!l.length && !p.length) return null;
+    const withDist = l.filter(s => s.distance && s.duration);
+    const dh = withDist.reduce((a, s) => a + s.duration, 0), dk = withDist.reduce((a, s) => a + s.distance, 0);
+    const longest = sp === 'muscu' ? l.reduce((b, s) => !b || (s.duration || 0) > (b.duration || 0) ? s : b, null)
+      : l.reduce((b, s) => !b || (s.distance || 0) > (b.distance || 0) ? s : b, null);
+    return { sport: sp, ...tot(l), prev: tot(p), pace: sp === 'muscu' ? null : calcPace(dh, dk, sp), longest };
+  }).filter(Boolean);
+  r.longest = ses.reduce((b, s) => !b || (s.duration || 0) > (b.duration || 0) ? s : b, null);
+
+  // Records, courses, badges
+  const recs = data.records || [];
+  r.records = recs.filter(x => inM(x.date) && x.time && compTimeToSec(x.time) > 0).map(x => {
+    const sec = compTimeToSec(x.time);
+    const before = recs.filter(y => y !== x && y.sport === x.sport && y.dist === x.dist && y.date && y.date < x.date && compTimeToSec(y.time) > 0);
+    return { ...x, pb: !before.some(y => compTimeToSec(y.time) <= sec), first: !before.length };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  r.comps = (data.competitions || []).filter(c => inM(c.date) && c.date <= today).sort((a, b) => a.date.localeCompare(b.date)).map(c => ({
+    ...c, goalOk: !!(c.goal_time && c.actual_time && compTimeToSec(c.actual_time) && compTimeToSec(c.actual_time) <= compTimeToSec(c.goal_time)) }));
+  r.muscuRecords = shown.includes('muscu') ? muscuRecordEvents({ from, to }) : [];
+  r.badges = getAchievements(data).filter(b => b.earned && inM(b.date));
+
+  // Musculation
+  const mus = ses.filter(s => s.sport === 'muscu');
+  if (mus.length) {
+    const load = muscuMuscleLoad({ from, to });
+    r.muscu = { n: mus.length, h: mus.reduce((a, s) => a + (s.duration || 0), 0),
+      sets: mus.reduce((a, s) => a + (s.exercises || []).reduce((b, e) => b + exSeries(e).length, 0), 0),
+      kg: mus.reduce((a, s) => a + muscuVolume(s), 0), totals: load.totals,
+      top: Object.keys(load.totals).sort((a, b) => load.totals[b] - load.totals[a]).slice(0, 3) };
+  }
+
+  // Nutrition : jours notés, apports des jours d'entraînement et de repos, eau, ravitaillements
+  const nutri = data.nutrition || {};
+  const mealDays = [...new Set((nutri.meals || []).filter(m => inM(m.date)).map(m => m.date))].sort();
+  const water = dailyWater(data), goal = hydroGoal(data);
+  const waterDays = Object.keys(water).filter(d => inM(d) && water[d] > 0);
+  const fuel = (nutri.fuel || []).filter(f => inM(f.date));
+  if (mealDays.length || waterDays.length || fuel.length) {
+    const sesDays = new Set(ses.map(s => s.date));
+    const avgOf = list => { if (list.length < 2) return null; const t = list.map(d => dayIntake(d, data));
+      return { days: list.length, kcal: Math.round(t.reduce((a, x) => a + x.kcal, 0) / list.length), carbs: Math.round(t.reduce((a, x) => a + x.glucides, 0) / list.length) }; };
+    const perHour = ses.map(s => sessionFuelSummary(s, data)).filter(x => x && x.perHour);
+    r.nutrition = { mealDays: mealDays.length, train: avgOf(mealDays.filter(d => sesDays.has(d))), rest: avgOf(mealDays.filter(d => !sesDays.has(d))),
+      waterDays: waterDays.length, waterAvg: waterDays.length ? Math.round(waterDays.reduce((a, d) => a + water[d], 0) / waterDays.length) : 0,
+      waterGoalDays: waterDays.filter(d => water[d] >= goal).length, goal,
+      fuel: fuel.reduce((a, f) => a + (f.qty || 1), 0),
+      carbsPerHour: perHour.length ? Math.round(perHour.reduce((a, x) => a + x.perHour, 0) / perHour.length) : null, fuelSessions: perHour.length };
+  }
+
+  // Forme : condition de fond (même calcul que la page Forme), charge, ressenti, défis
+  const withRpe = (data.sessions || []).filter(s => s.date && s.duration && s.rpe);
+  const tssOf = list => Math.round(list.reduce((a, s) => a + (s.rpe ? calcTSS(s.duration || 0, s.rpe) : 0), 0));
+  const forme = {};
+  if (withRpe.length >= 5 && ses.some(s => s.rpe)) {
+    const daily = {};
+    withRpe.forEach(s => { daily[s.date] = (daily[s.date] || 0) + calcTSS(s.duration, s.rpe); });
+    const first = Object.keys(daily).sort()[0];
+    const end = to < today ? to : today, k = 1 - Math.exp(-1 / 42);
+    let ctl = 0, start = null;
+    for (let d = first; d <= end; d = addDaysStr(d, 1)) {
+      if (d === from) start = ctl;
+      ctl += ((daily[d] || 0) - ctl) * k;
+    }
+    forme.ctl = { start: Math.round((start || 0) * 10) / 10, end: Math.round(ctl * 10) / 10 };
+    forme.tss = tssOf(ses); forme.prevTss = tssOf(pses);
+  }
+  const feel = ses.filter(s => s.sensation), rpe = ses.filter(s => s.rpe);
+  if (feel.length >= 3) forme.feel = feel.reduce((a, s) => a + s.sensation, 0) / feel.length;
+  if (rpe.length >= 3) forme.rpe = rpe.reduce((a, s) => a + s.rpe, 0) / rpe.length;
+  // Défis : semaines qui se terminent dans le mois (déjà finies)
+  const hist = challengeHistory(data);
+  const weeks = [];
+  for (let d = from; d <= to; d = addDaysStr(d, 1)) if (parseLocalDate(d).getDay() === 0 && d < today) weeks.push(getISOWeek(d));
+  if (weeks.length) forme.challenges = { done: weeks.filter(w => hist.doneWeeks.includes(w)).length, weeks: weeks.length };
+  if (Object.keys(forme).length) r.forme = forme;
+
+  // La suite (mois écoulé ou en cours seulement)
+  if (to >= addDaysStr(today, -45)) {
+    const race = (data.competitions || []).filter(c => c.date && c.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const plans = (data.plans || []).filter(p => p.date >= today && p.date <= addDaysStr(today, 30) && shown.includes(p.sport));
+    if (race || plans.length) r.next = { race, days: race ? daysBetweenStr(today, race.date) : null, plans: plans.length };
+  }
+  return r;
+}
+
+// Pages du résumé (HTML) ; une page sans contenu n'est pas affichée.
+function monthSummaryPages(m) {
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const num = (v, dec = 0) => Number(v.toFixed(dec)).toLocaleString('fr-FR');
+  const km = v => num(v, v < 100 ? 1 : 0) + ' km';
+  const dot = sp => `<span class="sport-dot sport-dot--${sp}"></span>`;
+  const label = sp => (SPORTS[sp] || {}).label || sp;
+  const prevName = monthName(m.prevYm);
+  const kicker = monthName(m.ym).replace(/^./, c => c.toUpperCase()) + ' ' + m.ym.slice(0, 4) + (m.current ? ' · en cours' : '');
+  const page = (title, body) => `<div class="ms-page__kicker">${kicker}</div><h2 class="ms-page__title">${title}</h2>${body}`;
+  const tile = (v, l) => `<div class="ms-tile"><div class="ms-tile__val">${v}</div><div class="ms-tile__label">${l}</div></div>`;
+  const line = (l, v) => `<div class="ms-line"><span>${l}</span><b>${v}</b></div>`;
+  const deltaH = (a, b) => { const d = Math.round((a - b) * 60) / 60; return !b ? '' : Math.abs(d) < 1 / 60 ? 'autant' : (d > 0 ? '+' : '−') + formatHours(Math.abs(d)); };
+  const pages = [];
+  const t = m.total, p = m.prev;
+
+  // 1. Le mois en un coup d'œil
+  const cmp = p.n ? `<p class="ms-note">${deltaH(t.h, p.h) === 'autant' ? 'Autant d’heures qu’en ' + prevName : deltaH(t.h, p.h) + ' par rapport à ' + prevName}`
+    + ` (${formatHours(p.h)}, ${p.n} séance${p.n > 1 ? 's' : ''}).</p>` : '';
+  pages.push(page('Ton mois ' + monthOf(m.ym), `<div class="ms-big">${formatHours(t.h)}</div><div class="ms-big__label">d’entraînement</div>
+    <div class="ms-tiles">${tile(t.n, 'séance' + (t.n > 1 ? 's' : ''))}${tile(m.activeDays + '<small> / ' + m.days + '</small>', 'jours actifs')}${t.km ? tile(num(t.km), 'km') : ''}</div>${cmp}`));
+
+  // 2. Jours d'entraînement : carte du mois
+  const first = parseLocalDate(m.from).getDay(), maxH = Math.max(...Object.values(m.byDay).map(d => d.h), 0.01);
+  let cells = '';
+  ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(x => { cells += `<div class="ms-cal__head">${x}</div>`; });
+  for (let i = 0; i < (first + 6) % 7; i++) cells += '<div></div>';
+  for (let i = 1; i <= m.days; i++) {
+    const d = m.from.slice(0, 8) + String(i).padStart(2, '0'), x = m.byDay[d];
+    const lvl = x ? Math.max(1, Math.ceil(x.h / maxH * 4)) : 0;
+    cells += `<div class="ms-cal__day${x ? ' ms-cal__day--' + x.sport + ' ms-lvl' + lvl : ''}" title="${x ? esc(shortDate(d) + ' : ' + formatHours(x.h)) : ''}">${i}</div>`;
+  }
+  const s = m.streak;
+  pages.push(page('Tes jours d’entraînement', `<div class="ms-cal">${cells}</div>
+    <div class="ms-cal__legend">${[...new Set(Object.values(m.byDay).map(d => d.sport))].map(sp => sp === 'multi'
+      ? '<span><i class="ms-cal__key ms-cal__day--multi"></i>Plusieurs sports</span>' : `<span><i class="ms-cal__key ms-cal__day--${sp}"></i>${label(sp)}</span>`).join('')}<span class="ms-cal__more">plus foncé = plus long</span></div>
+    <div class="ms-lines">${s.days > 1 ? line('Plus longue série', s.days + ' jours d’affilée <small>(' + shortDate(s.from) + ' → ' + shortDate(s.to) + ')</small>') : ''}
+    ${m.favDay ? line('Ton jour préféré', 'le ' + m.favDay.day + ' <small>(' + m.favDay.n + ' séances)</small>') : ''}
+    ${line('Jours de repos', (m.current ? Math.max(0, Number(localDateStr().slice(8, 10)) - m.activeDays) : m.days - m.activeDays))}</div>`));
+
+  // 3. Sport par sport
+  const rows = m.sports.filter(x => x.n).map(x => {
+    const main = x.sport === 'muscu' ? formatHours(x.h) : km(x.km);
+    const diff = x.sport === 'muscu' ? (x.prev.n ? deltaH(x.h, x.prev.h) : '') : (x.prev.km ? ((x.km - x.prev.km) >= 0 ? '+' : '−') + km(Math.abs(x.km - x.prev.km)) : '');
+    return `<div class="ms-sport"><div class="ms-sport__head">${dot(x.sport)}<b>${label(x.sport)}</b><span class="ms-sport__main">${main}</span></div>
+      <div class="ms-sport__sub">${x.n} séance${x.n > 1 ? 's' : ''}${x.sport !== 'muscu' ? ' · ' + formatHours(x.h) : ''}${x.pace ? ' · ' + x.pace + (x.sport === 'run' ? ' /km' : x.sport === 'nat' ? ' /100 m' : '') : ''}${diff && diff !== 'autant' ? ' · <span class="ms-diff">' + diff + ' vs ' + prevName + '</span>' : ''}</div></div>`;
+  }).join('');
+  const extra = (t.elev ? line('Dénivelé positif', num(t.elev) + ' m') : '') + (t.kcal ? line('Calories dépensées', num(t.kcal) + ' kcal') : '');
+  pages.push(page('Sport par sport', rows + (extra ? `<div class="ms-lines">${extra}</div>` : '')));
+
+  // 4. Temps forts
+  const L = [];
+  if (m.bestWeek) L.push(line('Meilleure semaine', `${formatHours(m.bestWeek.h)} <small>(semaine du ${shortDate(m.bestWeek.monday)}, ${m.bestWeek.n} séances)</small>`));
+  if (m.bestDay) { const d = m.byDay[m.bestDay]; L.push(line('Meilleure journée', `${formatHours(d.h)}${d.km ? ' · ' + km(d.km) : ''} <small>(${shortDate(m.bestDay)})</small>`)); }
+  m.sports.filter(x => x.longest && x.sport !== 'muscu' && x.longest.distance).forEach(x =>
+    L.push(line(dot(x.sport) + 'Plus longue sortie', `${km(x.longest.distance)} <small>(${shortDate(x.longest.date)}${x.longest.duration ? ', ' + formatHours(x.longest.duration) : ''})</small>`)));
+  if (m.longest && m.longest.duration) L.push(line('Plus longue séance', `${formatHours(m.longest.duration)} <small>(${label(m.longest.sport).toLowerCase()}, ${shortDate(m.longest.date)})</small>`));
+  if (L.length) pages.push(page('Tes temps forts', `<div class="ms-lines ms-lines--big">${L.join('')}</div>`));
+
+  // 5. Courses, records, badges
+  let rb = '';
+  if (m.comps.length) rb += '<div class="ms-sub">Compétitions</div>' + m.comps.map(c => `<div class="ms-item"><b>${esc(c.name || 'Course')}</b><span>${c.actual_time ? esc(c.actual_time) : 'sans temps'}${c.goalOk ? ' · objectif atteint' : c.goal_time && c.actual_time ? ' · objectif ' + esc(c.goal_time) : ''}</span></div>`).join('');
+  if (m.records.length) rb += '<div class="ms-sub">Records</div>' + m.records.slice(0, 6).map(x => `<div class="ms-item">${dot(x.sport)}<b>${esc(x.dist)}</b><span>${esc(x.time)} · ${x.pb ? (x.first ? 'premier temps' : 'record perso') : 'record de la saison'}</span></div>`).join('');
+  if (m.muscuRecords.length) rb += '<div class="ms-sub">Records de musculation</div>' + m.muscuRecords.slice(0, 4).map(ev => `<div class="ms-item">${dot('muscu')}<span>${esc(muscuRecordText(ev))}</span></div>`).join('')
+    + (m.muscuRecords.length > 4 ? `<div class="ms-note">et ${m.muscuRecords.length - 4} autre${m.muscuRecords.length > 5 ? 's' : ''}</div>` : '');
+  if (m.badges.length) rb += '<div class="ms-sub">Badges gagnés</div><div class="ms-badges">' + m.badges.slice(0, 6).map(badgeTileHtml).join('') + '</div>'
+    + (m.badges.length > 6 ? `<div class="ms-note">et ${m.badges.length - 6} autre${m.badges.length > 7 ? 's' : ''} : retrouve-les dans Profil</div>` : '');
+  if (rb) pages.push(page(m.comps.length ? 'Courses et records' : m.records.length || m.muscuRecords.length ? 'Tes records' : 'Tes badges', rb));
+
+  // 6. Musculation
+  if (m.muscu) {
+    const u = m.muscu, rest = Object.keys(MUSCLES).filter(x => !u.totals[x]);
+    pages.push(page('Ta musculation', `<div class="ms-tiles">${tile(u.n, 'séance' + (u.n > 1 ? 's' : ''))}${tile(u.sets, 'séries')}${u.kg ? tile(num(u.kg / 1000, 1) + '<small> t</small>', 'soulevées') : tile(formatHours(u.h), 'heures')}</div>
+      <div class="ms-body">${muscuBodyMapSvg(u.totals)}</div>
+      ${u.top.length ? `<p class="ms-note">Le plus travaillé : ${u.top.map(x => MUSCLES[x].toLowerCase()).join(', ')}.${rest.length && rest.length <= 6 ? ' Pas travaillé : ' + rest.map(x => MUSCLES[x].toLowerCase()).join(', ') + '.' : ''}</p>` : ''}`));
+  }
+
+  // 7. Nutrition
+  if (m.nutrition) {
+    const n = m.nutrition;
+    let b = `<div class="ms-tiles">${tile(n.mealDays + '<small> / ' + m.days + '</small>', 'jours de repas notés')}${n.waterDays ? tile(formatLiters(n.waterAvg), 'd’eau par jour noté') : ''}</div>`;
+    if (n.train && n.rest) b += `<div class="ms-compare"><div class="ms-compare__head"><span></span><span>Jours d’entraînement</span><span>Jours de repos</span></div>
+      <div><span>Glucides</span><b>${num(n.train.carbs)} g</b><b>${num(n.rest.carbs)} g</b></div>
+      <div><span>Calories</span><b>${num(n.train.kcal)}</b><b>${num(n.rest.kcal)}</b></div></div>
+      <p class="ms-note">Moyennes par jour, sur les jours où tu as noté tes repas.</p>`;
+    else if (n.train || n.rest) { const x = n.train || n.rest;
+      b += `<div class="ms-lines">${line('Glucides par jour', num(x.carbs) + ' g')}${line('Calories par jour', num(x.kcal) + ' kcal')}</div>
+      <p class="ms-note">Moyennes des jours ${n.train ? 'd’entraînement' : 'de repos'} où tu as noté tes repas.</p>`; }
+    const L2 = [];
+    if (n.waterDays) L2.push(line('Objectif d’eau atteint', n.waterGoalDays + ' jour' + (n.waterGoalDays > 1 ? 's' : '') + ' <small>(' + formatLiters(n.goal) + ')</small>'));
+    if (n.fuel) L2.push(line('Ravitaillements', n.fuel + (n.carbsPerHour ? ` <small>(${n.carbsPerHour} g de glucides par heure en moyenne)</small>` : '')));
+    if (L2.length) b += `<div class="ms-lines">${L2.join('')}</div>`;
+    pages.push(page('Ta nutrition', b));
+  }
+
+  // 8. Forme
+  if (m.forme) {
+    const f = m.forme, L3 = [];
+    if (f.ctl && (f.ctl.start || f.ctl.end)) L3.push(line('Condition de fond <span class="ms-q">(page Forme)</span>', `${num(f.ctl.start, 1)} → ${num(f.ctl.end, 1)}`));
+    if (f.tss != null && f.prevTss) { const pct = Math.round((f.tss - f.prevTss) / f.prevTss * 100); L3.push(line('Charge d’entraînement', (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct) + ' % <small>vs ' + prevName + '</small>')); }
+    if (f.feel) L3.push(line('Ressenti moyen', FEEL_WORDS_FR[Math.round(f.feel)]));
+    if (f.rpe) L3.push(line('Effort ressenti moyen', num(f.rpe, 1) + ' / 10'));
+    if (f.challenges) L3.push(line('Défis de la semaine', `${f.challenges.done} semaine${f.challenges.done > 1 ? 's' : ''} sur ${f.challenges.weeks}`));
+    if (L3.length) pages.push(page('Ta forme', `<div class="ms-lines ms-lines--big">${L3.join('')}</div>`));
+  }
+
+  // 9. La suite
+  if (m.next) {
+    const x = m.next, L4 = [];
+    if (x.race) L4.push(line('Prochaine course', `${esc(x.race.name || 'Course')} <small>(${x.days === 0 ? 'aujourd’hui' : x.days === 1 ? 'demain' : 'dans ' + x.days + ' jours'}, ${shortDate(x.race.date)})</small>`));
+    if (x.plans) L4.push(line('Séances prévues', x.plans + ' <small>dans les 30 prochains jours</small>'));
+    pages.push(page('Et maintenant', `<div class="ms-lines ms-lines--big">${L4.join('')}</div>`));
+  }
+  return pages;
+}
+
+function showMonthSummary(ym) {
+  if (document.getElementById('monthSummary')) return false;
+  const m = monthSummary(ym);
+  if (!m.total.n) { toast('Aucune séance en ' + monthName(ym) + ' ' + ym.slice(0, 4), 'info'); return false; }
+  const pages = monthSummaryPages(m);
+  const box = document.createElement('div');
+  box.className = 'ms';
+  box.id = 'monthSummary';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-label', 'Ton mois ' + monthOf(ym));
+  box.innerHTML = `<div class="ms__inner">
+    <div class="ms__top"><div class="ms__bars">${pages.map(() => '<i></i>').join('')}</div>
+      <button type="button" class="ms__close" data-ms="close">Fermer</button></div>
+    <div class="ms__pages">${pages.map((h, i) => `<section class="ms-page" data-i="${i}">${h}</section>`).join('')}</div>
+    <div class="ms__nav"><button type="button" class="btn btn--ghost" data-ms="prev">Précédent</button>
+      <span class="ms__count"></span>
+      <button type="button" class="btn btn--primary" data-ms="next">Suivant</button></div></div>`;
+  document.body.appendChild(box);
+  document.documentElement.classList.add('ms-open');
+  let cur = 0;
+  const go = i => {
+    if (i >= pages.length) return close();
+    cur = Math.max(0, i);
+    box.querySelectorAll('.ms-page').forEach((el, j) => { el.hidden = j !== cur; });
+    box.querySelectorAll('.ms__bars i').forEach((el, j) => el.classList.toggle('on', j <= cur));
+    box.querySelector('[data-ms="prev"]').disabled = cur === 0;
+    box.querySelector('[data-ms="next"]').textContent = cur === pages.length - 1 ? 'Terminer' : 'Suivant';
+    box.querySelector('.ms__count').textContent = (cur + 1) + ' / ' + pages.length;
+    box.querySelector('.ms__pages').scrollTop = 0;
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    box.classList.remove('open');
+    document.documentElement.classList.remove('ms-open');
+    setTimeout(() => box.remove(), 200);
+  };
+  const onKey = e => {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowRight') go(cur + 1);
+    else if (e.key === 'ArrowLeft') go(cur - 1);
+  };
+  document.addEventListener('keydown', onKey);
+  box.addEventListener('click', e => {
+    const b = e.target.closest('[data-ms]');
+    if (b) { const a = b.dataset.ms; if (a === 'close') close(); else go(cur + (a === 'next' ? 1 : -1)); return; }
+    if (e.target.closest('a, button, .tip-icon')) return;
+    // Toucher la page : à gauche = précédente, ailleurs = suivante (comme une story)
+    if (e.target.closest('.ms__pages')) { const x = e.clientX / window.innerWidth; go(cur + (x < 0.3 ? -1 : 1)); }
+  });
+  let x0 = null, y0 = null;
+  box.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  box.addEventListener('touchend', e => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { e.preventDefault(); go(cur + (dx < 0 ? 1 : -1)); }
+  });
+  go(0);
+  requestAnimationFrame(() => box.classList.add('open'));
+  box.querySelector('[data-ms="next"]').focus({ preventScroll: true });
+  return true;
+}
+
+// À l'ouverture : le mois écoulé, une seule fois (seulement s'il y a eu des séances).
+function maybeShowMonthSummary() {
+  if (!cloudLoaded || window.TS_LOGGED_OUT || document.getElementById('consentGate') || document.getElementById('newsModal')) return false;
+  if (!/(^|\/)(index\.html)?$/.test(location.pathname)) return false;   // Dashboard seulement
+  const data = getData();
+  const last = shiftMonth(localDateStr().slice(0, 7), -1);
+  if (data.month_seen && data.month_seen >= last) return false;
+  data.month_seen = last;
+  saveData(data);
+  return monthSummary(last, data).total.n ? showMonthSummary(last) : false;
 }
 
 // ── Strava : les séances arrivent toutes seules ─────────────────────────────
@@ -3558,5 +3912,6 @@ window.TS = {
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
   MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
+  monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, shiftMonth, monthName,
   SPORTS, COMP_TYPES,
 };

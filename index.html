@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261125a"></script>
+  <script src="theme.js?v=20261126a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261125a"></script>
+  <script src="auth-guard.js?v=20261126a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261125a">
+  <link rel="stylesheet" href="style.css?v=20261126a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     /* Ta semaine : une rangée de petites tuiles (une par sport suivi) */
@@ -282,6 +282,7 @@
         <span class="tip-icon" data-tip="Un point par jour d'entraînement. Plus le point est grand et coloré, plus le volume de ce jour-là est important. La couleur indique le sport dominant du jour.">?</span>
       </span>
       <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn btn--ghost btn--sm cal-summary-btn" id="calSummaryBtn" type="button" onclick="openCalSummary()">Résumé du mois</button>
         <button class="btn btn--ghost btn--sm btn--icon" onclick="changeCalMonth(-1)" style="font-size:16px;line-height:1">‹</button>
         <button class="btn btn--ghost btn--sm" onclick="goToCalCurrentMonth()">Aujourd'hui</button>
         <button class="btn btn--ghost btn--sm btn--icon" onclick="changeCalMonth(1)" style="font-size:16px;line-height:1">›</button>
@@ -404,7 +405,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261125a"></script>
+<script src="app.js?v=20261126a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -767,6 +768,10 @@ let calMonthIdx = _initNow.getMonth(); // 0-11
 
 function calFormatDur(h) { return TS.formatHours(h); }
 
+// Résumé du mois affiché dans le calendrier (pages qu'on fait défiler)
+function openCalSummary() {
+  TS.showMonthSummary(calYear + '-' + String(calMonthIdx + 1).padStart(2, '0'));
+}
 function changeCalMonth(dir) {
   calMonthIdx += dir;
   if (calMonthIdx < 0)  { calMonthIdx = 11; calYear--; }
