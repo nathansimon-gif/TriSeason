@@ -103,6 +103,8 @@
     .plan-list { display:grid; gap:6px; margin-top:12px; }
     .plan-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface2); cursor:pointer; text-align:left; font:inherit; color:inherit; width:100%; }
     .plan-row:hover { border-color:var(--text-3); }
+    .plan-more { background:none; border:0; padding:4px 2px; font:inherit; font-size:12px; font-weight:500; color:var(--accent); cursor:pointer; text-align:left; justify-self:start; }
+    .plan-more:hover { text-decoration:underline; }
     .plan-row__main { flex:1; min-width:0; font-size:13px; color:var(--text); }
     .plan-row__sub { font-size:11px; color:var(--text-2); }
     .plan-state { font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; white-space:nowrap; }
@@ -910,16 +912,45 @@ function planRowHtml(p, st, withDate) {
       <span class="plan-row__sub" style="display:block">${[planDone(st), p.notes ? p.notes.replace(/</g, '&lt;') : ''].filter(Boolean).join(' — ')}</span></span>
     <span class="plan-state plan-state--${st.state}">${PLAN_STATE_LABEL[st.state]}</span></button>`;
 }
-// Sous le calendrier : aujourd'hui et les 6 prochaines séances prévues, plus les 2 dernières passées.
+// Sous le calendrier :
+// - à venir (aujourd'hui compris) : les 2 prochaines, les autres derrière « Voir les n autres » ;
+// - passées : seulement celles de la semaine en cours (lundi → hier) ; celles des semaines
+//   précédentes derrière « Voir les séances des semaines passées ».
+let planShowAllNext = false, planShowOld = false;
+const PLAN_NEXT_SHOWN = 2, PLAN_OLD_MAX = 20;
 function renderPlanList() {
   const el = document.getElementById('planList');
   if (!el) return;
   const st = TS.planStatuses(), today = TS.localDateStr();
+  const monday = TS.localDateStr(TS.getWeekMonday(TS.getCurrentWeek()));
   const plans = TS.getPlans();
-  const past = plans.filter(p => p.date < today).slice(-2);
-  const next = plans.filter(p => p.date >= today).slice(0, 6);
-  el.innerHTML = past.concat(next).map(p => planRowHtml(p, st[p.id], true)).join('')
-    || '<div style="font-size:12px;color:var(--text-3)">Aucune séance prévue. Clique sur un jour du calendrier ou sur « Planifier une séance ». Quand tu fais la séance ce jour-là (import, Strava ou saisie), elle est reconnue toute seule.</div>';
+  const old = plans.filter(p => p.date < monday);
+  const thisWeek = plans.filter(p => p.date >= monday && p.date < today);
+  const next = plans.filter(p => p.date >= today);
+  if (!plans.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-3)">Aucune séance prévue. Clique sur un jour du calendrier ou sur « Planifier une séance ». Quand tu fais la séance ce jour-là (import, Strava ou saisie), elle est reconnue toute seule.</div>';
+    return;
+  }
+  const row = p => planRowHtml(p, st[p.id], true);
+  const more = (label, fn) => `<button type="button" class="plan-more" onclick="${fn}">${label}</button>`;
+  let html = '';
+  // Semaines passées : repliées (les plus récentes d'abord quand on les ouvre)
+  if (old.length) {
+    html += planShowOld
+      ? old.slice(-PLAN_OLD_MAX).map(row).join('') + more('Masquer les séances des semaines passées', 'planShowOld=false;renderPlanList()')
+      : more(`Voir les séances des semaines passées (${old.length})`, 'planShowOld=true;renderPlanList()');
+  }
+  html += thisWeek.map(row).join('');
+  const shownNext = planShowAllNext ? next : next.slice(0, PLAN_NEXT_SHOWN);
+  html += shownNext.map(row).join('');
+  if (next.length > PLAN_NEXT_SHOWN) {
+    const n = next.length - PLAN_NEXT_SHOWN;
+    html += planShowAllNext
+      ? more('Voir seulement les 2 prochaines', 'planShowAllNext=false;renderPlanList()')
+      : more(`Voir ${n > 1 ? 'les ' + n + ' autres séances prévues' : 'l’autre séance prévue'}`, 'planShowAllNext=true;renderPlanList()');
+  }
+  if (!next.length && !thisWeek.length && !planShowOld) html += '<div style="font-size:12px;color:var(--text-3)">Aucune séance prévue à venir.</div>';
+  el.innerHTML = html;
 }
 
 let planEditId = null, planSport = 'run';
