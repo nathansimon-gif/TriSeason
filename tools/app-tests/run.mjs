@@ -2468,6 +2468,25 @@ async function main() {
     assert(veloOn === 'km', 'vélo : retour aux km choisis : ' + veloOn);
   });
 
+  await test('Nutrition : repas et ravitaillements sans émojis, nom du repas lisible, crayon de modification en icône', async () => {
+    const data = sampleData();
+    data.nutrition.meals.push({ id: 'mx', date: day(0), type: 'collation-après-midi', desc: 'banane', glucides: 25 });
+    data.nutrition.fuel = [{ id: 'fx', date: day(0), type: 'gel', qty: 2 }];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(900);
+    const r = await v.page.evaluate(() => {
+      const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+      const zone = ['mealsList', 'fuelList', 'm_type', 'f_type'].map(id => (document.getElementById(id) || {}).textContent || '').join(' ').replace(/[★☆]/g, '');   // étoiles du favori : symboles, pas des émojis
+      return { emoji: emoji.test(zone), title: [...document.querySelectorAll('#mealsList .meal-card__title')].map(t => t.textContent.trim()),
+        pencil: !!document.querySelector('#mealsList button[aria-label="Modifier ce repas"] svg') };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!r.emoji, 'émojis encore présents');
+    assert(r.title.includes('Collation de l’après-midi'), 'titres : ' + JSON.stringify(r.title));
+    assert(r.pencil, 'pas de crayon en icône');
+  });
+
   await browser.close();
   server.close();
 

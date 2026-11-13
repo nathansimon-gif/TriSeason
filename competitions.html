@@ -364,8 +364,8 @@ function renderCompPrep(c) {
 
   var nutriHtml = count > 0
     ? '<span style="font-size:11px;color:var(--text-2)">Nutrition J-7 moy. :'
-      + (avgHydro ? ' 💧 '+avgHydro+'ml' : '')
-      + (avgKcal  ? ' · 🍽 '+avgKcal+' kcal' : '')
+      + (avgHydro ? ' eau '+(avgHydro/1000).toFixed(1).replace('.', ',')+' L' : '')
+      + (avgKcal  ? (avgHydro ? ' ·' : '')+' '+Number(avgKcal).toLocaleString('fr-FR')+' kcal' : '')
       + '</span>'
     : '';
 

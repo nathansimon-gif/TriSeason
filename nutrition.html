@@ -85,7 +85,6 @@
     .fuel-moment label { display:inline-flex; align-items:center; gap:6px; }
     .fuel-moment .form-input { width:84px; }
     .fuel-moment__or { color:var(--text-3); }
-    .fuel-row__icon { font-size:18px; flex-shrink:0; }
     .fuel-row__label { flex:1; font-size:12px; font-weight:600; }
     .fuel-row__val   { font-size:12px; color:var(--text-2); }
     .hydro-ring {
@@ -307,13 +306,13 @@
         <div class="form-group">
           <label class="form-label">Type de repas</label>
           <select class="form-select" id="m_type">
-            <option value="petit-déjeuner">☀️ Petit-déjeuner</option>
-            <option value="collation-matin">🍎 Collation matin</option>
-            <option value="déjeuner">🌞 Déjeuner</option>
-            <option value="collation-après-midi">🍌 Collation après-midi</option>
-            <option value="dîner">🌙 Dîner</option>
+            <option value="petit-déjeuner">Petit-déjeuner</option>
+            <option value="collation-matin">Collation du matin</option>
+            <option value="déjeuner">Déjeuner</option>
+            <option value="collation-après-midi">Collation de l’après-midi</option>
+            <option value="dîner">Dîner</option>
             <option value="avant-effort">Avant l'effort</option>
-            <option value="après-effort">💪 Après l'effort</option>
+            <option value="après-effort">Après l'effort</option>
             <option value="journée">Journée (sans détailler par repas)</option>
           </select>
         </div>
@@ -410,12 +409,12 @@
         <div class="form-group">
           <label class="form-label">Type</label>
           <select class="form-select" id="f_type" onchange="renderFuelPresets()">
-            <option value="gel">🟡 Gel énergétique</option>
-            <option value="barre">🍫 Barre énergétique</option>
-            <option value="banane">🍌 Banane / fruit</option>
-            <option value="boisson-iso">💧 Boisson isotonique</option>
-            <option value="flasque">🧃 Flasque maison</option>
-            <option value="pâte-de-fruit">🍬 Pâte de fruit</option>
+            <option value="gel">Gel énergétique</option>
+            <option value="barre">Barre énergétique</option>
+            <option value="banane">Banane / fruit</option>
+            <option value="boisson-iso">Boisson isotonique</option>
+            <option value="flasque">Flasque maison</option>
+            <option value="pâte-de-fruit">Pâte de fruit</option>
             <option value="compote">Compote / gourde</option>
             <option value="autre">Autre</option>
           </select>
@@ -625,11 +624,14 @@ function renderDayKPIs() {
   }
 }
 
-const MEAL_ICONS = {
-  'petit-déjeuner':'☀️','collation-matin':'🍎','déjeuner':'🌞',
-  'collation-après-midi':'🍌','dîner':'🌙','avant-effort':'⚡','après-effort':'💪',
-  'journée':'📋'
+// Nom affiché de chaque type de repas (pas d'icône : texte seul, comme le reste de l'appli)
+const MEAL_LABELS = {
+  'petit-déjeuner':'Petit-déjeuner','collation-matin':'Collation du matin','déjeuner':'Déjeuner',
+  'collation-après-midi':'Collation de l’après-midi','dîner':'Dîner','avant-effort':'Avant l’effort','après-effort':'Après l’effort',
+  'journée':'Journée'
 };
+const mealLabel = t => MEAL_LABELS[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Repas');
+const PENCIL_SVG = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
 
 // ── Saisie rapide : favoris, repas récents, copie de la veille ────────────────
 // Un repas « type » = même type, description et macros. Les favoris sont des
@@ -694,7 +696,7 @@ function renderQuickMeals(show) {
       const meta = [m.glucides ? m.glucides + ' g gluc.' : '', m.kcal ? '~' + m.kcal + ' kcal' : ''].filter(Boolean).join(' · ');
       return `<button type="button" class="quick-meal" onclick="useQuickMeal(${i})">
         <span class="quick-meal__star">${m.fav ? '★' : ''}</span>
-        <span class="quick-meal__desc"><b>${m.type}</b> — ${(m.desc || 'sans description').replace(/</g, '&lt;')}</span>
+        <span class="quick-meal__desc"><b>${escHtml(mealLabel(m.type))}</b> — ${(m.desc || 'sans description').replace(/</g, '&lt;')}</span>
         <span class="quick-meal__meta">${meta}</span>
       </button>`;
     }).join('')}
@@ -751,8 +753,7 @@ function renderMealsList() {
   const meals = getDayMeals(currentDay);
   const el = document.getElementById('mealsList');
   if (!meals.length) {
-    el.innerHTML = `<div class="empty"><div class="empty__icon" style="font-size:24px">🍽</div>
-      <div class="empty__text">Aucun repas enregistré</div></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty__text">Aucun repas enregistré</div></div>`;
     return;
   }
   el.innerHTML = meals.map(m => {
@@ -761,13 +762,13 @@ function renderMealsList() {
     return `<div class="meal-card">
       <div class="meal-card__header">
         <div class="meal-card__title">
-          <span>${MEAL_ICONS[m.type]||'🍽'}</span> ${m.type}
+          ${escHtml(mealLabel(m.type))}
           ${tags}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           ${m.time?`<span class="meal-card__time">${m.time}</span>`:''}
           <button class="fav-btn ${isFavorite(m)?'on':''}" onclick="toggleFavorite('${m.id}')" title="${isFavorite(m)?'Retirer des favoris':'Ajouter aux favoris : le retrouver en un clic'}" aria-label="Favori">${isFavorite(m)?'★':'☆'}</button>
-          <button class="btn btn--ghost btn--sm btn--icon" onclick="editMeal('${m.id}')">✏️</button>
+          <button class="btn btn--ghost btn--sm btn--icon" onclick="editMeal('${m.id}')" title="Modifier" aria-label="Modifier ce repas">${PENCIL_SVG}</button>
         </div>
       </div>
       <div style="font-size:13px;color:var(--text-2);margin-bottom:8px">${m.desc||''}</div>
@@ -780,10 +781,6 @@ function renderMealsList() {
     </div>`;
   }).join('');
 }
-
-const FUEL_ICONS = {
-  'gel':'🟡','barre':'🍫','banane':'🍌','boisson-iso':'💧','flasque':'🧃','pâte-de-fruit':'🍬','compote':'🍎','autre':'📦'
-};
 
 function renderFuelList() {
   const fuel = getDayFuel(currentDay);
@@ -799,7 +796,6 @@ function renderFuelList() {
     const act = s ? fuelSessionLabel(s) + (moment ? ' · ' + moment : '') : (moment ? moment : '');
     return `
     <div class="fuel-row fuel-row--click" onclick="if (!event.target.closest('button')) openFuelModal('${f.id}')" title="Modifier">
-      <div class="fuel-row__icon">${FUEL_ICONS[f.type]||'📦'}</div>
       <div class="fuel-row__label">${f.qty > 1 ? f.qty+'× ' : ''}${escHtml(TS.fuelLabel(f))}${act ? `<span class="fuel-row__act">${escHtml(act)}</span>` : ''}</div>
       <div class="fuel-row__val">${(() => { const c = TS.fuelCarbs(f); const ml = TS.fuelWater(f); return (c.estimated ? '≈ ' : '') + Math.round(c.carbs) + ' g gluc.' + (c.prot ? ' · ' + Math.round(c.prot) + ' g prot.' : '') + (ml ? ' · ' + ml.toLocaleString('fr-FR') + ' ml' : ''); })()}</div>
       <button class="btn btn--danger btn--sm btn--icon" onclick="deleteFuel('${f.id}')" aria-label="Supprimer">×</button>
