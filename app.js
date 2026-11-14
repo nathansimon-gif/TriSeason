@@ -3078,6 +3078,7 @@ function stravaToSession(a) {
     kcal: r(a.calories) || r(a.kilojoules) || null,
     notes: a.name || null,
     strava_id: a.id,
+    trail: sport === 'run' && (a.sport_type === 'TrailRun' || a.type === 'TrailRun') ? true : null,   // sortie de trail
   });
 }
 
@@ -3110,6 +3111,7 @@ function archiveToSession(a) {
     power_avg: a.watts ? Math.round(a.watts) : null, power_max: a.wattsMax ? Math.round(a.wattsMax) : null,
     np: a.np ? Math.round(a.np) : null, kcal: a.kcal ? Math.round(a.kcal) : null,
     notes: a.name ? a.name.slice(0, 80) : null, strava_id: a.id,
+    trail: a.sport === 'run' && /trail/i.test(a.type || '') ? true : null,
   };
   return compactSession(s);
 }
@@ -3967,11 +3969,28 @@ function deleteGear(id) {
   data.gear = (data.gear || []).filter(g => g.id !== id);
   saveData(data);
 }
-// Période couverte par chaque équipement : { id: { from, to } } (to inclus).
+// Terrain des chaussures (course à pied) : une paire « route » et une paire « trail » peuvent servir en même temps.
+// « manuel » : paire choisie seulement à la main sur la séance (fractionné, compétition…), jamais mise automatiquement,
+// et qui ne remplace aucune autre paire.
+const GEAR_TERRAINS = { tout: 'Tous terrains', route: 'Route', trail: 'Trail', manuel: 'Seulement quand je la choisis' };
+function gearTerrain(g) { return g.sport === 'run' && ['route', 'trail', 'manuel'].includes(g.terrain) ? g.terrain : 'tout'; }
+// Sortie de trail : cochée sur la séance (ou venue de Strava / de la montre), ou séance reliée à une course trail
+function isTrailSession(s, data = getData()) {
+  if (s.sport !== 'run') return false;
+  if (s.trail) return true;
+  return !!(s.comp_id && ((data.competitions || []).find(c => c.id === s.comp_id) || {}).trail);
+}
+// Période couverte par chaque équipement : { id: { from, to } } (to inclus). Un nouvel équipement du même
+// sport et du même terrain remplace le précédent la veille de sa première utilisation.
 function gearRanges(data = getData()) {
   const out = {};
-  ['run', 'velo', 'nat'].forEach(sp => {
-    const list = (data.gear || []).filter(g => g.sport === sp).sort((a, b) => a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
+  const lanes = {};
+  (data.gear || []).forEach(g => {
+    const key = g.sport + '|' + gearTerrain(g) + (gearTerrain(g) === 'manuel' ? '|' + g.id : '');   // paire « à la main » : seule dans sa file
+    (lanes[key] = lanes[key] || []).push(g);
+  });
+  Object.values(lanes).forEach(list => {
+    list.sort((a, b) => a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
     list.forEach((g, i) => {
       let to = list[i + 1] ? addDaysStr(list[i + 1].start, -1) : '9999-12-31';
       if (g.retired && g.retired < to) to = g.retired;
@@ -3980,16 +3999,41 @@ function gearRanges(data = getData()) {
   });
   return out;
 }
+// Équipements utilisables pour une séance : même sport, en service ce jour-là
+function gearChoices(s, data = getData(), ranges = gearRanges(data)) {
+  return (data.gear || []).filter(g => g.sport === s.sport && ranges[g.id] && s.date >= ranges[g.id].from && s.date <= ranges[g.id].to)
+    .sort((a, b) => b.start.localeCompare(a.start));
+}
+// Équipement choisi automatiquement (sans tenir compte du choix fait sur la séance) :
+// course à pied → chaussures du terrain de la sortie (trail ou route), sinon tous terrains, sinon l'autre ;
+// autres sports → le plus récent en service.
+function gearAuto(s, data = getData(), ranges = gearRanges(data)) {
+  const list = gearChoices(s, data, ranges).filter(g => gearTerrain(g) !== 'manuel');
+  if (!list.length) return null;
+  if (s.sport !== 'run') return list[0];
+  const order = isTrailSession(s, data) ? ['trail', 'tout', 'route'] : ['route', 'tout', 'trail'];
+  for (const t of order) { const g = list.find(x => gearTerrain(x) === t); if (g) return g; }
+  return list[0];
+}
+// Équipement d'une séance : celui choisi sur la séance (s.gear_id) s'il existe encore, sinon le choix automatique
 function gearForSession(s, data = getData(), ranges = gearRanges(data)) {
-  return (data.gear || []).find(g => g.sport === s.sport && ranges[g.id] && s.date >= ranges[g.id].from && s.date <= ranges[g.id].to) || null;
+  if (s.gear_id) { const g = (data.gear || []).find(x => x.id === s.gear_id && x.sport === s.sport); if (g) return g; }
+  return gearAuto(s, data, ranges);
 }
 // Chiffres de chaque équipement, seuil et prévision au rythme des 8 dernières semaines.
 function gearStats(data = getData(), today = localDateStr()) {
   const ranges = gearRanges(data);
   const out = {};
+  // Chaque séance compte pour un seul équipement : celui choisi sur la séance, sinon le choix automatique
+  const used = {};
+  (data.sessions || []).forEach(s => {
+    if (!GEAR_KINDS[s.sport] || s.date > today) return;
+    const g = gearForSession(s, data, ranges);
+    if (g) (used[g.id] = used[g.id] || []).push(s);
+  });
   (data.gear || []).forEach(g => {
     const r = ranges[g.id];
-    const list = (data.sessions || []).filter(s => s.sport === g.sport && s.date >= r.from && s.date <= r.to && s.date <= today);
+    const list = used[g.id] || [];
     const km = Math.round(list.reduce((a, s) => a + (s.distance || 0), 0) * 10) / 10;
     const st = {
       km, sessions: list.length,
@@ -4116,6 +4160,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   getGear, saveGear, deleteGear, gearRanges, gearForSession, gearStats, GEAR_KINDS, GEAR_DEFAULT_ALERT, GEAR_HINTS,
+  GEAR_TERRAINS, gearTerrain, isTrailSession, gearChoices, gearAuto,
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261128a"></script>
+  <script src="theme.js?v=20261129a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261128a"></script>
+  <script src="auth-guard.js?v=20261129a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261128a">
+  <link rel="stylesheet" href="style.css?v=20261129a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -35,6 +35,8 @@
     .feeling-row__line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%; }
     .feeling-row__label { font-size:11px; color:var(--text-2); width:64px; flex-shrink:0; }
     .rpe-btns { display:flex; gap:3px; flex-wrap:wrap; }
+    .check-line { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer; flex-wrap:wrap; }
+    .check-line input { width:18px; height:18px; accent-color:var(--accent); }
     .rpe-btn { min-width:28px; height:28px; padding:0 4px; border-radius:var(--r-sm); border:1px solid var(--border2); background:var(--surface2); color:var(--text-2); font:600 12px var(--mono); cursor:pointer; }
     .rpe-btn:hover { color:var(--text); border-color:var(--text-3); }
     .rpe-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--text); }
@@ -253,7 +255,7 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Date</label>
-          <input class="form-input" type="date" id="s_date" onchange="updatePainField()">
+          <input class="form-input" type="date" id="s_date" onchange="updatePainField();updateGearField()">
         </div>
         <div class="form-group">
           <label class="form-label">Sport</label>
@@ -282,6 +284,13 @@
           <label class="form-label" data-tip="Dénivelé positif cumulé sur la séance, en mètres">Dénivelé (m)</label>
           <input class="form-input" type="number" id="s_elevation" placeholder="">
         </div>
+      </div>
+      <!-- Équipement de la séance (chaussures, vélo, combinaison) et sortie de trail -->
+      <div class="form-group" id="gearGroup" style="display:none">
+        <label class="check-line" id="trailLine" style="display:none"><input type="checkbox" id="s_trail" onchange="updateGearField()"> Sortie de trail <span class="form-hint" style="margin:0">(chemins, montagne)</span></label>
+        <label class="form-label" for="s_gear" id="gearLabel">Chaussures</label>
+        <select class="form-select" id="s_gear"></select>
+        <div class="form-hint" id="gearHintLine"></div>
       </div>
       <!-- Musculation : exercices (séries × répétitions × charge) -->
       <div class="form-group" id="muscuGroup" style="display:none">
@@ -317,7 +326,7 @@
       </div>
       <div class="form-group">
         <label class="form-label" data-tip="Relie cette séance à une compétition pour suivre l'effet de ta préparation nutritionnelle">Associer à une compétition (optionnel)</label>
-        <select class="form-select" id="s_comp_id">
+        <select class="form-select" id="s_comp_id" onchange="updateGearField()">
           <option value="">— Aucune —</option>
         </select>
       </div>
@@ -367,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261128a"></script>
-<script src="import.js?v=20261128a"></script>
-<script src="app.js?v=20261128a"></script>
+<script src="fit-parser.js?v=20261129a"></script>
+<script src="import.js?v=20261129a"></script>
+<script src="app.js?v=20261129a"></script>
 <script>
 
 
@@ -591,6 +600,8 @@ function openSessionModal(session = null) {
   if (document.getElementById('s_kcal')) document.getElementById('s_kcal').value = session?.kcal || '';
   if (document.getElementById('s_elevation')) document.getElementById('s_elevation').value = session?.elevation || '';
   setSensation(session?.sensation || null);
+  document.getElementById('s_trail').checked = !!session?.trail;
+  document.getElementById('s_gear').dataset.chosen = session?.gear_id || '';
   setScale('s_pain', session?.pain ?? null);
   painKeep = session?.pain ?? null;
   updatePainField();
@@ -628,7 +639,40 @@ function toggleElevationField() {
   document.getElementById('muscuGroup').style.display = sport === 'muscu' ? '' : 'none';
   if (sport === 'muscu' && !document.querySelector('#muscuRows .muscu-row')) addMuscuRow();
   updateMuscuRepeat();
+  updateGearField();
 }
+
+// Équipement : « Automatique » (chaussures du terrain de la sortie, ou l'équipement en service) ou un choix précis
+// pour cette séance (enregistré dans gear_id). Seulement s'il y a de l'équipement pour ce sport (Profil → Équipement).
+function updateGearField() {
+  const sport = document.getElementById('s_sport').value;
+  const date = document.getElementById('s_date').value || TS.localDateStr();
+  const sel = document.getElementById('s_gear');
+  const keep = sel.dataset.chosen != null ? sel.dataset.chosen : sel.value;
+  const data = TS.getData();
+  const all = TS.getGear(data).filter(g => g.sport === sport);
+  document.getElementById('trailLine').style.display = sport === 'run' ? '' : 'none';
+  const grp = document.getElementById('gearGroup');
+  grp.style.display = TS.GEAR_KINDS[sport] && (all.length || sport === 'run') ? '' : 'none';
+  if (!TS.GEAR_KINDS[sport]) return;
+  document.getElementById('gearLabel').textContent = TS.GEAR_KINDS[sport];
+  document.getElementById('gearLabel').style.display = all.length ? '' : 'none';
+  sel.style.display = all.length ? '' : 'none';
+  const probe = { sport, date, trail: sport === 'run' && document.getElementById('s_trail').checked,
+    comp_id: document.getElementById('s_comp_id').value || null };
+  const auto = TS.gearAuto(probe, data);
+  const ranges = TS.gearRanges(data);
+  const usable = g => ranges[g.id] && date >= ranges[g.id].from && date <= ranges[g.id].to;
+  const label = g => g.name + (sport === 'run' && TS.gearTerrain(g) !== 'tout' ? ' (' + (TS.gearTerrain(g) === 'manuel' ? 'à la main' : TS.GEAR_TERRAINS[TS.gearTerrain(g)].toLowerCase()) + ')' : '');
+  // En service ce jour-là d'abord, puis les autres (anciens ou pas encore utilisés), au cas où
+  const list = all.filter(usable).concat(all.filter(g => !usable(g)));
+  sel.innerHTML = `<option value="">Automatique${auto ? ' : ' + gearEscape(label(auto)) : ' (aucun en service ce jour-là)'}</option>`
+    + list.map(g => `<option value="${g.id}">${gearEscape(label(g))}${usable(g) ? '' : ' · pas en service ce jour-là'}</option>`).join('');
+  sel.value = list.some(g => g.id === keep) ? keep : '';
+  delete sel.dataset.chosen;
+  document.getElementById('gearHintLine').textContent = all.length ? '' : 'Ajoute tes chaussures dans Profil → Équipement pour compter leurs kilomètres.';
+}
+function gearEscape(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 // ── Musculation : lignes d'exercices ─────────────────────────────────────────
 // Le nom de l'exercice se choisit dans une fenêtre avec recherche (#muscuPicker)
@@ -892,6 +936,8 @@ function saveSessionForm() {
     kcal:      parseFloat(document.getElementById('s_kcal')?.value)||null,
     elevation: parseFloat(document.getElementById('s_elevation')?.value)||null,
     comp_id:   document.getElementById('s_comp_id')?.value || null,
+    trail:     document.getElementById('s_sport').value === 'run' && document.getElementById('s_trail').checked ? true : null,
+    gear_id:   TS.GEAR_KINDS[document.getElementById('s_sport').value] ? (document.getElementById('s_gear').value || null) : null,
   };
   const pain = painValue();
   if (pain != null) session.pain = pain;
