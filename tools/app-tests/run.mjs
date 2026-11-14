@@ -2583,6 +2583,38 @@ async function main() {
     assert(reopen.gear === 'gc' && reopen.trail, 'réouverture : ' + JSON.stringify(reopen));
   });
 
+  await test('Équipement : chaussures trail seulement pour les sorties trail, « aucune paire » sur une séance, paire « pas encore utilisée »', async () => {
+    const data = sampleData();
+    data.sessions = [
+      { id: 'a1', date: day(-20), sport: 'run', duration: 1, distance: 10 },               // avant les chaussures route : aucune paire
+      { id: 'a2', date: day(-18), sport: 'run', duration: 1, distance: 12, trail: true },   // trail
+      { id: 'a3', date: day(-5), sport: 'run', duration: 1, distance: 9 },                  // route
+      { id: 'a4', date: day(-3), sport: 'run', duration: 1, distance: 8, gear_id: 'none' }, // « aucune paire » choisie à la main
+    ];
+    data.gear = [
+      { id: 'tr', sport: 'run', name: 'Trail', start: day(-40), terrain: 'trail' },
+      { id: 'ro', sport: 'run', name: 'Route', start: day(-10), terrain: 'route' },
+      { id: 'nw', sport: 'run', name: 'Neuves', start: day(1), terrain: 'route' },          // première utilisation demain
+    ];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => {
+      const d = TS.getData(), st = TS.gearStats(d);
+      const of = id => (TS.gearForSession(d.sessions.find(s => s.id === id), d) || {}).id || null;
+      const items = [...document.querySelectorAll('#gearList .gear-item')].map(x => x.textContent.replace(/\s+/g, ' '));
+      return { a1: of('a1'), a2: of('a2'), a3: of('a3'), a4: of('a4'), km: [st.tr.km, st.ro.km, st.nw.km], neuves: items.find(t => /Neuves/.test(t)) || '' };
+    });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.evaluate(() => editSession('a4')); await v.page.waitForTimeout(150);
+    const sel = await v.page.evaluate(() => ({ v: document.getElementById('s_gear').value, last: [...document.querySelectorAll('#s_gear option')].pop().textContent }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.a1 === null && r.a2 === 'tr' && r.a3 === 'ro' && r.a4 === null, 'paires : ' + JSON.stringify(r));
+    assert(JSON.stringify(r.km) === '[12,9,0]', 'km : ' + JSON.stringify(r.km));
+    assert(/Pas encore utilisé/.test(r.neuves) && !/Plus utilisé/.test(r.neuves) && /première utilisation le/.test(r.neuves), 'paire future : ' + r.neuves);
+    assert(sel.v === 'none' && /Aucune paire pour cette séance/.test(sel.last), 'choix « aucune » : ' + JSON.stringify(sel));
+  });
+
   await browser.close();
   server.close();
 

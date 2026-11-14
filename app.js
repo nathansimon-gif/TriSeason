@@ -4005,18 +4005,22 @@ function gearChoices(s, data = getData(), ranges = gearRanges(data)) {
     .sort((a, b) => b.start.localeCompare(a.start));
 }
 // Équipement choisi automatiquement (sans tenir compte du choix fait sur la séance) :
-// course à pied → chaussures du terrain de la sortie (trail ou route), sinon tous terrains, sinon l'autre ;
-// autres sports → le plus récent en service.
+// course à pied → sortie de trail : chaussures trail, sinon tous terrains, sinon route ;
+//                 autre sortie : chaussures route, sinon tous terrains (jamais les chaussures trail) ;
+// autres sports → le plus récent en service. Rien en service ce jour-là : aucun équipement.
 function gearAuto(s, data = getData(), ranges = gearRanges(data)) {
   const list = gearChoices(s, data, ranges).filter(g => gearTerrain(g) !== 'manuel');
   if (!list.length) return null;
   if (s.sport !== 'run') return list[0];
-  const order = isTrailSession(s, data) ? ['trail', 'tout', 'route'] : ['route', 'tout', 'trail'];
+  const order = isTrailSession(s, data) ? ['trail', 'tout', 'route'] : ['route', 'tout'];
   for (const t of order) { const g = list.find(x => gearTerrain(x) === t); if (g) return g; }
-  return list[0];
+  return null;
 }
-// Équipement d'une séance : celui choisi sur la séance (s.gear_id) s'il existe encore, sinon le choix automatique
+// Équipement d'une séance : celui choisi sur la séance (s.gear_id) s'il existe encore, sinon le choix automatique.
+// s.gear_id = 'none' : aucun équipement pour cette séance (choisi dans la fenêtre de la séance).
+const GEAR_NONE = 'none';
 function gearForSession(s, data = getData(), ranges = gearRanges(data)) {
+  if (s.gear_id === GEAR_NONE) return null;
   if (s.gear_id) { const g = (data.gear || []).find(x => x.id === s.gear_id && x.sport === s.sport); if (g) return g; }
   return gearAuto(s, data, ranges);
 }
@@ -4160,7 +4164,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   getGear, saveGear, deleteGear, gearRanges, gearForSession, gearStats, GEAR_KINDS, GEAR_DEFAULT_ALERT, GEAR_HINTS,
-  GEAR_TERRAINS, gearTerrain, isTrailSession, gearChoices, gearAuto,
+  GEAR_TERRAINS, gearTerrain, isTrailSession, gearChoices, gearAuto, GEAR_NONE,
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,

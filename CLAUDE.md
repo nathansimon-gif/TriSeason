@@ -69,8 +69,9 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   équipement (`data.gear`, `gearRanges` / `gearStats`) : chaque équipement est en service de sa première utilisation
   à la veille du suivant **du même sport et du même terrain** (`gearTerrain` : `tout` / `route` / `trail` / `manuel`, chaussures seulement),
   ou à son retrait ; une séance va sur `s.gear_id` (choisi dans la fenêtre de la séance) sinon `gearAuto` (course : chaussures trail si
-  `isTrailSession` — `s.trail`, Strava `TrailRun`, montre, ou course `trail` reliée — sinon route, puis tous terrains ;
-  une paire `manuel` n'est jamais prise automatiquement) ;
+  `isTrailSession` — `s.trail`, Strava `TrailRun`, montre, ou course `trail` reliée — puis tous terrains, puis route ;
+  sortie non trail : route puis tous terrains, **jamais trail** ; rien en service : aucun ; une paire `manuel` n'est jamais prise
+  automatiquement ; `s.gear_id = 'none'` (`GEAR_NONE`) : aucun équipement pour cette séance) ;
   option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
   et `pain` (0-10) sur les séances, voir RGPD ci-dessous ;
   **musculation** : sport `muscu` (violet), `session.exercises = [{name, group, sets, reps, kg}]`
