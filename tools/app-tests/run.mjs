@@ -2648,6 +2648,22 @@ async function main() {
     assert(back, 'ressortir ne marche pas');
   });
 
+  await test('Équipement (téléphone) : le nom de la paire seul sur sa ligne, état et boutons en dessous, sans chevauchement', async () => {
+    const data = sampleData();
+    data.gear = [{ id: 'g1', sport: 'run', name: 'Adidas Adizero Boston 13', start: day(1), terrain: 'manuel', alert_km: 700 },
+      { id: 'g2', sport: 'run', name: 'ASICS noosatri 16', start: day(-60), terrain: 'route', alert_km: 120 }];
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const r = await v.page.evaluate(() => [...document.querySelectorAll('.gear-item')].map(it => {
+      const n = it.querySelector('.gear-item__name'), a = it.querySelector('.gear-item__actions');
+      const nr = n.getBoundingClientRect(), ar = a.getBoundingClientRect();
+      return { oneLine: nr.height < parseFloat(getComputedStyle(n).lineHeight || '20') * 1.6 || nr.height < 30, below: nr.bottom <= ar.top + 1 };
+    }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.length === 2 && r.every(x => x.oneLine && x.below), 'disposition : ' + JSON.stringify(r));
+  });
+
   await browser.close();
   server.close();
 
