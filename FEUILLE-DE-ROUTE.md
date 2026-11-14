@@ -13,7 +13,9 @@ Les cases cochées passent dans « Fait » en bas de page.
   - **Courses** : à J-7 d'une compétition (et pourquoi pas la veille)
   - **Séances prévues** : le matin pour celles du jour, la veille au soir pour celles du lendemain
   - **Repas** : le soir si rien n'est noté pour la journée
-  - **Autres idées** : ressenti à noter après une séance arrivée de Strava, pesée, défis de la semaine le dimanche, résumé du mois prêt, équipement qui atteint son seuil
+  - **Équipement** : chaussures, vélo ou combinaison qui approchent ou atteignent leur seuil de kilomètres (idée retenue par Nathan le 14/11)
+  - **Résumé du mois** : le 1er du mois, « Ton résumé d'octobre est prêt » (idée retenue par Nathan le 14/11)
+  - **Autres idées** : ressenti à noter après une séance arrivée de Strava, pesée, défis de la semaine le dimanche
   - **Conditions** : l'appli installée sur l'écran d'accueil (iPhone avec iOS 16.4 ou plus, Android), accord de la personne pour les notifications ; le petit serveur Cloudflare (gratuit) envoie les messages à l'heure prévue ; mise à jour de la politique de confidentialité (le message passe par le service de notifications d'Apple ou de Google, **sans donnée de santé** dedans : « Course dans 7 jours », « Pense à noter tes repas »)
 - [ ] 🧑🤖 **Questionnaire de bienvenue (3 écrans), à valider lundi 16 novembre** (proposition du 14/11/2026, **à valider avec Nathan après le rapport du lundi 16 novembre**) : 3 écrans courts juste après la création du compte, chaque question facultative (« Passer »), tout modifiable ensuite dans Profil. But : une appli déjà réglée pour la personne dès la première visite.
   - **Écran 1, « Ton sport »** : sports pratiqués (remplit « Mes sports ») ; niveau (je débute / régulier / compétition, pour adapter les défis) ; objectif du moment (finir ma première course, progresser, préparer une compétition, garder la forme). « Préparer une compétition » demande la date et la distance et crée la course (bandeau J-… sur le Dashboard)
