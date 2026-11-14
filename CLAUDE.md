@@ -71,7 +71,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   ou à son retrait ; une séance va sur `s.gear_id` (choisi dans la fenêtre de la séance) sinon `gearAuto` (course : chaussures trail si
   `isTrailSession` — `s.trail`, Strava `TrailRun`, montre, ou course `trail` reliée — puis tous terrains, puis route ;
   sortie non trail : route puis tous terrains, **jamais trail** ; rien en service : aucun ; une paire `manuel` n'est jamais prise
-  automatiquement ; `s.gear_id = 'none'` (`GEAR_NONE`) : aucun équipement pour cette séance) ;
+  automatiquement ; `s.gear_id = 'none'` (`GEAR_NONE`) : aucun équipement pour cette séance ; équipement rangé `g.stored`
+  (`storeGear`) : plus proposé dans les séances, retiré ce jour-là s'il était en service (`stored_retired`), km passés gardés) ;
   option santé « Blessures, maladie et reprise » : `data.health = {consent, periods}`
   et `pain` (0-10) sur les séances, voir RGPD ci-dessous ;
   **musculation** : sport `muscu` (violet), `session.exercises = [{name, group, sets, reps, kg}]`

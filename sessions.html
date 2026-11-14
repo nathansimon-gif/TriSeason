@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261130a"></script>
+  <script src="theme.js?v=20261201a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261130a"></script>
+  <script src="auth-guard.js?v=20261201a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261130a">
+  <link rel="stylesheet" href="style.css?v=20261201a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -376,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261130a"></script>
-<script src="import.js?v=20261130a"></script>
-<script src="app.js?v=20261130a"></script>
+<script src="fit-parser.js?v=20261201a"></script>
+<script src="import.js?v=20261201a"></script>
+<script src="app.js?v=20261201a"></script>
 <script>
 
 
@@ -650,7 +650,8 @@ function updateGearField() {
   const sel = document.getElementById('s_gear');
   const keep = sel.dataset.chosen != null ? sel.dataset.chosen : sel.value;
   const data = TS.getData();
-  const all = TS.getGear(data).filter(g => g.sport === sport);
+  // Équipements rangés : plus proposés (sauf celui déjà choisi sur cette séance)
+  const all = TS.getGear(data).filter(g => g.sport === sport && (!g.stored || g.id === keep));
   document.getElementById('trailLine').style.display = sport === 'run' ? '' : 'none';
   const grp = document.getElementById('gearGroup');
   grp.style.display = TS.GEAR_KINDS[sport] && (all.length || sport === 'run') ? '' : 'none';

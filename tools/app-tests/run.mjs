@@ -2615,6 +2615,39 @@ async function main() {
     assert(sel.v === 'none' && /Aucune paire pour cette séance/.test(sel.last), 'choix « aucune » : ' + JSON.stringify(sel));
   });
 
+  await test('Équipement : ranger une paire (plus proposée dans les séances, kilomètres gardés), la ressortir', async () => {
+    const data = sampleData();
+    data.sessions = [{ id: 'b1', date: day(-12), sport: 'run', duration: 1, distance: 10 }, { id: 'b2', date: day(-2), sport: 'run', duration: 1, distance: 8 }];
+    data.gear = [
+      { id: 'old', sport: 'run', name: 'Anciennes', start: day(-30), terrain: 'route' },
+      { id: 'nw', sport: 'run', name: 'Nouvelles', start: day(-5), terrain: 'route' },
+    ];
+    const v = await newUser({ data });   // les fenêtres de confirmation sont acceptées par newUser
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(800);
+    const before = await v.page.evaluate(() => [...document.querySelectorAll('#gearList details summary')].map(x => x.textContent));
+    await v.page.click('#gearList details summary >> text=Anciens');
+    await v.page.click('#gearList .gear-item:has-text("Anciennes") >> text=Ranger'); await v.page.waitForTimeout(200);
+    const after = await v.page.evaluate(() => ({ sums: [...document.querySelectorAll('#gearList details summary')].map(x => x.textContent),
+      km: TS.gearStats().old.km, stored: !!TS.getGear().find(g => g.id === 'old').stored }));
+    // Modifier une paire rangée la garde rangée
+    await v.page.evaluate(() => { openGearModal('old'); document.getElementById('g_name').value = 'Anciennes 2'; saveGearForm(); });
+    const kept = await v.page.evaluate(() => !!TS.getGear().find(g => g.id === 'old').stored);
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'run');
+    const opts = await v.page.evaluate(() => [...document.querySelectorAll('#s_gear option')].map(o => o.textContent));
+    await v.page.evaluate(() => closeModal());
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate(() => gearStore('old', false)); await v.page.waitForTimeout(150);
+    const back = await v.page.evaluate(() => !TS.getGear().find(g => g.id === 'old').stored);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(before.join() === 'Anciens équipements (1)', 'avant : ' + before.join());
+    assert(after.sums.join() === 'Équipements rangés (1)' && after.km === 10 && after.stored, 'rangée : ' + JSON.stringify(after));
+    assert(kept, 'modifier une paire rangée l’a ressortie');
+    assert(!opts.some(o => /Anciennes/.test(o)) && opts.some(o => /Nouvelles/.test(o)), 'choix dans la séance : ' + JSON.stringify(opts));
+    assert(back, 'ressortir ne marche pas');
+  });
+
   await browser.close();
   server.close();
 

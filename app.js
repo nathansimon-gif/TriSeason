@@ -3969,6 +3969,24 @@ function deleteGear(id) {
   data.gear = (data.gear || []).filter(g => g.id !== id);
   saveData(data);
 }
+// Ranger un équipement (g.stored = date) : il n'est plus proposé dans les séances. S'il était encore en service,
+// il est retiré ce jour-là (g.retired, noté g.stored_retired pour pouvoir l'annuler en le ressortant).
+// Ses kilomètres passés restent comptés.
+function storeGear(id, on = true) {
+  const data = getData();
+  const g = (data.gear || []).find(x => x.id === id);
+  if (!g) return;
+  const today = localDateStr();
+  if (on) {
+    g.stored = today;
+    const r = gearRanges(data)[id];
+    if (!g.retired && r && r.to === '9999-12-31' && g.start <= today) { g.retired = today; g.stored_retired = true; }
+  } else {
+    delete g.stored;
+    if (g.stored_retired) { delete g.retired; delete g.stored_retired; }
+  }
+  saveData(data);
+}
 // Terrain des chaussures (course à pied) : une paire « route » et une paire « trail » peuvent servir en même temps.
 // « manuel » : paire choisie seulement à la main sur la séance (fractionné, compétition…), jamais mise automatiquement,
 // et qui ne remplace aucune autre paire.
@@ -4164,7 +4182,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   getGear, saveGear, deleteGear, gearRanges, gearForSession, gearStats, GEAR_KINDS, GEAR_DEFAULT_ALERT, GEAR_HINTS,
-  GEAR_TERRAINS, gearTerrain, isTrailSession, gearChoices, gearAuto, GEAR_NONE,
+  GEAR_TERRAINS, gearTerrain, isTrailSession, gearChoices, gearAuto, GEAR_NONE, storeGear,
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,
