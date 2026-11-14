@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261129a"></script>
+  <script src="theme.js?v=20261130a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261129a"></script>
+  <script src="auth-guard.js?v=20261130a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261129a">
+  <link rel="stylesheet" href="style.css?v=20261130a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -464,7 +464,7 @@
 </div>
 
 
-<script src="app.js?v=20261129a"></script>
+<script src="app.js?v=20261130a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');
@@ -638,10 +638,11 @@ function gearEta(st) {
 function gearItemHtml(g, st) {
   const kind = TS.GEAR_KINDS[g.sport];
   const status = st.active ? `en service depuis le ${gearDay(g.start)}`
-    : st.from > TS.localDateStr() ? `à partir du ${gearDay(g.start)}`
+    : st.from > TS.localDateStr() ? `première utilisation le ${gearDay(g.start)}`
     : `du ${gearDay(g.start)} au ${gearDay(st.to)}${st.replaced ? ' (remplacé)' : ''}`;
   const badge = st.state === 'over' ? '<span class="gear-state gear-state--over">Seuil atteint</span>'
     : st.state === 'near' ? '<span class="gear-state gear-state--near">Seuil bientôt atteint</span>'
+    : st.from > TS.localDateStr() ? '<span class="gear-state">Pas encore utilisé</span>'
     : !st.active ? '<span class="gear-state">Plus utilisé</span>' : '';
   let alert = '';
   if (st.alert) {

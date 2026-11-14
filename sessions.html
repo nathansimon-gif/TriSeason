@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261129a"></script>
+  <script src="theme.js?v=20261130a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261129a"></script>
+  <script src="auth-guard.js?v=20261130a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261129a">
+  <link rel="stylesheet" href="style.css?v=20261130a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -376,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261129a"></script>
-<script src="import.js?v=20261129a"></script>
-<script src="app.js?v=20261129a"></script>
+<script src="fit-parser.js?v=20261130a"></script>
+<script src="import.js?v=20261130a"></script>
+<script src="app.js?v=20261130a"></script>
 <script>
 
 
@@ -666,9 +666,10 @@ function updateGearField() {
   const label = g => g.name + (sport === 'run' && TS.gearTerrain(g) !== 'tout' ? ' (' + (TS.gearTerrain(g) === 'manuel' ? 'à la main' : TS.GEAR_TERRAINS[TS.gearTerrain(g)].toLowerCase()) + ')' : '');
   // En service ce jour-là d'abord, puis les autres (anciens ou pas encore utilisés), au cas où
   const list = all.filter(usable).concat(all.filter(g => !usable(g)));
-  sel.innerHTML = `<option value="">Automatique${auto ? ' : ' + gearEscape(label(auto)) : ' (aucun en service ce jour-là)'}</option>`
-    + list.map(g => `<option value="${g.id}">${gearEscape(label(g))}${usable(g) ? '' : ' · pas en service ce jour-là'}</option>`).join('');
-  sel.value = list.some(g => g.id === keep) ? keep : '';
+  sel.innerHTML = `<option value="">Automatique${auto ? ' : ' + gearEscape(label(auto)) : ' : aucun'}</option>`
+    + list.map(g => `<option value="${g.id}">${gearEscape(label(g))}${usable(g) ? '' : ' · pas en service ce jour-là'}</option>`).join('')
+    + `<option value="${TS.GEAR_NONE}">Aucun${sport === 'run' ? 'e paire' : ' équipement'} pour cette séance</option>`;
+  sel.value = keep === TS.GEAR_NONE || list.some(g => g.id === keep) ? keep : '';
   delete sel.dataset.chosen;
   document.getElementById('gearHintLine').textContent = all.length ? '' : 'Ajoute tes chaussures dans Profil → Équipement pour compter leurs kilomètres.';
 }
