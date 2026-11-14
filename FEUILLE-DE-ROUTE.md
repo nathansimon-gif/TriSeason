@@ -9,7 +9,19 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑🤖 **Notifications et rappels sur le téléphone** (demandé le 14/11/2026 ; **à reprendre avec Nathan après le rapport du lundi 16 novembre**, il a demandé qu'on le lui rappelle) : rappels choisis par la personne (noter ses repas le soir, son ressenti après une séance Strava, sa pesée, les défis du dimanche, le résumé du mois, J-7 avant une course). Possible pour l’appli installée sur l’écran d’accueil (iPhone avec iOS 16.4 ou plus, Android), avec l’accord de la personne. Demande : le petit serveur Cloudflare (gratuit) pour envoyer les messages à l’heure prévue, une clé d’envoi, et une mise à jour de la politique de confidentialité (le message passe par le service de notifications d’Apple ou de Google, sans donnée de santé dedans)
+- [ ] 🧑🤖 **Notifications et rappels sur le téléphone, à en reparler lundi 16 novembre** (demandé le 14/11/2026 ; **à reprendre avec Nathan après le rapport du lundi 16 novembre**, il a demandé qu'on le lui rappelle). Chaque rappel activé ou non par la personne (Profil → Paramètres), à l'heure qu'elle choisit :
+  - **Courses** : à J-7 d'une compétition (et pourquoi pas la veille)
+  - **Séances prévues** : le matin pour celles du jour, la veille au soir pour celles du lendemain
+  - **Repas** : le soir si rien n'est noté pour la journée
+  - **Autres idées** : ressenti à noter après une séance arrivée de Strava, pesée, défis de la semaine le dimanche, résumé du mois prêt, équipement qui atteint son seuil
+  - **Conditions** : l'appli installée sur l'écran d'accueil (iPhone avec iOS 16.4 ou plus, Android), accord de la personne pour les notifications ; le petit serveur Cloudflare (gratuit) envoie les messages à l'heure prévue ; mise à jour de la politique de confidentialité (le message passe par le service de notifications d'Apple ou de Google, **sans donnée de santé** dedans : « Course dans 7 jours », « Pense à noter tes repas »)
+- [ ] 🧑🤖 **Questionnaire de bienvenue (3 écrans), à valider lundi 16 novembre** (proposition du 14/11/2026, **à valider avec Nathan après le rapport du lundi 16 novembre**) : 3 écrans courts juste après la création du compte, chaque question facultative (« Passer »), tout modifiable ensuite dans Profil. But : une appli déjà réglée pour la personne dès la première visite.
+  - **Écran 1, « Ton sport »** : sports pratiqués (remplit « Mes sports ») ; niveau (je débute / régulier / compétition, pour adapter les défis) ; objectif du moment (finir ma première course, progresser, préparer une compétition, garder la forme). « Préparer une compétition » demande la date et la distance et crée la course (bandeau J-… sur le Dashboard)
+  - **Écran 2, « Ton rythme »** : séances par semaine en général (1-2, 3-4, 5-6, 7+), point de départ des défis ; montre ou appli utilisée (Strava, Garmin, Coros, Polar, Apple Watch, aucune), puis connexion Strava ou import des fichiers
+  - **Écran 3, « Pour des chiffres justes »** : poids et année de naissance (facultatifs, pour le W/kg, les zones de FC, les calories) ; suivre sa nutrition maintenant ou plus tard (plus tard : les parties repas restent discrètes) ; objectif d'eau (1,5 L par défaut)
+  - **Fin** : un écran de résumé (« C'est prêt : vélo et course, Marathon de Paris dans 142 jours. Connecte Strava… ») puis le Dashboard
+  - **Pas au départ** : les options santé (blessures, cycle : accord à part, à découvrir dans Forme), la FC max et le FTP (proposés plus tard dans Profil), plus de 3 écrans
+  - Seulement pour les nouveaux comptes ; « Refaire le questionnaire » dans Profil pour les autres. Poids : déjà couvert par l'accord de création du compte et la politique de confidentialité
 - [ ] 🧑 **Nouveau nom, la suite** (l'appli affiche ORKA partout, mais **ORKA est déjà utilisé par une autre appli** : choisir un autre nom, puis Claude le remplace partout) :
   - choisir le logo (pistes dessinées le 6 novembre : aileron, élan, de zéro au sommet, tache de l'orque), puis Claude met l'icône dans l'appli
   - vérifier que le nom est libre : INPI et EUIPO (marques), App Store / Google Play, nom de site, Instagram
@@ -42,13 +54,6 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [x] 🧑🤖 **Écrans de chargement** : fait (PR #50)
 - [ ] 🤖 **Import .fit automatique par paquets de 50** : l'import de 50 fichiers d'un coup a été testé par Nathan ; au-delà de 50, découper tout seul en paquets successifs au lieu de refuser
-- [ ] 🧑🤖 **Petit questionnaire de bienvenue** (à discuter ensemble avant de commencer) : juste après la création du compte, quelques questions courtes pour adapter l'appli dès le départ. Pistes :
-  - **sports pratiqués** (remplit directement « Mes sports ») et **niveau** dans chacun (débutant, régulier, compétiteur…)
-  - **objectif** : finir une première course, progresser, préparer une compétition précise (date, distance → crée la compétition), garder la forme
-  - **volume habituel** (séances ou heures par semaine) : sert de départ aux défis de la semaine
-  - **infos utiles aux calculs** : poids, FC max ou âge (W/kg, zones, besoins caloriques), suivi nutritionnel souhaité ou non
-  - **montre / Strava** : proposer tout de suite la connexion Strava ou l'import des fichiers
-  - court (2 à 3 écrans), chaque question **facultative** avec « Passer », tout modifiable ensuite dans Profil ; à écrire dans *Confidentialité* (poids et FC = données de santé, déjà couvertes par l'accord)
 - [ ] 🤖 **Musculation, plus tard** (idées) : objectifs par exercice (« 100 kg au squat »), minuteur de repos entre les séries (les séries détaillées, avec une charge différente à chaque série, sont faites : PR #55)
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
@@ -129,6 +134,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/11/2026 | — | Feuille de route : **questionnaire de bienvenue** détaillé (3 écrans) et **rappels** précisés (courses à J-7, séances prévues du jour et du lendemain, repas, autres idées), tous deux dans « Maintenant », à reprendre après le rapport du lundi 16 novembre |
 | 14/11/2026 | #80 | **Effort et ressenti** : dans le formulaire de séance, l’effort ressenti se note avec 10 cases (1 à 10, comme dans « Note tes séances »), et la douleur de l’option Blessures avec des cases de 0 à 10 ; Dashboard et calendrier : « ressenti bon · effort 7/10 » au lieu de « ressenti 4/5 ». **Cycle menstruel** : niveau de douleur du jour (1 à 10) quand « Crampes » ou « Maux de tête » est coché, résumé des douleurs sur 3 mois, comparaison des séances les jours de forte douleur, barres roses sur le graphique de forme, dans le calendrier du Dashboard et dans la politique de confidentialité |
 | 13/11/2026 | #79 | Nutrition : **émojis retirés** des repas et des ravitaillements (listes de choix, cartes des repas, lignes de ravitaillement), nom du repas écrit en clair (« Collation de l’après-midi » au lieu de « collation-après-midi »), crayon de modification dessiné comme les autres icônes de l’appli ; compétitions : « Nutrition J-7 » sans émojis (eau en litres, kcal) |
 | 10/11/2026 | #78 | Comparer deux mois : la courbe « Au fil du mois » se filtre **par sport** (« Tous » ou un des sports suivis pratiqués ces mois-là), en km, heures ou séances ; le choix km / heures / séances est gardé d’un sport à l’autre (musculation : heures ou séances) |
