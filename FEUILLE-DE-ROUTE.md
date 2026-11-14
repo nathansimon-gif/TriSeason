@@ -9,6 +9,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
+- [ ] 🧑🤖 **Notifications et rappels sur le téléphone** (demandé le 14/11/2026 ; **à reprendre avec Nathan après le rapport du lundi 16 novembre**, il a demandé qu'on le lui rappelle) : rappels choisis par la personne (noter ses repas le soir, son ressenti après une séance Strava, sa pesée, les défis du dimanche, le résumé du mois, J-7 avant une course). Possible pour l’appli installée sur l’écran d’accueil (iPhone avec iOS 16.4 ou plus, Android), avec l’accord de la personne. Demande : le petit serveur Cloudflare (gratuit) pour envoyer les messages à l’heure prévue, une clé d’envoi, et une mise à jour de la politique de confidentialité (le message passe par le service de notifications d’Apple ou de Google, sans donnée de santé dedans)
 - [ ] 🧑 **Nouveau nom, la suite** (l'appli affiche ORKA partout, mais **ORKA est déjà utilisé par une autre appli** : choisir un autre nom, puis Claude le remplace partout) :
   - choisir le logo (pistes dessinées le 6 novembre : aileron, élan, de zéro au sommet, tache de l'orque), puis Claude met l'icône dans l'appli
   - vérifier que le nom est libre : INPI et EUIPO (marques), App Store / Google Play, nom de site, Instagram
@@ -59,8 +60,6 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [ ] 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
 - [ ] 🧑 Vérifier dans Firebase que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié »), et tester un e-mail de réinitialisation
 - [ ] 🧑 *Facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom TriSeason
-
-- [ ] 🧑🤖 **Notifications et rappels sur le téléphone** (demandé le 14/11/2026, à décider ensemble) : rappels choisis par la personne (noter ses repas le soir, son ressenti après une séance Strava, sa pesée, les défis du dimanche, le résumé du mois, J-7 avant une course). Possible pour l’appli installée sur l’écran d’accueil (iPhone avec iOS 16.4 ou plus, Android), avec l’accord de la personne. Demande : le petit serveur Cloudflare (gratuit) pour envoyer les messages à l’heure prévue, une clé d’envoi, et une mise à jour de la politique de confidentialité (le message passe par le service de notifications d’Apple ou de Google, sans donnée de santé dedans)
 
 ## Dans 3 à 6 mois
 
