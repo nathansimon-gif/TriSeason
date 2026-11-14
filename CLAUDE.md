@@ -155,6 +155,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
 - **Graphiques** (app.js) : courbes et barres en `interaction` `index` / `intersect: false` (l'infobulle suit le doigt),
   `canvas { touch-action: pan-y }` (style.css) ; un clic qui ouvre une page doit vérifier un vrai toucher
   (`getElementsAtEventForMode(e, 'nearest', { intersect: true })`).
+- **Notes de séance** : effort `rpe` 1 à 10 et douleur `pain` 0 à 10 en cases (`.scale-picker`, `setScale`) dans le formulaire ; ressenti `sensation` 1 à 5 (visages), affiché en mots (`TS.feelWord` : « bon »), jamais « /5 » à côté d'un « /10 ».
 - **Séances** : liste `.ses-row` (bouton invisible `.ses-row__hit` sur la ligne + lien `.ses-strava` « Voir sur Strava ») (30 puis « Voir plus »), fenêtre `#importModal` (fichiers + archive Strava,
   ouverte aussi par `sessions.html#historique-strava`), filtres repliés. FC, puissance, W/kg et moyennes par
   séance : page Sports (`#perSessionCard`, `#muscuAvgs`).
@@ -275,7 +276,7 @@ le dire dans `confidentialite.html` et sans accord explicite.
 - **Option « Cycle menstruel »** (page Forme) : accord **séparé** dans `data.cycle.consent`
   (`CYCLE_CONSENT_VERSION`), sans lui rien n'est enregistré (`cycleEdit` refuse) ; `data.cycle =
   {mode, starts, period_days, signs}` ; `cycleInfo` / `cyclePhaseOn` (phases seulement en cycle naturel avec
-  une durée moyenne) / `cyclePredicted` / `cycleImpact` ; couleur `--cycle` (rose `#f472d0`, clair `#c638c9`) pour les règles (calendrier, graphique de forme) ; retirer l'accord (`TS.disableCycle`) efface tout.
+  une durée moyenne) / `cyclePredicted` / `cycleImpact` ; couleur `--cycle` (rose `#f472d0`, clair `#c638c9`) pour les règles (calendrier, graphique de forme) ; niveau de douleur du jour `data.cycle.pain[jour]` (1 à 10, seulement avec un signe de `CYCLE_PAIN_SIGNS` : crampes, maux de tête ; `setCyclePain` / `cyclePainOn` / `cyclePainStats`, barres roses en bas du graphique de forme) ; retirer l'accord (`TS.disableCycle`) efface tout.
   Estimations, jamais d'avis médical ni de contraception ; jamais montré à un coach par défaut.
 - **Effacement** : `TS.resetAllData()` (données à zéro, compte gardé) et
   `TS.deleteAccount(password)` (réauthentification, suppression du document

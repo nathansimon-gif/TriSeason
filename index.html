@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261127b"></script>
+  <script src="theme.js?v=20261128a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261127b"></script>
+  <script src="auth-guard.js?v=20261128a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20261127b">
+  <link rel="stylesheet" href="style.css?v=20261128a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     /* Ta semaine : une rangée de petites tuiles (une par sport suivi) */
@@ -405,7 +405,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261127b"></script>
+<script src="app.js?v=20261128a"></script>
 <script>
 let charts = {};
 let currentWeek = TS.getCurrentWeek();
@@ -507,7 +507,7 @@ function renderInsight() {
   const when = last.date === today ? 'aujourd’hui' : last.date === shift(today, -1) ? 'hier'
     : TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const facts = [last.duration ? TS.formatHours(last.duration) : '', last.distance ? last.distance.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' km' : '',
-    last.sensation ? 'ressenti ' + last.sensation + '/5' : ''].filter(Boolean).join(' · ');
+    last.sensation ? 'ressenti ' + TS.feelWord(last.sensation) : '', last.rpe ? 'effort ' + last.rpe + '/10' : ''].filter(Boolean).join(' · ');
   const prev = dayNutrition(nutri, shift(last.date, -1));
   const day = dayNutrition(nutri, last.date);
   // Ravitaillements reliés à la séance ; sinon ceux du jour qui ne sont reliés à aucune séance
@@ -985,8 +985,9 @@ function openPlanDay(date, focusForm, planId) {
     const ph = date <= today ? TS.cyclePhaseOn(date) : null;
     const pred = date > today && TS.cyclePredicted(3).some(p => p.days.includes(date));
     const signs = ((TS.getData().cycle || {}).signs || {})[date] || [];
+    const pain = TS.cyclePainOn(date);
     const txt = [ph && ph.phase === 'regles' ? 'Règles (jour ' + ph.day + ')' : ph && ph.phase ? 'Jour ' + ph.day + ' · ' + ph.label : ph && ph.day ? 'Jour ' + ph.day + ' du cycle' : '',
-      pred ? 'Règles prévues (estimation)' : '', signs.map(k => TS.CYCLE_SIGNS[k]).join(', ')].filter(Boolean).join(' · ');
+      pred ? 'Règles prévues (estimation)' : '', signs.map(k => TS.CYCLE_SIGNS[k]).join(', '), pain ? 'douleur ' + pain + '/10' : ''].filter(Boolean).join(' · ');
     if (txt) html += `<div class="day-sec">Cycle</div><div class="day-nutri">${txt}</div>`;
   }
   if (nutri.meals || nutri.water) {
@@ -1021,8 +1022,8 @@ function daySessionHtml(s, plan, st, data) {
     chip('FC max', s.fc_max ? Math.round(s.fc_max) + ' bpm' : ''),
     chip('Puissance', s.power_avg ? Math.round(s.power_avg) + ' W' : ''),
     chip('NP', s.np ? Math.round(s.np) + ' W' : ''),
-    chip('RPE', s.rpe ? s.rpe + '/10' : ''),
-    chip('Ressenti', s.sensation ? s.sensation + '/5' : ''),
+    chip('Effort', s.rpe ? s.rpe + '/10' : ''),
+    chip('Ressenti', s.sensation ? TS.feelWord(s.sensation).replace(/^./, c => c.toUpperCase()) : ''),
     chip('Dépense', s.kcal ? Math.round(s.kcal).toLocaleString('fr-FR') + ' kcal' : ''),
     chip('Douleur', s.pain != null && TS.healthEnabled(data) ? s.pain + '/10' : ''),
     chip('Tonnage', s.exercises && TS.muscuVolume(s) ? TS.muscuVolume(s).toLocaleString('fr-FR') + ' kg' : ''),
