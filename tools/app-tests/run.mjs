@@ -2534,6 +2534,55 @@ async function main() {
     assert(r2.pain === null && !r2.shown, 'douleur effacée avec le signe : ' + JSON.stringify(r2));
   });
 
+  await test('Équipement : chaussures route et trail en même temps, sortie de trail, choix séance par séance, Trail Run de Strava', async () => {
+    const data = sampleData();
+    data.sessions = [
+      { id: 'r1', date: day(-10), sport: 'run', duration: 1, distance: 10 },
+      { id: 'r2', date: day(-8), sport: 'run', duration: 1.5, distance: 15, trail: true },
+      { id: 'r3', date: day(-6), sport: 'run', duration: 0.75, distance: 8, gear_id: 'gc' },   // séance de fractionné : paire choisie à la main
+      { id: 'r4', date: day(-4), sport: 'run', duration: 2, distance: 20, comp_id: 'ct' },     // reliée à une course trail
+      { id: 'r5', date: day(-2), sport: 'run', duration: 1, distance: 11 },
+    ];
+    data.competitions = [{ id: 'ct', date: day(-4), name: 'Trail test', type: 'RUN', distance: '20', trail: true }];
+    data.gear = [
+      { id: 'gr', sport: 'run', name: 'Route', start: day(-30), terrain: 'route' },
+      { id: 'gt', sport: 'run', name: 'Trail', start: day(-30), terrain: 'trail' },
+      { id: 'gc', sport: 'run', name: 'Carbone', start: day(-31), terrain: 'manuel' },   // paire de fractionné, choisie à la main
+      { id: 'go', sport: 'run', name: 'Ancienne route', start: day(-90), terrain: 'route' },  // remplacée par gr
+    ];
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
+    const r = await v.page.evaluate(() => {
+      const d = TS.getData(), st = TS.gearStats(d);
+      const of = id => (TS.gearForSession(d.sessions.find(s => s.id === id), d) || {}).id;
+      return { r1: of('r1'), r2: of('r2'), r3: of('r3'), r4: of('r4'), r5: of('r5'), km: { gr: st.gr.km, gt: st.gt.km, gc: st.gc.km },
+        active: [st.gr.active, st.gt.active, st.gc.active, st.go.active],
+        strava: TS.stravaToSession({ id: 9, sport_type: 'TrailRun', start_date_local: '2026-01-02T08:00:00', elapsed_time: 3600, distance: 12000 }).trail,
+        road: TS.stravaToSession({ id: 8, sport_type: 'Run', start_date_local: '2026-01-02T08:00:00', elapsed_time: 3600, distance: 12000 }).trail };
+    });
+    // Fenêtre de séance : automatique puis trail, puis choix à la main enregistré
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'run'); await v.page.fill('#s_date', day(0)); await v.page.dispatchEvent('#s_date', 'change');
+    const autoRoad = await v.page.evaluate(() => document.querySelector('#s_gear option[value=""]').textContent);
+    await v.page.check('#s_trail');
+    const autoTrail = await v.page.evaluate(() => document.querySelector('#s_gear option[value=""]').textContent);
+    await v.page.selectOption('#s_gear', 'gc');
+    await v.page.fill('#s_dur', '0:40:00'); await v.page.fill('#s_dist', '7');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const saved = await v.page.evaluate(d => TS.getSessions().find(s => s.date === d), day(0));
+    await v.page.evaluate(id => editSession(id), saved.id); await v.page.waitForTimeout(150);
+    const reopen = await v.page.evaluate(() => ({ gear: document.getElementById('s_gear').value, trail: document.getElementById('s_trail').checked }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.r1 === 'gr' && r.r2 === 'gt' && r.r3 === 'gc' && r.r4 === 'gt' && r.r5 === 'gr', 'paires : ' + JSON.stringify(r));
+    assert(r.km.gr === 21 && r.km.gt === 35 && r.km.gc === 8, 'km : ' + JSON.stringify(r.km));
+    assert(JSON.stringify(r.active) === '[true,true,true,false]', 'en service : ' + JSON.stringify(r.active));
+    assert(r.strava === true && r.road === undefined, 'Strava Trail Run : ' + JSON.stringify([r.strava, r.road]));
+    assert(/Automatique : Route/.test(autoRoad) && /Automatique : Trail/.test(autoTrail), 'automatique : ' + autoRoad + ' / ' + autoTrail);
+    assert(saved && saved.gear_id === 'gc' && saved.trail === true, 'enregistré : ' + JSON.stringify(saved));
+    assert(reopen.gear === 'gc' && reopen.trail, 'réouverture : ' + JSON.stringify(reopen));
+  });
+
   await browser.close();
   server.close();
 

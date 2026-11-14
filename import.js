@@ -188,6 +188,7 @@ function parseFIT(buffer) {
           kcal: calories,
           elevation,
           notes,
+          trail: sport === 'run' && /trail/i.test(String(fitSub)) ? true : null,   // sortie de trail (montre)
           _skip: cls.skip || null,
           _source: 'fit'
         });

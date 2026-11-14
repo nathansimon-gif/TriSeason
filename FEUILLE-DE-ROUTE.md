@@ -70,7 +70,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Dans 3 à 6 mois
 
-- [ ] 🤖 **Équipement, la suite** (si utile après essai) : choisir l'équipement séance par séance (plusieurs paires en alternance, vélo de route / VTT) ; reprendre automatiquement les chaussures et vélos déclarés dans Strava (champ « gear » des activités) ; seuil en heures pour la combinaison
+- [ ] 🤖 **Équipement, la suite** (si utile après essai) : terrains pour le vélo (route / VTT / gravel), comme pour les chaussures ; reprendre automatiquement les chaussures et vélos déclarés dans Strava (champ « gear » des activités) ; seuil en heures pour la combinaison
 - [ ] 🤖 **Comptes inactifs depuis 3 ans** : les lister dans le rapport du lundi (engagement de la politique de confidentialité ; suppression manuelle sur décision de Nathan). Premiers comptes concernés : pas avant 2029
 - [ ] 🤖 **Préparer l'offre gratuite / payante dans le code** (savoir quelles pages sont gratuites ou payantes, sans rien faire payer encore)
 - [ ] 🧑 Faire relire la page *Confidentialité et mentions légales* par une personne compétente
@@ -136,6 +136,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/11/2026 | #82 | **Équipement** : chaque paire de chaussures a un terrain (tous terrains, route, trail, ou « seulement quand je la choisis » pour une paire de fractionné ou de compétition) et plusieurs paires peuvent servir en même temps ; case « Sortie de trail » sur les séances de course (cochée toute seule pour les « Trail Run » de Strava, l’archive Strava et les montres, et pour les séances reliées à une course trail) ; les sorties de trail vont sur les chaussures trail, les autres sur les chaussures route ; dans la fenêtre de la séance, choix « Automatique » ou d’un équipement précis, pour tous les sports ; « Terrain : Trail » dans le détail du jour du calendrier |
 | 14/11/2026 | #81 | Feuille de route : **questionnaire de bienvenue** détaillé (3 écrans) et **rappels** précisés (courses à J-7, séances prévues du jour et du lendemain, repas, autres idées), tous deux dans « Maintenant », à reprendre après le rapport du lundi 16 novembre |
 | 14/11/2026 | #80 | **Effort et ressenti** : dans le formulaire de séance, l’effort ressenti se note avec 10 cases (1 à 10, comme dans « Note tes séances »), et la douleur de l’option Blessures avec des cases de 0 à 10 ; Dashboard et calendrier : « ressenti bon · effort 7/10 » au lieu de « ressenti 4/5 ». **Cycle menstruel** : niveau de douleur du jour (1 à 10) quand « Crampes » ou « Maux de tête » est coché, résumé des douleurs sur 3 mois, comparaison des séances les jours de forte douleur, barres roses sur le graphique de forme, dans le calendrier du Dashboard et dans la politique de confidentialité |
 | 13/11/2026 | #79 | Nutrition : **émojis retirés** des repas et des ravitaillements (listes de choix, cartes des repas, lignes de ravitaillement), nom du repas écrit en clair (« Collation de l’après-midi » au lieu de « collation-après-midi »), crayon de modification dessiné comme les autres icônes de l’appli ; compétitions : « Nutrition J-7 » sans émojis (eau en litres, kcal) |
