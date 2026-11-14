@@ -1872,6 +1872,8 @@ function addPeriodStart(day) {
 function removePeriodStart(day) { cycleEdit(c => { c.starts = (c.starts || []).filter(d => d !== day); }); }
 function setCycleMode(mode) { if (CYCLE_MODES[mode]) cycleEdit(c => { c.mode = mode; }); }
 function setPeriodDays(n) { n = Math.round(Number(n)); if (n >= 2 && n <= 10) cycleEdit(c => { c.period_days = n; }); }
+// Signes douloureux : on peut noter en plus le niveau de douleur du jour, de 1 à 10 (data.cycle.pain[jour])
+const CYCLE_PAIN_SIGNS = ['crampes', 'tete'];
 function toggleCycleSign(day, sign) {
   if (!CYCLE_SIGNS[sign]) return;
   cycleEdit(c => {
@@ -1879,7 +1881,29 @@ function toggleCycleSign(day, sign) {
     const list = signs[day] || [];
     signs[day] = list.includes(sign) ? list.filter(x => x !== sign) : list.concat(sign);
     if (!signs[day].length) delete signs[day];
+    // Plus aucun signe douloureux ce jour-là : le niveau de douleur n'a plus de sens
+    if (c.pain && c.pain[day] && !(signs[day] || []).some(x => CYCLE_PAIN_SIGNS.includes(x))) delete c.pain[day];
   });
+}
+function cycleHasPainSign(day, data = getData()) {
+  return (((data.cycle || {}).signs || {})[day] || []).some(x => CYCLE_PAIN_SIGNS.includes(x));
+}
+function cyclePainOn(day, data = getData()) { return ((data.cycle || {}).pain || {})[day] || null; }
+function setCyclePain(day, n) {
+  n = Math.round(Number(n));
+  cycleEdit(c => {
+    const pain = c.pain || (c.pain = {});
+    if (n >= 1 && n <= 10 && ((c.signs || {})[day] || []).some(x => CYCLE_PAIN_SIGNS.includes(x))) pain[day] = n;
+    else delete pain[day];
+  });
+}
+// Douleurs notées sur une période (90 derniers jours par défaut) : jours, moyenne, la plus forte
+function cyclePainStats(data = getData(), days = 90) {
+  const from = addDaysStr(localDateStr(), -days + 1);
+  const list = Object.entries((data.cycle || {}).pain || {}).filter(([d, n]) => d >= from && n >= 1).sort((a, b) => a[0].localeCompare(b[0]));
+  if (!list.length) return null;
+  const max = list.reduce((b, x) => x[1] > b[1] ? x : b, list[0]);
+  return { days: list.length, avg: list.reduce((a, x) => a + x[1], 0) / list.length, max: max[1], maxDay: max[0] };
 }
 function daysBetweenStr(a, b) { return Math.round((parseLocalDate(b) - parseLocalDate(a)) / 86400000); }
 // Durées des cycles (entre deux débuts, 15 à 60 jours seulement) et durée moyenne des 6 derniers
@@ -1939,8 +1963,13 @@ function cycleImpact(data = getData()) {
   const ss = (data.sessions || []).filter(s => s.date >= info.starts[0] && s.date <= localDateStr() && (s.sensation || s.rpe));
   const avg = (l, k) => { const v = l.filter(s => s[k]).map(s => s[k]); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const during = ss.filter(s => days.has(s.date)), other = ss.filter(s => !days.has(s.date));
+  // Séances les jours de douleur forte (5/10 ou plus) comparées aux autres séances depuis le premier cycle noté
+  const pain = (data.cycle || {}).pain || {};
+  const hurt = ss.filter(s => (pain[s.date] || 0) >= 5), calm = ss.filter(s => !((pain[s.date] || 0) >= 5));
   return { during: during.length, other: other.length, sensDuring: avg(during, 'sensation'), sensOther: avg(other, 'sensation'),
-    rpeDuring: avg(during, 'rpe'), rpeOther: avg(other, 'rpe'), enough: during.length >= 3 && other.length >= 3 };
+    rpeDuring: avg(during, 'rpe'), rpeOther: avg(other, 'rpe'), enough: during.length >= 3 && other.length >= 3,
+    painSessions: hurt.length, sensPain: avg(hurt, 'sensation'), sensCalm: avg(calm, 'sensation'),
+    rpePain: avg(hurt, 'rpe'), rpeCalm: avg(calm, 'rpe'), painEnough: hurt.length >= 3 && calm.length >= 3 };
 }
 
 const HEALTH_CONSENT_VERSION = 1;
@@ -4091,6 +4120,7 @@ window.TS = {
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,
   cycleInfo, cyclePhaseOn, cyclePredicted, cyclePeriodDays, cycleImpact, CYCLE_MODES, CYCLE_SIGNS, CYCLE_PHASES, CYCLE_CONSENT_VERSION,
+  CYCLE_PAIN_SIGNS, cycleHasPainSign, cyclePainOn, setCyclePain, cyclePainStats, FEEL_WORDS: FEEL_WORDS_FR, feelWord: v => FEEL_WORDS_FR[Math.round(v)] || '',
   healthPhase, healthPeriodsOn, healthWeekPhase, HEALTH_TYPES, HEALTH_STATUS, HEALTH_ZONES, HEALTH_CONSENT_VERSION,
   formatHours, FUEL_PRESETS, fuelCarbs, fuelWater, fuelTotals, dayIntake, dailyWater, goalStreak, goalPeriodValue, fuelMomentText, fuelTimeText, parseFuelTime, fuelLabel, sessionFuel, sessionFuelSummary, sessionFuelHtml, getPlans, savePlan, deletePlan, parseDuration, planStatuses, planRatio, takeDonePlans, weeklyChallenges, challengeHistory, getAchievements, takeNewAchievements, badgeTileHtml,
   stravaAvailable, getStrava, stravaConnect, stravaHandleRedirect, stravaSync, stravaSyncMessage,

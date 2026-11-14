@@ -854,7 +854,7 @@ async function main() {
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
     const hms = s2.sport === 'velo' ? '1:30:00' : '0:45:00';
-    assert(r.body.includes(hms) && r.body.includes('FC moy.') && r.body.includes('RPE'), 'détail absent : ' + r.body.slice(0, 200));
+    assert(r.body.includes(hms) && r.body.includes('FC moy.') && r.body.includes('Effort'), 'détail absent : ' + r.body.slice(0, 200));
     assert(/nutrition du jour/i.test(r.body), 'nutrition du jour absente');
     assert(r.form === 'none' && r.btn !== 'none', 'le formulaire de planification cache le détail');
     assert(modal.open && modal.date === day(-2), 'la séance ne s’ouvre pas dans Séances');
@@ -1275,7 +1275,7 @@ async function main() {
     await v.page.fill('#s_date', day(-2)); await v.page.dispatchEvent('#s_date', 'change');
     const label = await v.page.textContent('#painLabel');
     await v.page.fill('#s_dur', '0:30:00'); await v.page.fill('#s_dist', '5'); await v.page.selectOption('#s_sport', 'run');
-    await v.page.fill('#s_pain', '4');
+    await v.page.click('#painPicker [data-val="4"]');
     await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
     const r = await v.page.evaluate(() => {
       const s = TS.getSessions().find(x => x.pain != null);
@@ -1403,7 +1403,7 @@ async function main() {
     const shown = await v.page.evaluate(() => ({ dist: getComputedStyle(document.getElementById('distGroup')).display,
       ex: getComputedStyle(document.getElementById('muscuGroup')).display, rows: document.querySelectorAll('#muscuRows .muscu-row').length,
       repeat: getComputedStyle(document.getElementById('muscuRepeatBtn')).display }));
-    await v.page.fill('#s_date', day(-3)); await v.page.fill('#s_dur', '1:00:00'); await v.page.fill('#s_rpe', '7');
+    await v.page.fill('#s_date', day(-3)); await v.page.fill('#s_dur', '1:00:00'); await v.page.click('#rpePicker [data-val="7"]');
     const row1 = '#muscuRows .muscu-row:nth-child(1) ';
     await v.page.click(row1 + '.muscu-pick'); await v.page.fill('#mpSearch', 'squat');
     await v.page.click('#mpList [data-name="Squat"]');
@@ -2197,7 +2197,7 @@ async function main() {
       { id: 'f2', date: today, type: 'boisson-iso', qty: 1, carbs: 35 },
       { id: 'f3', date: today, type: 'flasque', qty: 1, carbs: 50, ml: 300 }];
     // Objectif course : 9 km / semaine (une course de 9 km tous les 3 jours) et 3 séances / semaine
-    data.goals = { run: [{ id: 'g1', type: 'dist_week', target: 9 }, { id: 'g2', type: 'sessions_week', target: 3 }, { id: 'g3', type: 'dist_year', target: 500 }] };
+    data.goals = { run: [{ id: 'g1', type: 'dist_week', target: 9 }, { id: 'g2', type: 'sessions_week', target: 4 }, { id: 'g3', type: 'dist_year', target: 500 }] };
     const v = await newUser({ data });
     await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(800);
     const n1 = await v.page.evaluate(() => ({ intake: TS.dayIntake(TS.localDateStr()), gl: document.getElementById('kpiGlucides').textContent,
@@ -2485,6 +2485,53 @@ async function main() {
     assert(!r.emoji, 'émojis encore présents');
     assert(r.title.includes('Collation de l’après-midi'), 'titres : ' + JSON.stringify(r.title));
     assert(r.pencil, 'pas de crayon en icône');
+  });
+
+  await test('Séance : effort et douleur notés avec des cases (1 à 10), Dashboard sans « /5 »', async () => {
+    const data = sampleData();
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    await v.page.click('text=+ Nouvelle séance');
+    const btns = await v.page.evaluate(() => [...document.querySelectorAll('#rpePicker .rpe-btn')].map(b => b.textContent));
+    await v.page.fill('#s_date', day(0)); await v.page.selectOption('#s_sport', 'run'); await v.page.fill('#s_dur', '0:45:00'); await v.page.fill('#s_dist', '9');
+    await v.page.click('#rpePicker [data-val="9"]'); await v.page.click('#rpePicker [data-val="9"]');   // re-toucher : enlève
+    const cleared = await v.page.inputValue('#s_rpe');
+    await v.page.click('#rpePicker [data-val="7"]'); await v.page.click('#sensationPicker [data-val="4"]');
+    const overflow = await v.page.evaluate(() => { const m = document.querySelector('#sessionModal .modal'); return m.scrollWidth > m.clientWidth; });
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const saved = await v.page.evaluate(d => TS.getSessions().find(s => s.date === d && s.distance === 9), day(0));
+    // Rouvrir : la case 7 est cochée
+    await v.page.evaluate(id => editSession(id), saved.id); await v.page.waitForTimeout(150);
+    const active = await v.page.evaluate(() => [...document.querySelectorAll('#rpePicker .rpe-btn.active')].map(b => b.textContent));
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(800);
+    const ins = (await v.page.innerText('#insightBody')).replace(/\s+/g, ' ');
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(btns.join() === '1,2,3,4,5,6,7,8,9,10', 'cases : ' + btns.join());
+    assert(cleared === '', 're-toucher n’enlève pas : ' + cleared);
+    assert(!overflow, 'défilement latéral dans la fenêtre');
+    assert(saved && saved.rpe === 7 && saved.sensation === 4, 'enregistré : ' + JSON.stringify(saved));
+    assert(active.join() === '7', 'case cochée à la réouverture : ' + active.join());
+    assert(/ressenti bon/.test(ins) && /effort 7\/10/.test(ins) && !/\/5\b/.test(ins), 'Dashboard : ' + ins);
+  });
+
+  await test('Cycle : niveau de douleur du jour (1 à 10) avec un signe douloureux, effacé sans signe, barres sur le graphique', async () => {
+    const data = sampleData();
+    data.cycle = { consent: { version: 1, at: Date.now() }, mode: 'naturel', period_days: 5, starts: [day(-30), day(-2)], signs: {} };
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(900);
+    const before = await v.page.evaluate(() => !!document.querySelector('.cy-pain'));
+    await v.page.click('.cy-sign >> text=Crampes'); await v.page.waitForTimeout(100);
+    await v.page.click('.cy-pain__btn >> text=/^6$/'); await v.page.waitForTimeout(100);
+    const r1 = await v.page.evaluate(() => ({ pain: TS.cyclePainOn(TS.localDateStr()), stats: TS.cyclePainStats(),
+      note: getComputedStyle(document.getElementById('pmcPainNote')).display, txt: document.getElementById('cycleBody').textContent.replace(/\s+/g, ' ') }));
+    await v.page.click('.cy-sign >> text=Crampes'); await v.page.waitForTimeout(100);
+    const r2 = await v.page.evaluate(() => ({ pain: TS.cyclePainOn(TS.localDateStr()), shown: !!document.querySelector('.cy-pain') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!before, 'douleur proposée sans signe douloureux');
+    assert(r1.pain === 6 && r1.stats && r1.stats.max === 6 && r1.note !== 'none' && /Douleurs notées ces 3 derniers mois : 1 jour, en moyenne 6\/10/.test(r1.txt), 'douleur notée : ' + JSON.stringify(r1));
+    assert(r2.pain === null && !r2.shown, 'douleur effacée avec le signe : ' + JSON.stringify(r2));
   });
 
   await browser.close();

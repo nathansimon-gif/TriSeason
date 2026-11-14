@@ -60,6 +60,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [ ] 🧑 Vérifier dans Firebase que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié »), et tester un e-mail de réinitialisation
 - [ ] 🧑 *Facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom TriSeason
 
+- [ ] 🧑🤖 **Notifications et rappels sur le téléphone** (demandé le 14/11/2026, à décider ensemble) : rappels choisis par la personne (noter ses repas le soir, son ressenti après une séance Strava, sa pesée, les défis du dimanche, le résumé du mois, J-7 avant une course). Possible pour l’appli installée sur l’écran d’accueil (iPhone avec iOS 16.4 ou plus, Android), avec l’accord de la personne. Demande : le petit serveur Cloudflare (gratuit) pour envoyer les messages à l’heure prévue, une clé d’envoi, et une mise à jour de la politique de confidentialité (le message passe par le service de notifications d’Apple ou de Google, sans donnée de santé dedans)
+
 ## Dans 3 à 6 mois
 
 - [ ] 🤖 **Équipement, la suite** (si utile après essai) : choisir l'équipement séance par séance (plusieurs paires en alternance, vélo de route / VTT) ; reprendre automatiquement les chaussures et vélos déclarés dans Strava (champ « gear » des activités) ; seuil en heures pour la combinaison
@@ -128,6 +130,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 14/11/2026 | — | **Effort et ressenti** : dans le formulaire de séance, l’effort ressenti se note avec 10 cases (1 à 10, comme dans « Note tes séances »), et la douleur de l’option Blessures avec des cases de 0 à 10 ; Dashboard et calendrier : « ressenti bon · effort 7/10 » au lieu de « ressenti 4/5 ». **Cycle menstruel** : niveau de douleur du jour (1 à 10) quand « Crampes » ou « Maux de tête » est coché, résumé des douleurs sur 3 mois, comparaison des séances les jours de forte douleur, barres roses sur le graphique de forme, dans le calendrier du Dashboard et dans la politique de confidentialité |
 | 13/11/2026 | #79 | Nutrition : **émojis retirés** des repas et des ravitaillements (listes de choix, cartes des repas, lignes de ravitaillement), nom du repas écrit en clair (« Collation de l’après-midi » au lieu de « collation-après-midi »), crayon de modification dessiné comme les autres icônes de l’appli ; compétitions : « Nutrition J-7 » sans émojis (eau en litres, kcal) |
 | 10/11/2026 | #78 | Comparer deux mois : la courbe « Au fil du mois » se filtre **par sport** (« Tous » ou un des sports suivis pratiqués ces mois-là), en km, heures ou séances ; le choix km / heures / séances est gardé d’un sport à l’autre (musculation : heures ou séances) |
 | 10/11/2026 | #77 | **Comparer deux mois** (Profil → Résumés du mois → « Comparer deux mois ») : choix de deux mois quelconques, raccourcis « Mois d’avant », « Il y a 1 an », « Il y a 2 ans » ; chiffres côte à côte avec l’écart (heures, séances, jours actifs, distance, dénivelé), courbe du cumul jour par jour (km, heures ou séances, l’infobulle suit le doigt), les deux calendriers en couleurs, distances et allures par sport, nutrition et forme quand les deux mois en ont. Avec le mois en cours, la comparaison s’arrête à la même date pour les deux mois. Idée écartée pour l’instant : graphique « tes mois d’octobre » année par année |

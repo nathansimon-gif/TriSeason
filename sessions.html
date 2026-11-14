@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261127b"></script>
+  <script src="theme.js?v=20261128a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261127b"></script>
+  <script src="auth-guard.js?v=20261128a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261127b">
+  <link rel="stylesheet" href="style.css?v=20261128a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -275,10 +275,6 @@
           <input class="form-input" type="number" step="0.1" id="s_dist" placeholder="">
         </div>
         <div class="form-group">
-          <label class="form-label">RPE (1-10)</label>
-          <input class="form-input" type="number" min="1" max="10" id="s_rpe" placeholder="">
-        </div>
-        <div class="form-group">
           <label class="form-label" data-tip="Calories dépensées pendant la séance (estimées par ta montre, ou notées à la main)">Kcal dépensées</label>
           <input class="form-input" type="number" id="s_kcal" placeholder="">
         </div>
@@ -299,6 +295,11 @@
         <div class="form-hint">Charges différentes d'une série à l'autre, ou une série « Max » : « Détailler les séries » sous l'exercice. Gainage et exercices tenus : les secondes dans « Rép. ». Sans charge (pompes, tractions…) : « kg » vide.</div>
       </div>
       <div class="form-group">
+        <label class="form-label" data-tip="1 = très facile, 10 = effort maximal. Sert à calculer ta charge d'entraînement et ta forme.">Effort ressenti (1 à 10)</label>
+        <div class="rpe-btns scale-picker" id="rpePicker" data-input="s_rpe" data-from="1" data-to="10" role="group" aria-label="Effort ressenti de 1 à 10"></div>
+        <input type="hidden" id="s_rpe" value="">
+      </div>
+      <div class="form-group">
         <label class="form-label" data-tip="Comment tu te sentais pendant et après la séance ?">Sensation</label>
         <div style="display:flex;gap:6px;margin-top:2px" id="sensationPicker">
           <button type="button" class="sensation-btn" data-val="1" onclick="setSensation(1)" title="Très mauvais">😫</button>
@@ -311,7 +312,8 @@
       </div>
       <div class="form-group" id="painGroup" style="display:none">
         <label class="form-label" for="s_pain" id="painLabel" data-tip="Option « Blessures et reprise » (page Forme) : la douleur notée sur tes séances est affichée à côté de ton volume d'entraînement.">Douleur (0 à 10)</label>
-        <input class="form-input" type="number" min="0" max="10" step="1" id="s_pain" placeholder="0 = aucune douleur" style="max-width:180px">
+        <div class="rpe-btns scale-picker" id="painPicker" data-input="s_pain" data-from="0" data-to="10" role="group" aria-label="Douleur de 0 à 10"></div>
+        <input type="hidden" id="s_pain" value="">
       </div>
       <div class="form-group">
         <label class="form-label" data-tip="Relie cette séance à une compétition pour suivre l'effet de ta préparation nutritionnelle">Associer à une compétition (optionnel)</label>
@@ -365,9 +367,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261127b"></script>
-<script src="import.js?v=20261127b"></script>
-<script src="app.js?v=20261127b"></script>
+<script src="fit-parser.js?v=20261128a"></script>
+<script src="import.js?v=20261128a"></script>
+<script src="app.js?v=20261128a"></script>
 <script>
 
 
@@ -578,7 +580,7 @@ function openSessionModal(session = null) {
     document.getElementById('s_dur').value = '';
   }
   document.getElementById('s_dist').value     = session?.distance || '';
-  document.getElementById('s_rpe').value      = session?.rpe      || '';
+  setScale('s_rpe', session?.rpe ? Math.round(session.rpe) : null);
   document.getElementById('s_fc_avg').value   = session?.fc_avg   || '';
   document.getElementById('s_fc_max').value   = session?.fc_max   || '';
   document.getElementById('s_fc_rest').value  = session?.fc_rest  || '';
@@ -589,7 +591,7 @@ function openSessionModal(session = null) {
   if (document.getElementById('s_kcal')) document.getElementById('s_kcal').value = session?.kcal || '';
   if (document.getElementById('s_elevation')) document.getElementById('s_elevation').value = session?.elevation || '';
   setSensation(session?.sensation || null);
-  document.getElementById('s_pain').value = session?.pain ?? '';
+  setScale('s_pain', session?.pain ?? null);
   painKeep = session?.pain ?? null;
   updatePainField();
   populateCompSelect(session?.comp_id || null);
@@ -953,6 +955,33 @@ function populateCompSelect(selectedId) {
     sel.appendChild(opt);
   });
 }
+
+// Notes sur une échelle (effort 1 à 10, douleur 0 à 10) : une case à cocher, comme dans « Note tes séances ».
+// Toucher la case déjà choisie l'enlève. La valeur est gardée dans un champ caché (s_rpe, s_pain).
+function buildScales() {
+  document.querySelectorAll('.scale-picker').forEach(box => {
+    const from = +box.dataset.from, to = +box.dataset.to, input = box.dataset.input;
+    let html = '';
+    for (let v = from; v <= to; v++) html += `<button type="button" class="rpe-btn" data-val="${v}"${input === 's_rpe' && typeof RPE_HINTS !== 'undefined' ? ` title="${RPE_HINTS[v]}"` : ''} onclick="pickScale('${input}', ${v})">${v}</button>`;
+    box.innerHTML = html;
+    setScale(input, document.getElementById(input).value);   // fenêtre déjà ouverte au chargement : garder le choix
+  });
+}
+function setScale(input, val) {
+  const el = document.getElementById(input);
+  el.value = val == null || val === '' ? '' : String(val);
+  const box = document.querySelector(`.scale-picker[data-input="${input}"]`);
+  if (box) box.querySelectorAll('.rpe-btn').forEach(b => {
+    const on = el.value !== '' && +b.dataset.val === +el.value;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on);
+  });
+}
+function pickScale(input, v) {
+  setScale(input, document.getElementById(input).value !== '' && +document.getElementById(input).value === v ? null : v);
+  updateCalc();
+}
+document.addEventListener('DOMContentLoaded', buildScales);
 
 function setSensation(val) {
   document.getElementById('s_sensation').value = val || '';

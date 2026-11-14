@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261127b"></script>
+  <script src="theme.js?v=20261128a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261127b"></script>
+  <script src="auth-guard.js?v=20261128a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ORKA — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261127b">
+  <link rel="stylesheet" href="style.css?v=20261128a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -77,6 +77,12 @@
     .cy-signs { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
     .cy-sign { background:var(--surface2); border:1px solid var(--border2); color:var(--text-2); border-radius:999px; padding:5px 11px; font-size:12.5px; }
     .cy-sign[aria-pressed="true"] { background:var(--cycle-dim); border-color:var(--cycle); color:var(--text); }
+    .cy-pain { margin-top:10px; display:grid; gap:6px; }
+    .cy-pain__label { font-size:12.5px; color:var(--text-2); }
+    .cy-pain__label small { color:var(--text-3); font-size:11.5px; margin-left:4px; }
+    .cy-pain__btns { display:flex; gap:3px; flex-wrap:wrap; }
+    .cy-pain__btn { min-width:28px; height:28px; padding:0 4px; border-radius:var(--r-sm); border:1px solid var(--border2); background:var(--surface2); color:var(--text-2); font:600 12px var(--mono); cursor:pointer; }
+    .cy-pain__btn[aria-pressed="true"] { background:var(--cycle-dim); border-color:var(--cycle); color:var(--text); }
     .cy-h { font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 4px; }
     .cy-hist { font-size:12.5px; color:var(--text-2); }
     .cy-hist div { display:flex; gap:10px; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); }
@@ -138,6 +144,7 @@
     </div>
     <div id="pmcBandsNote" style="display:none;margin-top:6px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(240,185,65,.25);vertical-align:-1px;margin-right:5px"></span>Fond jaune : blessure, maladie ou arrêt noté (Blessures, maladie et reprise)</div>
     <div id="pmcCycleNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:var(--cycle-dim);border:1px solid var(--cycle);box-sizing:border-box;vertical-align:-1px;margin-right:5px"></span>Fond rose : règles notées (Cycle menstruel)</div>
+    <div id="pmcPainNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:3px;height:10px;background:var(--cycle);vertical-align:-1px;margin:0 8px 0 4px"></span>Barres roses en bas : douleur notée ce jour-là, plus haute = plus forte (1 à 10)</div>
   </div>
 
   <!-- ── Nutrition × performance ── -->
@@ -314,7 +321,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261127b"></script>
+<script src="app.js?v=20261128a"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -547,11 +554,15 @@ function renderPMC() {
   const cyBands = [];
   recent.forEach((s, i) => { if (periodSet.has(s.day)) { const last = cyBands[cyBands.length - 1]; if (last && last[1] === i - 1) last[1] = i; else cyBands.push([i, i]); } });
   document.getElementById('pmcCycleNote').style.display = cyBands.length ? '' : 'none';
+  // Douleur notée (Cycle menstruel, signes douloureux) : petite barre rose en bas, hauteur = niveau sur 10
+  const painMap = TS.cycleEnabled() ? ((TS.getData().cycle || {}).pain || {}) : {};
+  const painBars = recent.map((s, i) => [i, painMap[s.day] || 0]).filter(x => x[1] > 0);
+  document.getElementById('pmcPainNote').style.display = painBars.length ? '' : 'none';
   makeChart('chartPMC', {
     plugins: [{
       id: 'healthBands',
       beforeDatasetsDraw(chart) {
-        if (!bands.length && !cyBands.length) return;
+        if (!bands.length && !cyBands.length && !painBars.length) return;
         const { ctx, chartArea: a, scales: { x } } = chart;
         const half = recent.length > 1 ? (x.getPixelForValue(1) - x.getPixelForValue(0)) / 2 : 0;
         ctx.save();
@@ -564,6 +575,12 @@ function renderPMC() {
         cyBands.forEach(([i, j]) => {
           const l = Math.max(a.left, x.getPixelForValue(i) - half), r = Math.min(a.right, x.getPixelForValue(j) + half);
           ctx.fillRect(l, a.top, r - l, a.bottom - a.top);
+        });
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cycle').trim() || '#f472d0';
+        const maxH = Math.min(40, (a.bottom - a.top) * 0.3), w = Math.max(2, Math.min(6, half * 1.2));
+        painBars.forEach(([i, n]) => {
+          const h = maxH * n / 10;
+          ctx.fillRect(x.getPixelForValue(i) - w / 2, a.bottom - h, w, h);
         });
         ctx.restore();
       },
@@ -617,7 +634,7 @@ function renderCycle() {
     body.innerHTML = `
       <div style="font-size:13px;color:var(--text-2);line-height:1.6">Note tes règles : l'appli calcule ton cycle et le compare à tes séances.</div>
       <label class="hp-consent"><input type="checkbox" id="cyConsent" onchange="document.getElementById('cyEnableBtn').disabled=!this.checked">
-        <span>J'accepte que ORKA enregistre ces informations de santé (dates de mes règles, type de cycle, signes notés) pour me
+        <span>J'accepte que ORKA enregistre ces informations de santé (dates de mes règles, type de cycle, signes et douleurs notés) pour me
         les afficher. Elles ne sont montrées à personne d'autre et je peux les effacer à tout moment.
         <a href="confidentialite.html#cycle" target="_blank" rel="noopener">En savoir plus</a></span></label>
       <button class="btn btn--primary" id="cyEnableBtn" disabled onclick="TS.enableCycle();renderCycle();TS.toast('Option activée')">Activer cette option</button>
@@ -650,14 +667,23 @@ function renderCycle() {
   const imp = TS.cycleImpact();
   let cmp = '';
   if (imp && imp.enough) {
-    const part = (s, r) => [s != null ? 'ressenti ' + f1(s) + '/5' : '', r != null ? 'effort ' + f1(r) + '/10' : ''].filter(Boolean).join(' et ');
+    const part = (s, r) => [s != null ? 'ressenti ' + TS.feelWord(s) : '', r != null ? 'effort ' + f1(r) + '/10' : ''].filter(Boolean).join(' et ');
     cmp = `<div class="hp-summary">Pendant tes règles : <b>${part(imp.sensDuring, imp.rpeDuring)}</b> en moyenne (${imp.during} séances),
       contre <b>${part(imp.sensOther, imp.rpeOther)}</b> le reste du temps (${imp.other} séances).
       <div class="hp-note" style="margin-top:4px">Une comparaison sur tes données, pas une preuve de cause à effet.</div></div>`;
   } else if (imp) {
     cmp = `<div class="hp-note">Dès 3 séances notées (ressenti ou effort) pendant tes règles et 3 le reste du temps, l'appli comparera les deux ici.</div>`;
   }
+  if (imp && imp.painEnough) {
+    const part2 = (s, r) => [s != null ? 'ressenti ' + TS.feelWord(s) : '', r != null ? 'effort ' + f1(r) + '/10' : ''].filter(Boolean).join(' et ');
+    cmp += `<div class="hp-summary">Les jours de douleur forte (5/10 ou plus) : <b>${part2(imp.sensPain, imp.rpePain)}</b> en moyenne (${imp.painSessions} séances),
+      contre <b>${part2(imp.sensCalm, imp.rpeCalm)}</b> les autres jours.</div>`;
+  }
+  const ps = TS.cyclePainStats();
+  const painSum = ps ? `<div class="hp-note" style="margin-top:6px">Douleurs notées ces 3 derniers mois : ${ps.days} jour${ps.days > 1 ? 's' : ''}, en moyenne ${f1(ps.avg)}/10
+    (la plus forte : ${ps.max}/10 le ${fmt(ps.maxDay)}). Elles apparaissent aussi en barres roses sur le graphique de forme.</div>` : '';
   const signs = ((TS.getData().cycle || {}).signs || {})[day] || [];
+  const painSign = TS.cycleHasPainSign(day), painVal = TS.cyclePainOn(day);
   const hist = info.starts.slice().reverse().slice(0, 6).map(st => {
     const l = info.lengths.find(x => x.from === st);
     return `<div><b>${fmt(st)}</b><span>${l ? 'cycle de ' + l.days + ' jours' : st === info.starts[info.starts.length - 1] ? 'en cours' : ''}</span>
@@ -673,6 +699,10 @@ function renderCycle() {
     <div class="cy-h">Signes du ${day === today ? 'jour' : fmt(day)}</div>
     <div class="cy-row" style="margin:4px 0"><input class="form-input" type="date" id="cySignDay" value="${day}" max="${today}" onchange="cyDay=this.value;renderCycle()" aria-label="Jour des signes"></div>
     <div class="cy-signs">${Object.entries(TS.CYCLE_SIGNS).map(([k, l]) => `<button type="button" class="cy-sign" aria-pressed="${signs.includes(k)}" onclick="cyToggleSign('${k}')">${l}</button>`).join('')}</div>
+    ${painSign ? `<div class="cy-pain"><span class="cy-pain__label">Douleur du ${day === today ? 'jour' : fmt(day)} <small>1 = légère, 10 = très forte</small></span>
+      <div class="cy-pain__btns" role="group" aria-label="Niveau de douleur de 1 à 10">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n =>
+        `<button type="button" class="cy-pain__btn" aria-pressed="${painVal === n}" onclick="cySetPain(${n})">${n}</button>`).join('')}</div></div>` : ''}
+    ${painSum}
     ${hist ? `<div class="cy-h">Débuts de règles notés</div><div class="cy-hist">${hist}</div>` : ''}
     <div class="cy-h">Réglages</div>
     <div class="cy-row">
@@ -696,7 +726,13 @@ function cyRemove(d) {
   if (!confirm('Retirer ce début de règles ?')) return;
   TS.removePeriodStart(d); renderCycle(); renderPMC();
 }
-function cyToggleSign(k) { TS.toggleCycleSign(cyDay || TS.localDateStr(), k); renderCycle(); }
+function cyToggleSign(k) { TS.toggleCycleSign(cyDay || TS.localDateStr(), k); renderCycle(); renderPMC(); }
+// Niveau de douleur du jour (1 à 10) ; toucher le niveau déjà choisi l'enlève
+function cySetPain(n) {
+  const day = cyDay || TS.localDateStr();
+  TS.setCyclePain(day, TS.cyclePainOn(day) === n ? 0 : n);
+  renderCycle(); renderPMC();
+}
 function cyDisable() {
   if (!confirm('Désactiver l’option ? Toutes les dates de règles et les signes notés seront effacés, sur tous tes appareils.')) return;
   TS.disableCycle(); cyDay = null; renderCycle(); renderPMC();
@@ -853,7 +889,7 @@ function renderHealthChart(p, today) {
           const ds = it.dataset;
           if (ds.mark === 'comp') return compsW[it.dataIndex].map(c => 'Compétition : ' + c.name + ' (' + day(c.date) + ')');
           if (ds.mark === 'hard') return hardW[it.dataIndex].map(s => 'Séance dure : ' + (TS.SPORTS[s.sport] || {}).label + ' le ' + day(s.date)
-            + (s.rpe ? ' · RPE ' + s.rpe : '') + (s.sensation ? ' · ressenti ' + s.sensation + '/5' : '') + (s.pain != null ? ' · douleur ' + s.pain + '/10' : ''));
+            + (s.rpe ? ' · effort ' + s.rpe + '/10' : '') + (s.sensation ? ' · ressenti ' + TS.feelWord(s.sensation) : '') + (s.pain != null ? ' · douleur ' + s.pain + '/10' : ''));
           return ds.yAxisID === 'y' ? 'Volume : ' + TS.formatHours(it.raw) : 'Douleur moyenne : ' + String(it.raw).replace('.', ',') + '/10';
         } } } },
       scales: {
