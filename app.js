@@ -3155,7 +3155,12 @@ function showWelcome() {
 
   let cur = 0;
   const go = i => {
-    if (i >= pages.length) return close();
+    if (i >= pages.length) {
+      // « Aller au Dashboard » : depuis une autre page (questionnaire refait dans Profil), on y va vraiment
+      if (/(^|\/)(index\.html)?$/.test(location.pathname)) return close();
+      location.href = 'index.html';
+      return;
+    }
     cur = Math.max(0, i);
     if (cur === pages.length - 1) box.querySelector(`.ms-page[data-i="${cur}"]`).innerHTML = endPage();
     box.querySelectorAll('.ms-page').forEach((el, j) => { el.hidden = j !== cur; });

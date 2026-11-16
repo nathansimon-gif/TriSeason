@@ -2867,8 +2867,11 @@ async function main() {
     await v.page.waitForSelector('#welcome');
     for (let i = 0; i < 3; i++) { await v.page.click('#welcome [data-wq-act="skip"]'); await v.page.waitForTimeout(50); }
     const endTitle = await v.page.textContent('#welcome .ms-page:not([hidden]) .ms-page__title');
-    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForTimeout(300);
+    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForURL(/index\.html/, { timeout: 5000 }).catch(() => {});
+    const wentHome = /\/index\.html$/.test(new URL(v.page.url()).pathname);
+    await v.page.waitForTimeout(800);
     const after = await v.page.evaluate(() => JSON.stringify(TS.getData().profile));
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(800);
     // Une réponse déjà enregistrée est présélectionnée quand on refait le questionnaire
     await v.page.evaluate(() => { const d = TS.getData(); d.profile.level = 'debut'; TS.saveData(d); });
     await v.page.click('#redoWelcome'); await v.page.waitForSelector('#welcome');
@@ -2879,6 +2882,7 @@ async function main() {
     await v.ctx.close();
     assert(!shown, 'montré à un compte qui a déjà des séances');
     assert(endTitle === 'C’est prêt', 'fin : ' + endTitle);
+    assert(wentHome, '« Aller au Dashboard » depuis Profil doit ouvrir le Dashboard : ' + v.page.url());
     assert(before === after, 'Passer a changé le profil : ' + before + ' → ' + after);
     assert(pre === 'true' && closed, 'présélection / Plus tard');
   });
