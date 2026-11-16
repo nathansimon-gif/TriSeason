@@ -3896,7 +3896,7 @@ function exSeries(e) {
 function exMaxKg(e) { return Math.max(0, ...exSeries(e).map(x => x.kg || 0)) || null; }
 // Texte court : « 4 × 8 × 60 kg » ou « 8 × 60 · 6 × 70 · 1 × 90 kg (max) »
 function muscuSetsText(e) {
-  const hold = isHoldExercise(e.name);
+  const hold = exHold(e);
   const r = v => v ? v + (hold ? ' s' : '') : '';
   const kgTxt = v => v ? v.toLocaleString('fr-FR') + ' kg' : '';
   if (!(Array.isArray(e.series) && e.series.length)) {
@@ -3909,9 +3909,30 @@ function muscuVolume(s) {
   return Math.round((s.exercises || []).reduce((a, e) => a + exSeries(e).reduce((b, x) => b + (x.reps || 0) * (x.kg || 0), 0), 0));
 }
 
-// Exercices tenus (gainage…) : « reps » contient des secondes
+// Exercices au temps (gainage…) : « reps » contient des secondes. Par défaut d'après le nom
+// (MUSCU_HOLD) ; la personne peut choisir « Temps » ou « Rép. » pour chaque exercice dans la séance :
+// - chaque exercice enregistré garde son choix dans e.hold (seulement s'il diffère du défaut) ;
+// - le dernier choix pour ce nom est gardé dans data.muscu_hold[nom] : il sert de réglage pour
+//   la séance suivante et d'unité des records et de la progression (les séances faites dans
+//   l'autre unité n'y comptent pas, elles restent affichées avec leur unité).
 const MUSCU_HOLD = /^(Gainage|Hollow body)/;
-function isHoldExercise(name) { return MUSCU_HOLD.test(name || ''); }
+function holdByName(name) { return MUSCU_HOLD.test(name || ''); }
+function isHoldExercise(name, data = getData()) {
+  const m = data.muscu_hold;
+  return m && Object.prototype.hasOwnProperty.call(m, name) ? !!m[name] : holdByName(name);
+}
+// Unité d'un exercice enregistré : son propre choix, sinon le défaut d'après le nom
+function exHold(e) { return e && e.hold != null ? !!e.hold : holdByName(e && e.name); }
+// Garde le dernier choix de chaque exercice (appelé à l'enregistrement d'une séance)
+function rememberMuscuHold(exercises, data) {
+  (exercises || []).forEach(e => {
+    if (!e || !e.name) return;
+    const h = exHold(e);
+    if (h === holdByName(e.name)) { if (data.muscu_hold) delete data.muscu_hold[e.name]; }
+    else (data.muscu_hold = data.muscu_hold || {})[e.name] = h;
+  });
+  if (data.muscu_hold && !Object.keys(data.muscu_hold).length) delete data.muscu_hold;
+}
 // Charge maximale estimée sur 1 répétition (formule d'Epley), seulement jusqu'à 12 répétitions
 function oneRepMax(kg, reps) {
   if (!(kg > 0) || !(reps > 0) || reps > 12) return null;
@@ -3920,8 +3941,9 @@ function oneRepMax(kg, reps) {
 // Une ligne par séance où l'exercice a été fait (du plus ancien au plus récent) :
 // charge max (et répétitions à cette charge), 1RM estimé, répétitions max, tonnage
 function muscuExerciseHistory(name, { from, to } = {}) {
+  const hold = isHoldExercise(name);   // unité du moment : les séances faites dans l'autre unité ne comptent pas
   return getSessions({ sport: 'muscu', from, to }).slice().reverse().map(s => {
-    const rows = (s.exercises || []).filter(e => e.name === name);
+    const rows = (s.exercises || []).filter(e => e.name === name && exHold(e) === hold);
     if (!rows.length) return null;
     const h = { date: s.date, id: s.id, kg: null, reps: null, orm: null, maxReps: null, volume: 0, sets: 0, one: null };
     // Charge de la séance = la série la plus lourde ; une série « Max » est retenue (max: true)
@@ -3967,8 +3989,8 @@ function muscuRecords({ from, to } = {}) {
     const rm = {};
     // Meilleure charge par rapport au poids du corps du jour (pesée de Profil), exercices avec charge seulement
     let rel = null;
-    const hold = isHoldExercise(name);
-    getSessions({ sport: 'muscu', from, to }).slice().reverse().forEach(s => (s.exercises || []).filter(e => e.name === name)
+    const hold = isHoldExercise(name, data);
+    getSessions({ sport: 'muscu', from, to }).slice().reverse().forEach(s => (s.exercises || []).filter(e => e.name === name && exHold(e) === hold)
       .forEach(e => exSeries(e).forEach(x => {
         if (!x.kg || !x.reps) return;
         MUSCU_RM_REPS.forEach(n => { if (x.reps >= n && (!rm[n] || x.kg > rm[n].kg)) rm[n] = { kg: x.kg, reps: x.reps, date: s.date }; });
@@ -3978,7 +4000,7 @@ function muscuRecords({ from, to } = {}) {
       })));
     if (rel) rel.ratio = Math.round(rel.ratio * 100) / 100;
     return {
-      name, group, hold: isHoldExercise(name), sessions: hist.length, last: hist.length ? hist[hist.length - 1].date : null,
+      name, group, hold, sessions: hist.length, last: hist.length ? hist[hist.length - 1].date : null,
       maxKg: kg ? { kg: kg.kg, reps: kg.reps, date: kg.date, max: !!kg.max } : null,
       oneRep: one ? { kg: one.one, date: one.date } : null,
       orm: orm ? { value: orm.orm, date: orm.date } : null,
@@ -3986,7 +4008,8 @@ function muscuRecords({ from, to } = {}) {
       volume: vol && vol.volume ? { value: vol.volume, date: vol.date } : null,
       rm, rel,
     };
-  }).sort((a, b) => b.sessions - a.sessions || (b.last || '').localeCompare(a.last || ''));
+  }).filter(r => r.sessions)   // exercice fait seulement dans l'autre unité : pas de record à montrer
+    .sort((a, b) => b.sessions - a.sessions || (b.last || '').localeCompare(a.last || ''));
 }
 // Records battus, du plus récent au plus ancien : chaque fois qu'une séance dépasse la
 // meilleure charge de toutes les séances d'avant (ou, sans charge, le plus de répétitions).
@@ -4018,14 +4041,14 @@ function muscuSessionRecords(session) {
   const out = [];
   (session.exercises || []).forEach(e => {
     const before = getSessions({ sport: 'muscu' }).filter(s => s.date < session.date && s.id !== session.id)
-      .flatMap(s => (s.exercises || []).filter(x => x.name === e.name));
+      .flatMap(s => (s.exercises || []).filter(x => x.name === e.name && exHold(x) === exHold(e)));
     if (!before.length || out.some(o => o.name === e.name)) return;
     const kg = exMaxKg(e), prevKg = Math.max(0, ...before.map(exMaxKg));
     if (kg && kg > prevKg) { out.push({ name: e.name, kind: 'kg', value: kg, prev: prevKg || null }); return; }
     if (!kg && !prevKg) {
       const reps = Math.max(0, ...exSeries(e).map(x => x.reps || 0));
       const prevReps = Math.max(0, ...before.flatMap(x => exSeries(x).map(y => y.reps || 0)));
-      if (reps > prevReps) out.push({ name: e.name, kind: 'reps', value: reps, prev: prevReps || null, hold: isHoldExercise(e.name) });
+      if (reps > prevReps) out.push({ name: e.name, kind: 'reps', value: reps, prev: prevReps || null, hold: exHold(e) });
     }
   });
   return out;
@@ -4043,7 +4066,7 @@ const MUSCU_LOAD_MODES = { sets: 'séries', reps: 'répétitions', kg: 'kg soule
 function muscuMuscleLoad({ from, to, mode = 'sets' } = {}) {
   const totals = {}, byExercise = {};
   getSessions({ sport: 'muscu', from, to }).forEach(s => (s.exercises || []).forEach(e => {
-    const hold = isHoldExercise(e.name);
+    const hold = exHold(e);
     const base = exSeries(e).reduce((a, x) => {
       const reps = hold ? Math.round((x.reps || 0) / 3) : (x.reps || 0);
       return a + (mode === 'sets' ? 1 : mode === 'reps' ? reps : reps * (x.kg || 0));
@@ -4480,7 +4503,7 @@ window.TS = {
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
   MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
-  bodyWeightOn, isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
+  bodyWeightOn, isHoldExercise, exHold, holdByName, rememberMuscuHold, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
   SPORTS, COMP_TYPES,

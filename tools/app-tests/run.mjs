@@ -2896,6 +2896,62 @@ async function main() {
     assert(msgs.every(m => !/auth\//.test(m) && /e-mail/.test(m)), JSON.stringify(msgs));
   });
 
+  await test('Musculation : chaque exercice se compte en répétitions ou au temps (abdos au temps, gainage en rép.), choix gardé, records dans la bonne unité', async () => {
+    const d = sampleData();
+    d.sessions.push({ id: 'old', date: day(-12), sport: 'muscu', duration: 0.5, exercises: [{ name: 'Crunch', group: 'Abdos et gainage', sets: 3, reps: 20 }] });
+    const v = await newUser({ data: d, ctxOpts: { viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.fill('#s_date', day(-2)); await v.page.fill('#s_dur', '0:40:00');
+    const row = n => `#muscuRows .muscu-row:nth-child(${n}) `;
+    const pick = async (n, search, name) => { await v.page.click(row(n) + '.muscu-pick'); await v.page.fill('#mpSearch', search); await v.page.click(`#mpList [data-name="${name}"]`); };
+    await pick(1, 'crunch', 'Crunch');
+    const unit = n => v.page.evaluate(sel => ({ time: document.querySelector(sel + '.muscu-unit [data-unit="time"]').getAttribute('aria-pressed'),
+      ph: document.querySelector(sel + '[data-k="reps"]').placeholder }), row(n));
+    const crunchDefault = await unit(1);
+    await v.page.click(row(1) + '.muscu-unit [data-unit="time"]');
+    const crunchTime = await unit(1);
+    await v.page.fill(row(1) + '[data-k="sets"]', '3'); await v.page.fill(row(1) + '[data-k="reps"]', '30');
+    await v.page.click('text=+ Ajouter un exercice');
+    await pick(2, 'planche', 'Gainage (planche)');
+    const plankDefault = await unit(2);
+    await v.page.click('text=+ Ajouter un exercice');
+    await pick(3, 'latéral', 'Gainage latéral');
+    await v.page.click(row(3) + '.muscu-unit [data-unit="reps"]');
+    await v.page.fill(row(2) + '[data-k="sets"]', '2'); await v.page.fill(row(2) + '[data-k="reps"]', '60');
+    await v.page.fill(row(3) + '[data-k="sets"]', '2'); await v.page.fill(row(3) + '[data-k="reps"]', '12');
+    const overflow = await v.page.evaluate(() => { const m = document.querySelector('#sessionModal .modal'); return m.scrollWidth > m.clientWidth; });
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const res = await v.page.evaluate(() => {
+      const s = TS.getSessions({ sport: 'muscu' }).find(x => x.date !== TS.getSessions({ sport: 'muscu' }).find(y => y.id === 'old').date);
+      const recs = TS.muscuRecords();
+      const r = n => recs.find(x => x.name === n);
+      return { ex: s.exercises, map: TS.getData().muscu_hold, texts: s.exercises.map(TS.muscuSetsText),
+        old: TS.muscuSetsText(TS.getSessions().find(x => x.id === 'old').exercises[0]),
+        crunch: r('Crunch'), lat: r('Gainage latéral'), hist: TS.muscuExerciseHistory('Crunch').length };
+    });
+    // La fois suivante : Crunch proposé au temps directement
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    await pick(1, 'crunch', 'Crunch');
+    const next = await unit(1);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(crunchDefault.time === 'false' && crunchDefault.ph === 'rép.', 'Crunch par défaut : ' + JSON.stringify(crunchDefault));
+    assert(crunchTime.time === 'true' && crunchTime.ph === 's', 'Crunch au temps : ' + JSON.stringify(crunchTime));
+    assert(plankDefault.time === 'true', 'gainage au temps par défaut');
+    assert(!overflow, 'débordement sur téléphone');
+    const [c, p, l] = res.ex;
+    assert(c.name === 'Crunch' && c.hold === true && c.reps === 30 && !('hold' in p) && l.hold === false && l.reps === 12, 'enregistré : ' + JSON.stringify(res.ex));
+    assert(res.texts.join(' | ') === '3 × 30 s | 2 × 60 s | 2 × 12', 'affichage : ' + res.texts.join(' | '));
+    assert(res.old === '3 × 20', 'ancienne séance en rép. gardée : ' + res.old);
+    assert(res.map && res.map.Crunch === true && res.map['Gainage latéral'] === false && !('Gainage (planche)' in res.map), 'choix gardés : ' + JSON.stringify(res.map));
+    assert(res.crunch.hold && res.crunch.maxReps.reps === 30 && res.crunch.sessions === 1 && res.hist === 1, 'record Crunch : ' + JSON.stringify(res.crunch));
+    assert(!res.lat.hold && res.lat.maxReps.reps === 12, 'record gainage latéral : ' + JSON.stringify(res.lat));
+    assert(next.time === 'true', 'Crunch pas proposé au temps la fois suivante');
+  });
+
   await browser.close();
   server.close();
 

@@ -318,6 +318,12 @@ input, select, textarea { font-family: var(--font); }
 .muscu-row .form-input { padding: 8px 6px; text-align: center; }
 .muscu-row .form-select { padding: 8px 6px; border-left: 3px solid var(--muscu); }
 .muscu-detail { grid-column: 1 / -1; }
+.muscu-foot { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.muscu-row--detail .muscu-foot .muscu-detail { flex-basis: 100%; }
+.muscu-unit { display: inline-flex; border: 1px solid var(--border2); border-radius: 999px; overflow: hidden; }
+.muscu-unit button { background: var(--surface2); border: 0; color: var(--text-3); font: 600 11.5px var(--font); padding: 5px 10px; cursor: pointer; }
+.muscu-unit button + button { border-left: 1px solid var(--border2); }
+.muscu-unit button[aria-pressed="true"] { background: var(--muscu); color: #fff; }
 .link-btn.muscu-detail__open { font-size: 12px; color: var(--text-3); text-decoration-color: var(--border2); }
 .link-btn.muscu-detail__open:hover { color: var(--text-2); }
 /* Séries détaillées : les champs « séries × rép. × kg » de la ligne sont remplacés par une ligne par série */
