@@ -30,13 +30,22 @@
   // si l'attente dépasse ~0,3 s (style.css : html.ts-boot, #tsSplash).
   var root = document.documentElement;
   root.classList.add('ts-boot');
+  // « Ouverture… » seulement à l'ouverture de l'appli ; d'une page à l'autre : « Chargement… ».
+  // L'onglet (ou l'appli installée) garde la trace d'une page déjà ouverte tant qu'il reste ouvert.
+  var OPENED_KEY = 'triseason_opened';
+  var alreadyOpen = false;
+  try { alreadyOpen = sessionStorage.getItem(OPENED_KEY) === '1'; } catch (e) {}
+  if (!alreadyOpen) {
+    try { alreadyOpen = !!document.referrer && new URL(document.referrer).origin === location.origin && !/login\.html/.test(document.referrer); } catch (e) {}
+  }
+  window.TS_BOOT_LABEL = alreadyOpen ? 'Chargement…' : 'Ouverture…';
   function showSplash() {
     if (!root.classList.contains('ts-boot') || document.getElementById('tsSplash') || !document.body) return;
     var sp = document.createElement('div');
     sp.id = 'tsSplash';
     sp.setAttribute('role', 'status');
     sp.innerHTML = '<div class="ts-splash__logo"><span class="nav__logo-icon" aria-hidden="true"><i></i></span> ORKA</div>'
-      + '<span class="spinner spinner--lg" aria-hidden="true"></span><div class="ts-splash__txt">Ouverture…</div>';
+      + '<span class="spinner spinner--lg" aria-hidden="true"></span><div class="ts-splash__txt">' + window.TS_BOOT_LABEL + '</div>';
     document.body.appendChild(sp);
   }
   if (document.body) showSplash(); else document.addEventListener('DOMContentLoaded', showSplash);
@@ -69,6 +78,7 @@
       return;
     }
     window.TS_USER = user || null;
+    if (user) { try { sessionStorage.setItem(OPENED_KEY, '1'); } catch (e) {} }
     reveal();
     document.dispatchEvent(new CustomEvent('triseason:auth-ready', { detail: user }));
   });
@@ -81,6 +91,7 @@
     ['triseason_data', 'triseason_owner', 'triseason_active_day', 'triseason_pending_consent'].forEach(function (k) {
       try { localStorage.removeItem(k); } catch (e) {}
     });
+    try { sessionStorage.removeItem('triseason_opened'); } catch (e) {}
     firebase.auth().signOut().then(function () {
       location.replace('login.html');
     });

@@ -2952,6 +2952,18 @@ async function main() {
     assert(next.time === 'true', 'Crunch pas proposé au temps la fois suivante');
   });
 
+  await test('Écran de démarrage : « Ouverture… » à l’ouverture de l’appli, « Chargement… » d’une page à l’autre', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
+    const first = await v.page.evaluate(() => window.TS_BOOT_LABEL);
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const next = await v.page.evaluate(() => window.TS_BOOT_LABEL);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(/Ouverture/.test(first || ''), 'ouverture : ' + first);
+    assert(/Chargement/.test(next || ''), 'changement de page : ' + next);
+  });
+
   await browser.close();
   server.close();
 
