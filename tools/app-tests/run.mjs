@@ -2964,6 +2964,28 @@ async function main() {
     assert(/Chargement/.test(next || ''), 'changement de page : ' + next);
   });
 
+  await test('Création de compte : mot de passe de 8 caractères avec majuscule, chiffre et caractère spécial (connexion inchangée)', async () => {
+    const v = await newUser({ uid: null, data: null });
+    await v.page.goto(`${BASE}/login.html`); await v.page.waitForTimeout(400);
+    const signinHidden = await v.page.evaluate(() => document.getElementById('pwRules').hidden);
+    await v.page.evaluate(() => toggleMode());
+    await v.page.fill('#authEmail', 'nouveau@test.fr');
+    await v.page.fill('#authPassword', 'abcdef');
+    const weak = await v.page.evaluate(() => [...document.querySelectorAll('#pwRules li.ok')].map(l => l.dataset.rule));
+    await v.page.evaluate(() => { document.getElementById('authConsentCheck').checked = true; });
+    await v.page.click('#authSubmitBtn'); await v.page.waitForTimeout(200);
+    const err = await v.page.textContent('#authError');
+    await v.page.fill('#authPassword', 'Velo2026!');
+    const strong = await v.page.evaluate(() => ({ ok: document.querySelectorAll('#pwRules li.ok').length, all: pwRulesOk('Velo2026!'),
+      noUpper: pwRulesOk('velo2026!'), noDigit: pwRulesOk('Velodrome!'), noSpecial: pwRulesOk('Velo20266'), accent: pwRulesOk('Écluse12?') }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(signinHidden, 'règles affichées à la connexion');
+    assert(weak.join() === '', 'mot de passe faible : ' + weak.join());
+    assert(/8 caractères/.test(err) && /majuscule/.test(err), 'message : ' + err);
+    assert(strong.ok === 4 && strong.all && !strong.noUpper && !strong.noDigit && !strong.noSpecial && strong.accent, JSON.stringify(strong));
+  });
+
   await browser.close();
   server.close();
 
