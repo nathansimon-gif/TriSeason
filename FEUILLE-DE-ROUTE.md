@@ -30,7 +30,7 @@ Les cases cochées passent dans « Fait » en bas de page.
   - sur strava.com/settings/api : changer le **nom de l'application** en ORKA (c'est le nom que les gens voient en connectant Strava)
   - *facultatif* : une adresse e-mail au nouveau nom (aujourd'hui tri.season.tracker@gmail.com, gardée en attendant), et le nom du projet dans la console Firebase / l'e-mail de mot de passe oublié
   - *plus tard, avec Claude* : changer l'adresse du site (aujourd'hui …github.io/TriSeason/). Attention : il faut aussi mettre à jour Firebase (domaines autorisés) et Strava (domaine de retour), sinon la connexion casse ; les applis installées sur les téléphones devront être réinstallées
-- [ ] 🧑🤖 **Records de musculation, suite** (idées **à regarder ensemble**, Nathan le 16/11/2026) : records par poids du corps (charge / poids), badge pour un record battu (le défi de la semaine « Battre un de tes records de charge » existe déjà), records aussi pour les exercices tenus en charge (gainage lesté)
+- [ ] 🧑🤖 **Records de musculation, suite** (idées **à regarder ensemble**, Nathan le 16/11/2026) : records par poids du corps (charge / poids), badge pour un record battu (le défi de la semaine « Battre un de tes records de charge » existe déjà)
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
 ## Bientôt (dans le mois)
@@ -122,6 +122,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Idées écartées (et pourquoi)
 
+- ~~Records de musculation pour le gainage lesté (exercices tenus avec une charge)~~ — écarté par Nathan le 16/11/2026 : pas utile pour l’instant
 - ~~Connexion directe à Garmin Connect~~ — Garmin a suspendu les nouvelles inscriptions à son programme développeurs (2026). Passer par Strava, où la plupart des montres envoient déjà leurs séances
 - ~~Espace coach, appli dans les stores~~ — reporté (pas écarté) : voir « Quand l'appli devient payante »
 
@@ -135,7 +136,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
-| 16/11/2026 | #86 | Résumé du mois : regardé par Nathan sur son compte (octobre 2026), rien à changer pour l’instant ; la suite (pages partageables en image) rejoint la tâche « Partage en story ». Records de musculation : idées à regarder ensemble |
+| 16/11/2026 | #86 | Résumé du mois : regardé par Nathan sur son compte (octobre 2026), rien à changer pour l’instant ; la suite (pages partageables en image) rejoint la tâche « Partage en story ». Records de musculation : idées à regarder ensemble (records par rapport au poids du corps, badge pour un record battu ; gainage lesté écarté) |
 | 15/11/2026 | #85 | Profil → Équipement sur téléphone : le **nom de la paire seul sur sa ligne**, l’état (« Pas encore utilisé », « Seuil bientôt atteint »…) et les boutons « Ranger » / « Modifier » en dessous (avant, ils se chevauchaient avec les noms longs) |
 | 15/11/2026 | #84 | Équipement : bouton « **Ranger** » sur chaque paire (ou vélo, combinaison) : elle n’est plus proposée dans les séances, ses kilomètres passés restent comptés, elle passe dans « Équipements rangés » (replié) avec un bouton « Ressortir » ; une paire encore en service est retirée le jour où on la range. Les anciennes paires non rangées restent repliées dans « Anciens équipements » et peuvent toujours être choisies sur une séance |
 | 15/11/2026 | #83 | Équipement, corrections : les chaussures **trail ne prennent que les sorties trail** (une sortie route sans paire route ou tous terrains en service n’a plus de chaussures, au lieu de prendre la paire trail) ; choix « **Aucune paire / aucun équipement pour cette séance** » dans la fenêtre de la séance ; une paire dont la première utilisation est à venir affiche « **Pas encore utilisé** » (au lieu de « Plus utilisé ») |
