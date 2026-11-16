@@ -30,7 +30,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [ ] 🤖🧑 **Faire le point ensemble : réglementation, RGPD et Firebase** (demandé par Nathan le 16/11/2026) : relire ensemble ce qui est en place et ce qui reste à faire :
   - 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
   - 🤖 Revoir la politique de confidentialité, les accords (création du compte, options santé) et la durée de conservation (comptes inactifs supprimés après 3 ans : pas encore automatisé)
-  - 🧑 **Firebase, à faire en premier (la connexion avec Google ne marche pas sans ça)** : *Authentication → Paramètres → Domaines autorisés → Ajouter un domaine* : `nathansimon-gif.github.io` (vérifié le 16/11/2026 : seuls localhost et les deux adresses Firebase sont autorisés ; Google est bien activé)
+  - [x] 🧑 **Firebase, fait le 16/11/2026 (connexion avec Google testée)** : *Authentication → Paramètres → Domaines autorisés → Ajouter un domaine* : `nathansimon-gif.github.io` (vérifié le 16/11/2026 : seuls localhost et les deux adresses Firebase sont autorisés ; Google est bien activé)
   - 🧑 Firebase : vérifier que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié ») et tester un e-mail de réinitialisation
   - 🧑 Firebase : vérifier que les règles de sécurité de la console sont bien celles de `firestore.rules` (seul le propriétaire lit et écrit son compte et ses tiroirs)
   - 🧑 Firebase, *facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom de l'appli (à faire une fois le nouveau nom choisi)
@@ -135,6 +135,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/11/2026 | — | Écran de démarrage : « Ouverture… » seulement à l’ouverture de l’appli, « Chargement… » quand on change de page. Connexion avec Google : domaine ajouté par Nathan dans Firebase, testé et fonctionnel |
 | 16/11/2026 | #92 | **Musculation au temps** : sous chaque exercice, choix « Rép. » ou « Temps » (secondes), pour le gainage, les abdos ou n'importe quel exercice ; le gainage reste au temps par défaut et peut passer en répétitions ; le choix est gardé pour la fois suivante ; les records et la progression suivent l'unité choisie (les anciennes séances gardent la leur) |
 | 16/11/2026 | #91 | Dashboard : la carte « Ce que Strava ne te montre pas » s’appelle maintenant **« Ta séance et ta nutrition »** (avant la demande à Strava, pour ne pas froisser l’examinateur). Dossier Strava : abonnement Strava de Nathan confirmé, demande portée à **1 000 sportifs** pour ne pas avoir à la refaire |
 | 16/11/2026 | #91 | **Dossier pour Strava** (plus de 10 comptes connectés) préparé dans `tools/strava-dossier/` : texte de la demande en anglais avec sa traduction, 7 captures d'écran de tous les endroits où l'appli montre des données Strava, mode d'emploi et liste de ce qui manque (nom, logo, logos officiels Strava, abonnement) |
