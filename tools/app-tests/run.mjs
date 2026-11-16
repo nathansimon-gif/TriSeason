@@ -325,7 +325,7 @@ async function main() {
     });
     assert(JSON.stringify(r) === JSON.stringify([['3 séances de vélo', 2, false], ['Repas notés 3 jours', 1, false]]), JSON.stringify(r));
   });
-  await test('Dashboard : carte « Ce que Strava ne te montre pas » (dernière séance + repas autour)', async () => {
+  await test('Dashboard : carte « Ta séance et ta nutrition » (dernière séance + repas autour)', async () => {
     await u.page.goto(`${BASE}/index.html`); await u.page.waitForTimeout(800);
     const full = (await u.page.innerText('#insightBody')).replace(/\s+/g, ' ');
     // Compte avec jours d'entraînement et de repos, et un ravitaillement
@@ -2088,7 +2088,7 @@ async function main() {
     assert(/69,8 kg/.test(p2.latest) && p2.cloud === 3 && /69,8 kg/.test(p2.sub), 'nouvelle pesée : ' + JSON.stringify(p2));
   });
 
-  await test('Sports décochés : « Ce que Strava ne te montre pas » prend la dernière séance d’un sport suivi', async () => {
+  await test('Sports décochés : « Ta séance et ta nutrition » prend la dernière séance d’un sport suivi', async () => {
     const data = sampleData(); data.profile.sports = ['run'];
     data.sessions.push({ id: 'v0', date: day(0), sport: 'velo', duration: 1, distance: 30 });
     const v = await newUser({ data });
@@ -2885,6 +2885,15 @@ async function main() {
     assert(wentHome, '« Aller au Dashboard » depuis Profil doit ouvrir le Dashboard : ' + v.page.url());
     assert(before === after, 'Passer a changé le profil : ' + before + ' → ' + after);
     assert(pre === 'true' && closed, 'présélection / Plus tard');
+  });
+
+  await test('Connexion avec Google refusée : message clair (site pas autorisé, fenêtre bloquée), jamais un code brut', async () => {
+    const v = await newUser({ uid: null, data: null });
+    await v.page.goto(`${BASE}/login.html`); await v.page.waitForTimeout(400);
+    const msgs = await v.page.evaluate(() => ['auth/unauthorized-domain', 'auth/popup-blocked', 'auth/operation-not-allowed'].map(code => friendlyError({ code })));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(msgs.every(m => !/auth\//.test(m) && /e-mail/.test(m)), JSON.stringify(msgs));
   });
 
   await browser.close();

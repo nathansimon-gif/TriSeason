@@ -232,10 +232,10 @@
 
   <!-- Cartes du Dashboard : une colonne sur téléphone ; deux colonnes sur grand écran (layoutDash) -->
   <div id="dashGrid">
-  <!-- ── Ce que Strava ne te montre pas (constat nutrition × séances) ── -->
+  <!-- ── Ta séance et ta nutrition (constat nutrition × séances) ── -->
   <div class="card" style="margin-bottom:12px" id="insightCard">
     <div class="card__title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <span style="display:flex;align-items:center;gap:8px">Ce que Strava ne te montre pas <span class="tip-icon" data-tip="Ta dernière séance, avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort. Des faits sur tes données, pas un conseil. Le lien entre tes repas et tes performances est détaillé dans Forme.">?</span></span>
+      <span style="display:flex;align-items:center;gap:8px">Ta séance et ta nutrition <span class="tip-icon" data-tip="Ta dernière séance, avec ce que tu as mangé et bu la veille, le jour même et pendant l'effort. Des faits sur tes données, pas un conseil. Le lien entre tes repas et tes performances est détaillé dans Forme.">?</span></span>
       <a href="forme.html" style="font-size:12px;font-weight:500;color:var(--accent)">Détail dans Forme</a>
     </div>
     <div id="insightBody"></div>
@@ -503,7 +503,7 @@ function renderGearAlert() {
   }).join('');
 }
 
-// ── Ce que Strava ne te montre pas : ta dernière séance avec ce que tu as mangé
+// ── Ta séance et ta nutrition : ta dernière séance avec ce que tu as mangé
 // et bu autour, puis tes glucides les jours d'entraînement et de repos.
 // Des faits sur tes données, jamais un conseil.
 // Repas + ravitaillements du jour, eau notée + boissons des ravitaillements (TS.dayIntake)

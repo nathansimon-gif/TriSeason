@@ -30,6 +30,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 - [ ] 🤖🧑 **Faire le point ensemble : réglementation, RGPD et Firebase** (demandé par Nathan le 16/11/2026) : relire ensemble ce qui est en place et ce qui reste à faire :
   - 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
   - 🤖 Revoir la politique de confidentialité, les accords (création du compte, options santé) et la durée de conservation (comptes inactifs supprimés après 3 ans : pas encore automatisé)
+  - 🧑 **Firebase, à faire en premier (la connexion avec Google ne marche pas sans ça)** : *Authentication → Paramètres → Domaines autorisés → Ajouter un domaine* : `nathansimon-gif.github.io` (vérifié le 16/11/2026 : seuls localhost et les deux adresses Firebase sont autorisés ; Google est bien activé)
   - 🧑 Firebase : vérifier que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié ») et tester un e-mail de réinitialisation
   - 🧑 Firebase : vérifier que les règles de sécurité de la console sont bien celles de `firestore.rules` (seul le propriétaire lit et écrit son compte et ses tiroirs)
   - 🧑 Firebase, *facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom de l'appli (à faire une fois le nouveau nom choisi)
@@ -59,7 +60,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
   1. 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets »), les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload ») et prévenir Claude
-  2. 🤖 Claude remplace le bouton « Connecter avec Strava » et la mention « Powered by Strava » par les logos officiels, prépare les captures d'écran et le texte de la demande
+  2. 🤖 Claude remplace le bouton « Connecter avec Strava » et la mention « Powered by Strava » par les logos officiels. **Texte de la demande et captures d'écran prêts** (dossier `tools/strava-dossier/`, 16/11/2026) : il manque le **nouveau nom**, le **logo**, les logos Strava (abonnement Strava de Nathan : OK ; demande : 1 000 sportifs) ; puis Claude refait les captures
   3. 🧑 Envoyer la demande depuis strava.com/settings/api
 - [ ] 🤖 *Plus tard* : séances en temps réel avec les alertes Strava (« webhooks »), au lieu d'attendre l'ouverture de l'appli. Demande que le serveur puisse écrire dans Firestore
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
@@ -87,7 +88,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 ## Quand l'appli devient payante
 
 - [ ] 🧑 **Prix conseillés** (rapport du 18/10, à confirmer avec les testeurs) :
-  - **Sportifs** : **gratuit** (séances, Strava, Dashboard, sports, compétitions, records, défis et badges) + **« Performance » 2,99 €/mois ou 24,99 €/an** (Nutrition, Forme, carte « Ce que Strava ne te montre pas »). Plus tard, quand l'IA existera : « Performance + IA » autour de 4,99 €/mois
+  - **Sportifs** : **gratuit** (séances, Strava, Dashboard, sports, compétitions, records, défis et badges) + **« Performance » 2,99 €/mois ou 24,99 €/an** (Nutrition, Forme, carte « Ta séance et ta nutrition »). Plus tard, quand l'IA existera : « Performance + IA » autour de 4,99 €/mois
   - **Pros** : **« Pro » 12 €/mois** (10 clients inclus, +1 € par client en plus) et **« Pro + IA » 24 €/mois** (10 clients inclus, +0,50 € par client en plus)
   - Simulateur pour tester d'autres prix : claude.ai/artifact/YbZgjx1DvaoPJkrxahaUzM · rapport : claude.ai/artifact/Cwp3rux55rdrj5FCVZSZTs
 - [ ] 🧑 Avant de fixer les prix : poser 4 questions de prix aux testeurs (trop cher / cher / bon marché / trop bon marché), et montrer l'idée de l'espace pro à 3 ou 4 coachs ou nutritionnistes
@@ -134,6 +135,9 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/11/2026 | #91 | Dashboard : la carte « Ce que Strava ne te montre pas » s’appelle maintenant **« Ta séance et ta nutrition »** (avant la demande à Strava, pour ne pas froisser l’examinateur). Dossier Strava : abonnement Strava de Nathan confirmé, demande portée à **1 000 sportifs** pour ne pas avoir à la refaire |
+| 16/11/2026 | #91 | **Dossier pour Strava** (plus de 10 comptes connectés) préparé dans `tools/strava-dossier/` : texte de la demande en anglais avec sa traduction, 7 captures d'écran de tous les endroits où l'appli montre des données Strava, mode d'emploi et liste de ce qui manque (nom, logo, logos officiels Strava, abonnement) |
+| 16/11/2026 | #91 | Connexion avec Google : message clair quand Google refuse (site pas encore autorisé dans Firebase, fenêtre bloquée) au lieu d’un code d’erreur ; cause trouvée : l’adresse du site n’est pas dans les domaines autorisés de Firebase (à ajouter par Nathan, voir « Faire le point… Firebase ») |
 | 16/11/2026 | #90 | Questionnaire de bienvenue refait depuis Profil : « Aller au Dashboard » ouvre maintenant vraiment le Dashboard (avant, la fenêtre se fermait et on restait sur Profil) |
 | 16/11/2026 | #89 | **Questionnaire de bienvenue** (niveaux : « Je débute », « J’ai l’habitude, sans compétition », « Je fais aussi des compétitions ») : à la première ouverture d’un nouveau compte (sans séance), 3 écrans courts en plein écran, chaque question facultative (« Passer », « Plus tard ») : **Ton sport** (sports suivis, niveau, objectif du moment ; « Préparer une compétition » crée la course avec son nom, sa date, son type et sa distance, d’où le bandeau J-… du Dashboard), **Ton rythme** (séances par semaine, montre ou appli), **Pour des chiffres justes** (poids du jour, âge, nutrition maintenant ou plus tard, objectif d’eau) ; puis « C’est prêt » avec le résumé, « Connecter Strava » et l’import des fichiers de montre. Le rythme choisi sert de **point de départ au défi de la semaine** tant qu’il n’y a pas de séance (« je débute » : 4 séances au plus) ; nutrition « plus tard » : défi d’eau au lieu du défi des repas tant qu’aucun repas n’est noté. « Refaire le questionnaire de bienvenue » dans Profil → Paramètres (réponses déjà données présélectionnées). Confidentialité mise à jour |
 | 16/11/2026 | #88 | **VTT comme le trail** : un vélo peut être « Route », « VTT », « Tous terrains » ou « Seulement quand je le choisis » ; case « Sortie VTT » sur les séances de vélo (cochée toute seule pour les sorties VTT de Strava, de l’archive Strava et des montres) ; les sorties VTT vont sur le vélo VTT, les autres sur le vélo de route. **Filtres de Séances alignés** (noms à gauche, champs alignés) ; Terrain : course sur route, trail, vélo sur route, VTT ; avec un terrain choisi, la liste Équipement ne propose que ce qui va avec (en service, ancien ou rangé) |
