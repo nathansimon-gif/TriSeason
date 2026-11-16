@@ -99,7 +99,6 @@
     <a href="aide.html?depuis=records.html" class="nav__link">Aide</a>
   </div>
   <div class="nav__actions">
-    <button class="btn btn--primary" onclick="openRecordModal()">+ Ajouter un record</button>
     <a href="profile.html" class="btn btn--ghost btn--sm btn--icon nav__profile" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
@@ -112,7 +111,10 @@
       <h1>Records personnels</h1>
       <p id="recIntro">Tes meilleures performances</p>
     </div>
-    <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison : affiche les records réalisés cette année-là"></select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select class="form-select" id="filterSeason" onchange="onSeasonChange()" style="width:auto" title="Filtrer par saison : affiche les records réalisés cette année-là"></select>
+      <button class="btn btn--primary" onclick="openRecordModal()">+ Ajouter un record</button>
+    </div>
   </div>
 
   <!-- Natation -->
