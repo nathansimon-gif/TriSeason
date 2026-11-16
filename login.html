@@ -54,6 +54,10 @@
     }
     .auth-forgot { text-align: right; margin-top: -4px; margin-bottom: 4px; }
     .auth-forgot a, .auth-legal a { color: var(--text-2); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .pw-rules { list-style: none; margin: 8px 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-3); }
+    .pw-rules li::before { content: '○'; margin-right: 5px; }
+    .pw-rules li.ok { color: var(--accent); }
+    .pw-rules li.ok::before { content: '✓'; }
     .auth-consent {
       display: none; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--text-2);
       line-height: 1.5; margin: 6px 0 4px; cursor: pointer;
@@ -99,6 +103,10 @@
         <label class="form-label">Mot de passe</label>
         <div class="pw-field"><input class="form-input" type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" required><button type="button" class="pw-eye" aria-label="Afficher le mot de passe" aria-pressed="false" onclick="const i=this.previousElementSibling,v=i.type==='password';i.type=v?'text':'password';this.setAttribute('aria-pressed',v);this.setAttribute('aria-label',v?'Cacher le mot de passe':'Afficher le mot de passe')"><svg class="pw-eye__show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="pw-eye__hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></button></div>
       </div>
+      <ul class="pw-rules" id="pwRules" hidden aria-live="polite">
+        <li data-rule="len">8 caractères ou plus</li><li data-rule="upper">une majuscule</li>
+        <li data-rule="digit">un chiffre</li><li data-rule="special">un caractère spécial (! ? # @ …)</li>
+      </ul>
       <div class="auth-forgot" id="authForgot"><a onclick="resetPassword()">Mot de passe oublié ?</a></div>
       <button class="btn btn--primary" style="width:100%;margin-top:6px;justify-content:center" onclick="submitEmailAuth()" id="authSubmitBtn">Se connecter</button>
     </form>
@@ -127,6 +135,8 @@ function toggleMode() {
   document.getElementById('authForm').querySelector('input[type=password]').autocomplete = isSignup ? 'new-password' : 'current-password';
   document.getElementById('authConsent').style.display = isSignup ? 'flex' : 'none';
   document.getElementById('authForgot').style.display = isSignup ? 'none' : 'block';
+  document.getElementById('pwRules').hidden = !isSignup;
+  checkPwRules();
   document.getElementById('authSwitch').innerHTML = isSignup
     ? 'Déjà un compte ? <button type="button" class="btn btn--ghost" onclick="toggleMode()">Se connecter</button>'
     : 'Pas encore de compte ? <button type="button" class="btn btn--ghost" onclick="toggleMode()">Créer un compte</button>';
@@ -193,7 +203,8 @@ function friendlyError(err) {
     'auth/wrong-password':           'Mot de passe incorrect.',
     'auth/invalid-credential':       'Email ou mot de passe incorrect.',
     'auth/email-already-in-use':     'Un compte existe déjà avec cet email.',
-    'auth/weak-password':            'Le mot de passe doit faire au moins 6 caractères.',
+    'auth/weak-password':            PW_RULES_MSG,
+    'auth/password-does-not-meet-requirements': PW_RULES_MSG,
     'auth/too-many-requests':        'Trop de tentatives — réessaie dans quelques minutes.',
     'auth/popup-closed-by-user':     'Fenêtre Google fermée avant la fin de connexion.',
     'auth/popup-blocked':            'La fenêtre Google a été bloquée : autorise les fenêtres pour ce site, ou connecte-toi avec ton e-mail.',
@@ -205,11 +216,28 @@ function friendlyError(err) {
   return map[err.code] || ('Une erreur est survenue (' + (err.code || err.message) + ').');
 }
 
+// Règles des mots de passe (les mêmes que dans Firebase → Authentication → Paramètres) :
+// à la création du compte seulement ; les comptes existants se connectent comme avant.
+const PW_RULES = {
+  len: p => p.length >= 8,
+  upper: p => /[A-ZÀ-ÖØ-Þ]/.test(p),
+  digit: p => /[0-9]/.test(p),
+  special: p => /[^A-Za-z0-9À-ÖØ-öø-ÿ\s]/.test(p),
+};
+const PW_RULES_MSG = 'Le mot de passe doit faire au moins 8 caractères, avec une majuscule, un chiffre et un caractère spécial.';
+function pwRulesOk(p) { return Object.values(PW_RULES).every(f => f(p)); }
+function checkPwRules() {
+  const p = document.getElementById('authPassword').value;
+  document.querySelectorAll('#pwRules li').forEach(li => li.classList.toggle('ok', PW_RULES[li.dataset.rule](p)));
+}
+document.getElementById('authPassword').addEventListener('input', checkPwRules);
+
 function submitEmailAuth() {
   hideError();
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   if (!email || !password) { showError('Renseigne un email et un mot de passe.'); return; }
+  if (mode === 'signup' && !pwRulesOk(password)) { showError(PW_RULES_MSG); return; }
   if (!consentOk()) return;
 
   const btn = document.getElementById('authSubmitBtn');
