@@ -2749,6 +2749,16 @@ async function main() {
     assert(active === 0, 'onglet surligné sur Compétitions');
   });
 
+  await test('Séances : filtres de dates sur deux lignes, « Du » et « Au »', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const labels = await v.page.evaluate(() => [...document.querySelectorAll('#advancedFilters span')].map(x => x.textContent.trim()).filter(t => /^(Du|Au|Dates|au)$/.test(t)));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(labels.join() === 'Du,Au', 'dates : ' + labels.join());
+  });
+
+
   await browser.close();
   server.close();
 

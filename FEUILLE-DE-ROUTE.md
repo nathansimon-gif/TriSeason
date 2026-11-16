@@ -32,8 +32,6 @@ Les cases cochées passent dans « Fait » en bas de page.
   - *plus tard, avec Claude* : changer l'adresse du site (aujourd'hui …github.io/TriSeason/). Attention : il faut aussi mettre à jour Firebase (domaines autorisés) et Strava (domaine de retour), sinon la connexion casse ; les applis installées sur les téléphones devront être réinstallées
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
-- [ ] 🧑 **Page Sports plus courte** (maquette montrée le 16/11/2026, à valider) : replier en une ligne les cartes secondaires (« Par séance et fréquence cardiaque », « Volume mensuel », « Répartition des zones », « Meilleures semaines ») avec un résumé (« Record : 27 km, semaine du 19 oct. ») ; on les ouvre en les touchant. Sur téléphone, la page passerait de 3,4 à 2,3 écrans
-
 ## Bientôt (dans le mois)
 
 **Prochaines tâches, dans cet ordre :**
@@ -123,6 +121,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Idées écartées (et pourquoi)
 
+- ~~Page Sports plus courte (cartes secondaires repliées en une ligne)~~ — maquette montrée le 16/11/2026, pas nécessaire pour l’instant selon Nathan (à reprendre si la page s’allonge)
 - ~~Records de musculation pour le gainage lesté (exercices tenus avec une charge)~~ — écarté par Nathan le 16/11/2026 : pas utile pour l’instant
 - ~~Connexion directe à Garmin Connect~~ — Garmin a suspendu les nouvelles inscriptions à son programme développeurs (2026). Passer par Strava, où la plupart des montres envoient déjà leurs séances
 - ~~Espace coach, appli dans les stores~~ — reporté (pas écarté) : voir « Quand l'appli devient payante »
@@ -137,6 +136,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/11/2026 | #87 | Filtres de Séances : dates sur deux lignes, « Du » et « Au » |
 | 16/11/2026 | #87 | **Séances** : nouveaux filtres **Terrain** (course sur route / trail) et **Équipement** (une paire, un vélo, une combinaison, ou « sans équipement ») ; lien « Voir les séances » sur chaque équipement de Profil ; « + Nouvelle séance » en premier ; filtres lisibles sur téléphone (les dates débordaient), « RPE » renommé « Effort ». **Dashboard sur ordinateur** (1100 px et plus) : deux colonnes (Ce que Strava ne te montre pas et Évolution à gauche ; défis, équipement, nutrition et records à droite), calendrier en dessous ; téléphone inchangé. **Compétitions** : plus d’onglet « Dashboard » surligné à tort dans la barre du bas |
 | 16/11/2026 | #87 | **Boutons « Ajouter » retirés du bandeau du haut** : Nutrition et Compétitions (déjà en haut de la page : « + Ajouter », « + Nouvelle course ») ; Séances (« + Nouvelle séance », à côté de « Importer des séances ») et Records (« + Ajouter un record », à côté du choix de saison) déplacés dans le haut de la page. Le bandeau ne garde que le profil et le menu |
 | 16/11/2026 | #86 | **Records de musculation** : chaque record avec charge est aussi donné **par rapport à ton poids** (« 1,28 × ton poids », d’après la pesée notée dans Profil ce jour-là ou juste avant) sur la page Records (carte et détail de l’exercice) et dans la progression (Sports → Muscu) ; deux **badges** : « Record battu » (le premier) et « 10 records » |
