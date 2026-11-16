@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261201a"></script>
+  <script src="theme.js?v=20261202a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261201a"></script>
+  <script src="auth-guard.js?v=20261202a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Sports</title>
-  <link rel="stylesheet" href="style.css?v=20261201a">
+  <link rel="stylesheet" href="style.css?v=20261202a">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .goal-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -242,7 +242,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261201a"></script>
+<script src="app.js?v=20261202a"></script>
 <script>
 let currentSport = 'nat';
 let charts = {};
@@ -586,7 +586,11 @@ function renderMuscuProgress() {
   if (hist.length < 2 || !first || !last) { note.textContent = hist.length === 1 ? 'Une seule séance pour l’instant : la courbe apparaîtra à la prochaine.' : ''; return; }
   const a = withKg ? first.kg : first.maxReps, b = withKg ? last.kg : last.maxReps, unit = withKg ? ' kg' : hold ? ' s' : ' rép.';
   const diff = Math.round((b - a) * 10) / 10;
-  note.innerHTML = `${hist.length} séances, du ${fmtDay(first.date)} au ${fmtDay(last.date)} : ${a.toLocaleString('fr-FR')}${unit} → <b>${b.toLocaleString('fr-FR')}${unit}</b> (${diff > 0 ? '+' : ''}${diff.toLocaleString('fr-FR')}${unit}).`;
+  // Par rapport au poids du corps (pesée du jour ou juste avant), si elle est notée
+  const ratio = (h, v) => { const w = withKg && TS.bodyWeightOn(h.date); return w ? (v / w.value).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null; };
+  const ra = ratio(first, a), rb = ratio(last, b);
+  note.innerHTML = `${hist.length} séances, du ${fmtDay(first.date)} au ${fmtDay(last.date)} : ${a.toLocaleString('fr-FR')}${unit} → <b>${b.toLocaleString('fr-FR')}${unit}</b> (${diff > 0 ? '+' : ''}${diff.toLocaleString('fr-FR')}${unit})`
+    + (ra && rb ? `, soit ${ra} → <b>${rb} × ton poids</b>.` : '.');
 }
 function renderMuscuMap() {
   const range = muscuRange();
