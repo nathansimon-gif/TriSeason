@@ -92,7 +92,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   toujours proposées et leurs records (créés tout seuls) visibles : `multisportShown` ;
   `muscuRecords` / `muscuExerciseHistory` (records et progression, calculés à partir de
   toutes les séances, rien d'enregistré ; 1RM estimé Epley jusqu'à 12 rép. ; `rm` = meilleure
-  charge pour au moins 1/3/5/8/10/12 rép.), `muscuRecordEvents` (records battus, la 1re
+  charge pour au moins 1/3/5/8/10/12 rép. ; `rel` = meilleure charge / poids du corps du jour, `bodyWeightOn(jour)` :
+  pesée du jour ou la plus récente avant, sinon la première si moins de 60 jours après ; badges `muscu_pr` / `muscu_pr10`), `muscuRecordEvents` (records battus, la 1re
   séance n'en est pas un) / `muscuSessionRecords` (records d'une séance : annonce, calendrier), `muscuMuscleLoad` + `renderBodyMap`
   (carte du corps SVG dans Sports → Muscu, `#carte-du-corps` ; Forme n'en montre qu'une ligne et un lien) ;
   **nouveautés** : `NEWS` / `showNews`, message une fois par compte (`data.news_seen`),

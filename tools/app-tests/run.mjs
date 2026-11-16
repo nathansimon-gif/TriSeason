@@ -2664,6 +2664,38 @@ async function main() {
     assert(r.length === 2 && r.every(x => x.oneLine && x.below), 'disposition : ' + JSON.stringify(r));
   });
 
+  await test('Musculation : records par rapport au poids du corps, badges « Record battu » et « 10 records »', async () => {
+    const data = sampleData();
+    data.profile.sports = ['nat', 'velo', 'run', 'muscu'];
+    const sq = (id, d, kg) => ({ id, date: day(d), sport: 'muscu', duration: 1, exercises: [{ name: 'Squat', group: 'Jambes', sets: 3, reps: 5, kg }] });
+    data.sessions = [sq('m1', -25, 90), sq('m2', -20, 100), sq('m3', -3, 96)];   // record battu le j-20 (100 > 90)
+    data.weight = [{ date: day(-30), value: 80 }, { date: day(-5), value: 75 }];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/records.html`); await v.page.waitForTimeout(900);
+    const r = await v.page.evaluate(() => {
+      const rec = TS.muscuRecords().find(x => x.name === 'Squat');
+      const b = TS.getAchievements(); const pr = b.find(x => x.id === 'muscu_pr'), pr10 = b.find(x => x.id === 'muscu_pr10');
+      return { rel: rec.rel, maxKg: rec.maxKg.kg, card: (document.querySelector('#records-muscu [data-exo="Squat"]') || {}).textContent || '',
+        pr: pr && [pr.earned, pr.date], pr10: pr10 && [pr10.earned, pr10.value],
+        before: (TS.bodyWeightOn(TS.localDateStr(new Date(Date.now() - 50 * 864e5))) || {}).value, none: TS.bodyWeightOn('2020-01-01') };
+    });
+    await v.page.click('#records-muscu [data-exo="Squat"]'); await v.page.waitForTimeout(150);
+    const modal = (await v.page.textContent('#mrecBody')).replace(/\s+/g, ' ');
+    const fits = await v.page.evaluate(() => { const m = document.querySelector('#muscuRecModal .modal'), t = m.querySelector('.mrec-table');
+      return t.getBoundingClientRect().right <= m.getBoundingClientRect().right + 1; });
+    await v.page.goto(`${BASE}/sport.html?sport=muscu&exo=Squat`); await v.page.waitForTimeout(900);
+    const note = (await v.page.textContent('#muscuProgNote')).replace(/\s+/g, ' ');
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    // 96 kg pour 75 kg (1,28) bat 100 kg pour 80 kg (1,25)
+    assert(r.rel && r.rel.ratio === 1.28 && r.rel.kg === 96 && r.rel.weight === 75 && r.maxKg === 100, 'ratio : ' + JSON.stringify(r));
+    assert(/1,28 × ton poids/.test(r.card) && /Par rapport à ton poids.{0,6}1,28 × ton poids ?96 kg pour 75 kg/.test(modal), 'affichage : ' + r.card + ' | ' + modal);
+    assert(fits, 'le tableau du détail dépasse de la fenêtre');
+    assert(r.pr && r.pr[0] && r.pr[1] === day(-20) && r.pr10 && !r.pr10[0] && r.pr10[1] === 1, 'badges : ' + JSON.stringify([r.pr, r.pr10]));
+    assert(r.before === 80 && r.none === null, 'poids avant la 1re pesée : ' + JSON.stringify([r.before, r.none]));
+    assert(/90 kg → 96 kg/.test(note) && /soit 1,13 → 1,28 × ton poids/.test(note), 'progression : ' + note);
+  });
+
   await browser.close();
   server.close();
 

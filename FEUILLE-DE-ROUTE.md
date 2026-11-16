@@ -30,7 +30,6 @@ Les cases cochées passent dans « Fait » en bas de page.
   - sur strava.com/settings/api : changer le **nom de l'application** en ORKA (c'est le nom que les gens voient en connectant Strava)
   - *facultatif* : une adresse e-mail au nouveau nom (aujourd'hui tri.season.tracker@gmail.com, gardée en attendant), et le nom du projet dans la console Firebase / l'e-mail de mot de passe oublié
   - *plus tard, avec Claude* : changer l'adresse du site (aujourd'hui …github.io/TriSeason/). Attention : il faut aussi mettre à jour Firebase (domaines autorisés) et Strava (domaine de retour), sinon la connexion casse ; les applis installées sur les téléphones devront être réinstallées
-- [ ] 🧑🤖 **Records de musculation, suite** (idées **à regarder ensemble**, Nathan le 16/11/2026) : records par poids du corps (charge / poids), badge pour un record battu (le défi de la semaine « Battre un de tes records de charge » existe déjà)
 - [ ] 🧑 Dans un mois environ (fin novembre 2026) : décider avec Claude de supprimer les **copies de secours** de l'ancien rangement (`users/{uid}/backup/v1`), une fois que tout fonctionne
 
 ## Bientôt (dans le mois)
@@ -136,6 +135,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/11/2026 | — | **Records de musculation** : chaque record avec charge est aussi donné **par rapport à ton poids** (« 1,28 × ton poids », d’après la pesée notée dans Profil ce jour-là ou juste avant) sur la page Records (carte et détail de l’exercice) et dans la progression (Sports → Muscu) ; deux **badges** : « Record battu » (le premier) et « 10 records » |
 | 16/11/2026 | #86 | Résumé du mois : regardé par Nathan sur son compte (octobre 2026), rien à changer pour l’instant ; la suite (pages partageables en image) rejoint la tâche « Partage en story ». Records de musculation : idées à regarder ensemble (records par rapport au poids du corps, badge pour un record battu ; gainage lesté écarté) |
 | 15/11/2026 | #85 | Profil → Équipement sur téléphone : le **nom de la paire seul sur sa ligne**, l’état (« Pas encore utilisé », « Seuil bientôt atteint »…) et les boutons « Ranger » / « Modifier » en dessous (avant, ils se chevauchaient avec les noms longs) |
 | 15/11/2026 | #84 | Équipement : bouton « **Ranger** » sur chaque paire (ou vélo, combinaison) : elle n’est plus proposée dans les séances, ses kilomètres passés restent comptés, elle passe dans « Équipements rangés » (replié) avec un bouton « Ressortir » ; une paire encore en service est retirée le jour où on la range. Les anciennes paires non rangées restent repliées dans « Anciens équipements » et peuvent toujours être choisies sur une séance |

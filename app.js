@@ -2290,6 +2290,10 @@ function getAchievements(data = getData()) {
       bestG = Math.max(bestG, g.size);
     });
     add('muscu_full', 'Corps complet', 'Les 6 groupes de muscles travaillés dans la même semaine', 'muscu', fullDate, bestG, MUSCU_CATALOG.length);
+    // Records battus (charge, ou répétitions sans charge) : le premier, puis 10
+    const prs = muscuRecordEvents().slice().sort((a, b) => a.date.localeCompare(b.date));
+    add('muscu_pr', 'Record battu', 'Battre un de tes records en musculation', 'muscu', prs[0] && prs[0].date, prs.length, 1);
+    add('muscu_pr10', '10 records', '10 records battus en musculation', 'muscu', prs[9] && prs[9].date, prs.length, 10);
   }
 
   // Compétitions
@@ -2313,7 +2317,7 @@ function getAchievements(data = getData()) {
 // Affichage d'un badge (Dashboard et Profil) : médaille avec un repère court, pas d'emoji.
 const BADGE_MARKS = { first: '1', s50: '50', s100: '100', tri_week: '3', velo100: 'km', hours10: '10h', brick: 'V+C',
   swim2k: '2k', half: '21', regular4: '4×3', meals7: '7j', meals30: '30j', hydro5: 'H2O', feel10: '10',
-  finisher: 'F', goal: 'OK', challenge1: '1', challenge4: '4', muscu10: '10', muscu_full: '6' };
+  finisher: 'F', goal: 'OK', challenge1: '1', challenge4: '4', muscu10: '10', muscu_full: '6', muscu_pr: 'PR', muscu_pr10: '×10' };
 function badgeTileHtml(b) {
   const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const when = b.earned ? 'Obtenu le ' + parseLocalDate(b.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -3690,7 +3694,18 @@ function muscuExerciseHistory(name, { from, to } = {}) {
 // Triés du plus pratiqué au moins pratiqué.
 // Records par nombre de répétitions : meilleure charge tenue sur au moins N répétitions
 const MUSCU_RM_REPS = [1, 3, 5, 8, 10, 12];
+// Poids du corps à une date : la pesée de ce jour ou la plus récente avant ; à défaut, la première pesée
+// si elle date de moins de 60 jours après. Sinon rien (pas de ratio inventé).
+function bodyWeightOn(day, data = getData()) {
+  const w = (data.weight || []).filter(x => x && x.value > 0 && x.date).sort((a, b) => a.date.localeCompare(b.date));
+  if (!w.length || !day) return null;
+  let before = null;
+  for (const x of w) { if (x.date <= day) before = x; else break; }
+  if (before) return before;
+  return daysBetweenStr(day, w[0].date) <= 60 ? w[0] : null;
+}
 function muscuRecords({ from, to } = {}) {
+  const data = getData();
   const names = new Map();
   getSessions({ sport: 'muscu', from, to }).forEach(s => (s.exercises || []).forEach(e => {
     if (!names.has(e.name)) names.set(e.name, e.group || MUSCU_GROUP_OF[e.name] || null);
@@ -3701,11 +3716,18 @@ function muscuRecords({ from, to } = {}) {
     const best = (key) => hist.reduce((b, h) => (h[key] != null && (!b || h[key] > b[key]) ? h : b), null);
     const kg = best('kg'), orm = best('orm'), reps = best('maxReps'), vol = best('volume'), one = best('one');
     const rm = {};
+    // Meilleure charge par rapport au poids du corps du jour (pesée de Profil), exercices avec charge seulement
+    let rel = null;
+    const hold = isHoldExercise(name);
     getSessions({ sport: 'muscu', from, to }).slice().reverse().forEach(s => (s.exercises || []).filter(e => e.name === name)
       .forEach(e => exSeries(e).forEach(x => {
         if (!x.kg || !x.reps) return;
         MUSCU_RM_REPS.forEach(n => { if (x.reps >= n && (!rm[n] || x.kg > rm[n].kg)) rm[n] = { kg: x.kg, reps: x.reps, date: s.date }; });
+        if (hold) return;
+        const w = bodyWeightOn(s.date, data);
+        if (w && (!rel || x.kg / w.value > rel.ratio)) rel = { ratio: x.kg / w.value, kg: x.kg, reps: x.reps, weight: w.value, date: s.date };
       })));
+    if (rel) rel.ratio = Math.round(rel.ratio * 100) / 100;
     return {
       name, group, hold: isHoldExercise(name), sessions: hist.length, last: hist.length ? hist[hist.length - 1].date : null,
       maxKg: kg ? { kg: kg.kg, reps: kg.reps, date: kg.date, max: !!kg.max } : null,
@@ -3713,7 +3735,7 @@ function muscuRecords({ from, to } = {}) {
       orm: orm ? { value: orm.orm, date: orm.date } : null,
       maxReps: reps ? { reps: reps.maxReps, date: reps.date } : null,
       volume: vol && vol.volume ? { value: vol.volume, date: vol.date } : null,
-      rm,
+      rm, rel,
     };
   }).sort((a, b) => b.sessions - a.sessions || (b.last || '').localeCompare(a.last || ''));
 }
@@ -4195,7 +4217,7 @@ window.TS = {
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
   MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
-  isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
+  bodyWeightOn, isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
   SPORTS, COMP_TYPES,

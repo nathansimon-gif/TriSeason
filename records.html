@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261201a"></script>
+  <script src="theme.js?v=20261202a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261201a"></script>
+  <script src="auth-guard.js?v=20261202a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Records</title>
-  <link rel="stylesheet" href="style.css?v=20261201a">
+  <link rel="stylesheet" href="style.css?v=20261202a">
   <style>
     .record-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -257,7 +257,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20261201a"></script>
+<script src="app.js?v=20261202a"></script>
 <script>
 let editRecordId = null;
 
@@ -355,6 +355,7 @@ let muscuRecGroup = '';
 const mrecEsc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const mrecDay = d => new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const mrecKg = v => v.toLocaleString('fr-FR') + ' kg';
+const mrecRatio = v => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' × ton poids';
 function renderMuscuRecords() {
   const section = document.getElementById('muscuRecordSection');
   section.style.display = TS.muscuOn() ? '' : 'none';
@@ -379,6 +380,7 @@ function renderMuscuRecords() {
     if (r.maxKg && r.maxKg.reps) sub.push(r.maxKg.reps + ' rép.' + (r.maxKg.max ? ' (max)' : ''));
     if (r.oneRep && r.maxKg && r.oneRep.kg < r.maxKg.kg) sub.push('1 rép. : ' + mrecKg(r.oneRep.kg));
     if (r.orm && r.maxKg && r.orm.value > r.maxKg.kg) sub.push('1RM estimé ' + mrecKg(r.orm.value));
+    if (r.rel) sub.push(mrecRatio(r.rel.ratio));
     return `<button type="button" class="record-card record-card--muscu" data-exo="${mrecEsc(r.name)}">
       <div class="record-label">${mrecEsc(r.name)}</div>
       <div class="record-val" style="color:var(--muscu)">${val}</div>
@@ -429,7 +431,10 @@ function openMuscuRecord(name) {
       + TS.MUSCU_RM_REPS.map(n => r.rm[n] ? row(n === 1 ? '1 répétition' : n + ' répétitions ou plus', mrecKg(r.rm[n].kg) + (r.rm[n].reps > n ? ' <span style="font-weight:400;color:var(--text-3)">(' + r.rm[n].reps + ' rép.)</span>' : ''), r.rm[n].date) : '').join('')
       + (r.orm ? row('1RM estimé <span class="tip-icon" data-tip="Charge que tu pourrais soulever une seule fois, calculée (formule d’Epley) à partir de tes séries de 12 répétitions ou moins. Une estimation, pas un test.">?</span>', '≈ ' + mrecKg(r.orm.value), r.orm.date) : '')
       + (r.volume ? row('Meilleure séance (kg soulevés)', mrecKg(r.volume.value), r.volume.date) : '')
-      + '</table>';
+      + (r.rel ? row('Par rapport à ton poids <span class="tip-icon" data-tip="Ta meilleure charge divisée par ton poids du jour (la pesée notée dans Profil ce jour-là ou juste avant). Pratique pour suivre ta force même si ton poids change.">?</span>',
+          mrecRatio(r.rel.ratio) + '<span style="display:block;font-weight:400;font-size:11.5px;color:var(--text-3)">' + mrecKg(r.rel.kg) + ' pour ' + mrecKg(r.rel.weight) + '</span>', r.rel.date) : '')
+      + '</table>'
+      + (!r.rel && !r.hold ? '<div style="font-size:12px;color:var(--text-3);margin-top:6px">Note ton poids dans Profil → Mon profil pour voir tes charges par rapport à ton poids.</div>' : '');
   } else if (r.maxReps) {
     html += '<table class="mrec-table">' + row(r.hold ? 'Durée max' : 'Répétitions max', r.maxReps.reps + (r.hold ? ' s' : ''), r.maxReps.date) + '</table>';
   }
