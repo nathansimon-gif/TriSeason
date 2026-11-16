@@ -27,6 +27,14 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Bientôt (dans le mois)
 
+- [ ] 🤖🧑 **Faire le point ensemble : réglementation, RGPD et Firebase** (demandé par Nathan le 16/11/2026) : relire ensemble ce qui est en place et ce qui reste à faire :
+  - 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
+  - 🤖 Revoir la politique de confidentialité, les accords (création du compte, options santé) et la durée de conservation (comptes inactifs supprimés après 3 ans : pas encore automatisé)
+  - 🧑 Firebase : vérifier que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié ») et tester un e-mail de réinitialisation
+  - 🧑 Firebase : vérifier que les règles de sécurité de la console sont bien celles de `firestore.rules` (seul le propriétaire lit et écrit son compte et ses tiroirs)
+  - 🧑 Firebase, *facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom de l'appli (à faire une fois le nouveau nom choisi)
+  - 🧑🤖 Fin novembre : décider de supprimer les **copies de secours** de l'ancien rangement (voir « Maintenant »)
+
 **Prochaines tâches, dans cet ordre :**
 
 - [x] 🤖🧑 **1. Ranger les données en plusieurs tiroirs** : fait (PR #43, en service depuis le 24 octobre 2026 : compte de Nathan vérifié, 841 séances et 56 repas identiques à la copie de secours, plus gros document 58 Ko au lieu de 182 Ko). Séances par année, repas et ravitaillements par mois, le reste dans le document principal ; en général **une seule lecture** par ouverture (seuls les tiroirs modifiés sont relus) et un seul envoi par enregistrement ; tout l'historique Strava tient (testé avec 9 000 séances). Plus tard : **parcours** (un tiroir par sortie, ouvert seulement quand on regarde la séance)
@@ -55,9 +63,6 @@ Les cases cochées passent dans « Fait » en bas de page.
   3. 🧑 Envoyer la demande depuis strava.com/settings/api
 - [ ] 🤖 *Plus tard* : séances en temps réel avec les alertes Strava (« webhooks »), au lieu d'attendre l'ouverture de l'appli. Demande que le serveur puisse écrire dans Firestore
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
-- [ ] 🤖 **Registre des traitements** (document interne demandé par la CNIL, données de santé) : brouillon à partir du modèle CNIL
-- [ ] 🧑 Vérifier dans Firebase que *Authentication → Sign-in method → E-mail/Mot de passe* est activé (pour « Mot de passe oublié »), et tester un e-mail de réinitialisation
-- [ ] 🧑 *Facultatif* : personnaliser l'e-mail de réinitialisation (*Authentication → Templates*) avec le nom TriSeason
 
 ## Dans 3 à 6 mois
 
@@ -129,7 +134,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
-| 16/11/2026 | #89 | **Questionnaire de bienvenue** : à la première ouverture d’un nouveau compte (sans séance), 3 écrans courts en plein écran, chaque question facultative (« Passer », « Plus tard ») : **Ton sport** (sports suivis, niveau, objectif du moment ; « Préparer une compétition » crée la course avec son nom, sa date, son type et sa distance, d’où le bandeau J-… du Dashboard), **Ton rythme** (séances par semaine, montre ou appli), **Pour des chiffres justes** (poids du jour, âge, nutrition maintenant ou plus tard, objectif d’eau) ; puis « C’est prêt » avec le résumé, « Connecter Strava » et l’import des fichiers de montre. Le rythme choisi sert de **point de départ au défi de la semaine** tant qu’il n’y a pas de séance (« je débute » : 4 séances au plus) ; nutrition « plus tard » : défi d’eau au lieu du défi des repas tant qu’aucun repas n’est noté. « Refaire le questionnaire de bienvenue » dans Profil → Paramètres (réponses déjà données présélectionnées). Confidentialité mise à jour |
+| 16/11/2026 | #89 | **Questionnaire de bienvenue** (niveaux : « Je débute », « J’ai l’habitude, sans compétition », « Je fais aussi des compétitions ») : à la première ouverture d’un nouveau compte (sans séance), 3 écrans courts en plein écran, chaque question facultative (« Passer », « Plus tard ») : **Ton sport** (sports suivis, niveau, objectif du moment ; « Préparer une compétition » crée la course avec son nom, sa date, son type et sa distance, d’où le bandeau J-… du Dashboard), **Ton rythme** (séances par semaine, montre ou appli), **Pour des chiffres justes** (poids du jour, âge, nutrition maintenant ou plus tard, objectif d’eau) ; puis « C’est prêt » avec le résumé, « Connecter Strava » et l’import des fichiers de montre. Le rythme choisi sert de **point de départ au défi de la semaine** tant qu’il n’y a pas de séance (« je débute » : 4 séances au plus) ; nutrition « plus tard » : défi d’eau au lieu du défi des repas tant qu’aucun repas n’est noté. « Refaire le questionnaire de bienvenue » dans Profil → Paramètres (réponses déjà données présélectionnées). Confidentialité mise à jour |
 | 16/11/2026 | #88 | **VTT comme le trail** : un vélo peut être « Route », « VTT », « Tous terrains » ou « Seulement quand je le choisis » ; case « Sortie VTT » sur les séances de vélo (cochée toute seule pour les sorties VTT de Strava, de l’archive Strava et des montres) ; les sorties VTT vont sur le vélo VTT, les autres sur le vélo de route. **Filtres de Séances alignés** (noms à gauche, champs alignés) ; Terrain : course sur route, trail, vélo sur route, VTT ; avec un terrain choisi, la liste Équipement ne propose que ce qui va avec (en service, ancien ou rangé) |
 | 16/11/2026 | #87 | Filtres de Séances : dates sur deux lignes, « Du » et « Au » |
 | 16/11/2026 | #87 | **Séances** : nouveaux filtres **Terrain** (course sur route / trail) et **Équipement** (une paire, un vélo, une combinaison, ou « sans équipement ») ; lien « Voir les séances » sur chaque équipement de Profil ; « + Nouvelle séance » en premier ; filtres lisibles sur téléphone (les dates débordaient), « RPE » renommé « Effort ». **Dashboard sur ordinateur** (1100 px et plus) : deux colonnes (Ce que Strava ne te montre pas et Évolution à gauche ; défis, équipement, nutrition et records à droite), calendrier en dessous ; téléphone inchangé. **Compétitions** : plus d’onglet « Dashboard » surligné à tort dans la barre du bas |

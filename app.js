@@ -2964,7 +2964,7 @@ function maybeShowMonthSummary() {
 // weekly_sessions, devices, nutrition_later, age, hydro_goal), « Mes sports », le poids
 // du jour et la course préparée. data.welcome_done = jour où il a été montré.
 const WELCOME_SPORTS = [['nat', 'Natation'], ['velo', 'Vélo'], ['run', 'Course à pied'], ['muscu', 'Musculation']];
-const WELCOME_LEVELS = [['debut', 'Je débute'], ['regulier', 'Je m’entraîne régulièrement'], ['competition', 'Je fais des compétitions']];
+const WELCOME_LEVELS = [['debut', 'Je débute'], ['regulier', 'J’ai l’habitude, sans compétition'], ['competition', 'Je fais aussi des compétitions']];
 const WELCOME_GOALS = [['premiere', 'Finir ma première course'], ['progresser', 'Progresser'], ['competition', 'Préparer une compétition'], ['forme', 'Garder la forme']];
 // Séances par semaine : la valeur sert de point de départ au défi de la semaine
 const WELCOME_RHYTHM = [['1-2', '1 à 2', 2], ['3-4', '3 à 4', 3], ['5-6', '5 à 6', 5], ['7+', '7 ou plus', 6]];
