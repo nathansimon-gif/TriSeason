@@ -2696,6 +2696,69 @@ async function main() {
     assert(/90 kg → 96 kg/.test(note) && /soit 1,13 → 1,28 × ton poids/.test(note), 'progression : ' + note);
   });
 
+  await test('Séances : filtres Terrain (route / trail) et Équipement, lien « Voir les séances » depuis Profil', async () => {
+    const data = sampleData();
+    data.sessions = [
+      { id: 'r1', date: day(-6), sport: 'run', duration: 1, distance: 10 },
+      { id: 'r2', date: day(-5), sport: 'run', duration: 2, distance: 18, trail: true },
+      { id: 'r3', date: day(-4), sport: 'run', duration: 1, distance: 8, gear_id: 'gc' },
+      { id: 'v1', date: day(-3), sport: 'velo', duration: 2, distance: 60 },
+    ];
+    data.gear = [{ id: 'gr', sport: 'run', name: 'Route', start: day(-30), terrain: 'route' }, { id: 'gt', sport: 'run', name: 'Trail', start: day(-30), terrain: 'trail' },
+      { id: 'gc', sport: 'run', name: 'Carbone', start: day(-30), terrain: 'manuel' }];
+    const v = await newUser({ data });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
+    const ids = () => v.page.evaluate(() => [...document.querySelectorAll('#sessionTable .ses-row__hit')].map(b => (b.getAttribute('onclick').match(/'([^']+)'/) || [])[1]).sort().join());
+    const first = await v.page.evaluate(() => document.querySelector('.page-header .btn').textContent.trim());
+    await v.page.click('#advFilterToggle');
+    await v.page.selectOption('#filterTerrain', 'trail'); await v.page.waitForTimeout(100);
+    const trail = await ids();
+    await v.page.selectOption('#filterTerrain', 'route'); await v.page.waitForTimeout(100);
+    const route = await ids();
+    await v.page.selectOption('#filterTerrain', ''); await v.page.selectOption('#filterGear', 'gr'); await v.page.waitForTimeout(100);
+    const gr = await ids();
+    await v.page.selectOption('#filterGear', 'none'); await v.page.waitForTimeout(100);
+    const none = await ids();
+    await v.page.goto(`${BASE}/profile.html`); await v.page.waitForTimeout(700);
+    await v.page.click('#gearList .gear-item:has-text("Carbone") >> text=Voir les séances'); await v.page.waitForTimeout(900);
+    const linked = { ids: await ids(), sel: await v.page.inputValue('#filterGear') };
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(first === '+ Nouvelle séance', 'premier bouton : ' + first);
+    assert(trail === 'r2' && route === 'r1,r3', 'terrain : ' + JSON.stringify([trail, route]));
+    assert(gr === 'r1' && none === 'v1', 'équipement : ' + JSON.stringify([gr, none]));
+    assert(linked.ids === 'r3' && linked.sel === 'gc', 'lien depuis Profil : ' + JSON.stringify(linked));
+  });
+
+  await test('Dashboard sur grand écran : deux colonnes, calendrier en dessous ; retour à une colonne sur téléphone ; Compétitions sans onglet surligné', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 1280, height: 900 } } });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(900);
+    const wide = await v.page.evaluate(() => {
+      const r = id => document.getElementById(id).getBoundingClientRect();
+      return { cols: !!document.querySelector('#dashGrid .dash-cols'), side: r('challengesCard').left > r('insightCard').right, below: r('calWrap').top >= Math.max(r('trendCard').bottom, r('recordsCard').bottom) - 1 };
+    });
+    await v.page.setViewportSize({ width: 390, height: 800 }); await v.page.waitForTimeout(300);
+    const narrow = await v.page.evaluate(() => ({ cols: !!document.querySelector('#dashGrid .dash-cols'),
+      order: [...document.getElementById('dashGrid').children].map(c => c.id).filter(Boolean).join() }));
+    await v.page.goto(`${BASE}/competitions.html`); await v.page.waitForTimeout(500);
+    const active = await v.page.evaluate(() => document.querySelectorAll('.mobile-nav__item.active').length);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(wide.cols && wide.side && wide.below, 'grand écran : ' + JSON.stringify(wide));
+    assert(!narrow.cols && narrow.order === 'insightCard,gearAlertCard,challengesCard,trendCard,calWrap,nutriCard,recordsCard', 'téléphone : ' + JSON.stringify(narrow));
+    assert(active === 0, 'onglet surligné sur Compétitions');
+  });
+
+  await test('Séances : filtres de dates sur deux lignes, « Du » et « Au »', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    const labels = await v.page.evaluate(() => [...document.querySelectorAll('#advancedFilters span')].map(x => x.textContent.trim()).filter(t => /^(Du|Au|Dates|au)$/.test(t)));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(labels.join() === 'Du,Au', 'dates : ' + labels.join());
+  });
+
+
   await browser.close();
   server.close();
 

@@ -668,7 +668,8 @@ function gearItemHtml(g, st) {
     <div class="gear-item__sub">${kind}${g.sport === 'run' && TS.gearTerrain(g) !== 'tout' ? ' · ' + (TS.gearTerrain(g) === 'manuel' ? 'choisie à la main' : TS.GEAR_TERRAINS[TS.gearTerrain(g)].toLowerCase()) : ''} · ${status}${g.notes ? ' · ' + gearEsc(g.notes) : ''}</div>
     <div class="gear-item__stats"><span><b>${gearKm(st.km)}</b> km</span><span><b>${st.sessions}</b> sortie${st.sessions > 1 ? 's' : ''}</span>
       ${st.hours ? `<span><b>${TS.formatHours(st.hours)}</b></span>` : ''}${st.elevation ? `<span>D+ <b>${st.elevation.toLocaleString('fr-FR')}</b> m</span>` : ''}
-      ${st.last ? `<span>dernière le ${gearDay(st.last, false)}</span>` : ''}</div>
+      ${st.last ? `<span>dernière le ${gearDay(st.last, false)}</span>` : ''}
+      ${st.sessions ? `<a href="sessions.html?gear=${g.id}" style="color:var(--accent)">Voir les séances</a>` : ''}</div>
     ${alert}
   </div>`;
 }

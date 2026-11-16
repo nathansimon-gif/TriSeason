@@ -35,6 +35,9 @@
     .feeling-row__line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%; }
     .feeling-row__label { font-size:11px; color:var(--text-2); width:64px; flex-shrink:0; }
     .rpe-btns { display:flex; gap:3px; flex-wrap:wrap; }
+    /* Filtres avancés : chaque ligne peut passer à la ligne sur téléphone (les dates débordaient) */
+    #advancedFilters > div > div { flex-wrap:wrap; min-width:0; max-width:100%; }
+    #advancedFilters input[type="date"] { width:150px !important; max-width:42vw; }
     .check-line { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer; flex-wrap:wrap; }
     .check-line input { width:18px; height:18px; accent-color:var(--accent); }
     .rpe-btn { min-width:28px; height:28px; padding:0 4px; border-radius:var(--r-sm); border:1px solid var(--border2); background:var(--surface2); color:var(--text-2); font:600 12px var(--mono); cursor:pointer; }
@@ -83,7 +86,6 @@
     <a href="aide.html?depuis=sessions.html" class="nav__link">Aide</a>
   </div>
   <div class="nav__actions">
-    <button class="btn btn--primary" onclick="openSessionModal()">+ Nouvelle séance</button>
     <a href="profile.html" class="btn btn--ghost btn--sm btn--icon nav__profile" title="Mon profil" aria-label="Mon profil"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     <button class="nav__menu-btn" onclick="toggleMenu()" aria-label="Menu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
@@ -97,6 +99,7 @@
       <p>Ajoute, importe et retrouve tes séances</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn--primary" onclick="openSessionModal()">+ Nouvelle séance</button>
       <button class="btn btn--ghost" id="stravaRefreshBtn" onclick="refreshStrava()" style="display:none" title="Chercher tes nouvelles séances sur Strava">Actualiser Strava</button>
       <button class="btn btn--ghost" onclick="openImportModal()">Importer des séances</button>
     </div>
@@ -140,9 +143,11 @@
   <div id="advancedFilters" class="card" style="display:none;margin-bottom:12px;padding:14px 16px">
       <div style="display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center">
         <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:60px">Dates</span>
+          <span style="font-size:11px;color:var(--text-2);min-width:60px">Du</span>
           <input class="form-input" type="date" id="filterFrom" onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Du">
-          <span style="font-size:11px;color:var(--text-3)">au</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text-2);min-width:60px">Au</span>
           <input class="form-input" type="date" id="filterTo"   onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Au">
         </div>
         <div style="display:flex;align-items:center;gap:6px">
@@ -166,10 +171,22 @@
           <span style="font-size:11px;color:var(--text-3)">m</span>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:40px">RPE</span>
+          <span style="font-size:11px;color:var(--text-2);min-width:40px">Effort</span>
           <input class="form-input" type="number" min="1" max="10" id="filterRpeMin" onchange="renderSessions()" placeholder="Min" style="width:70px">
           <span style="font-size:11px;color:var(--text-3)">à</span>
           <input class="form-input" type="number" min="1" max="10" id="filterRpeMax" onchange="renderSessions()" placeholder="Max" style="width:70px">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px" id="filterTerrainGroup">
+          <span style="font-size:11px;color:var(--text-2);min-width:50px">Terrain</span>
+          <select class="form-select" id="filterTerrain" onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Terrain (course à pied)">
+            <option value="">Toutes les sorties</option>
+            <option value="route">Course sur route</option>
+            <option value="trail">Trail</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px" id="filterGearGroup">
+          <span style="font-size:11px;color:var(--text-2);min-width:50px">Équipement</span>
+          <select class="form-select" id="filterGear" onchange="resetSessionPage();renderSessions()" style="width:auto;max-width:100%" aria-label="Équipement"></select>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
@@ -507,6 +524,18 @@ function renderSessions() {
   if (!isNaN(eleMax))  sessions = sessions.filter(s => (s.elevation||0) <= eleMax);
   if (!isNaN(rpeMin))  sessions = sessions.filter(s => (s.rpe||0) >= rpeMin);
   if (!isNaN(rpeMax))  sessions = sessions.filter(s => (s.rpe||0) <= rpeMax);
+  // Terrain (course à pied) : trail = sortie de trail ; route = sortie de course qui n'est pas du trail
+  const terrain = document.getElementById('filterTerrain')?.value;
+  if (terrain) { const d = TS.getData(); sessions = sessions.filter(s => s.sport === 'run' && TS.isTrailSession(s, d) === (terrain === 'trail')); }
+  // Équipement : séances comptées sur cette paire (ou ce vélo, cette combinaison)
+  fillGearFilter();
+  const gearId = document.getElementById('filterGear')?.value;
+  if (gearId) {
+    const d = TS.getData(), ranges = TS.gearRanges(d);
+    sessions = sessions.filter(s => gearId === TS.GEAR_NONE
+      ? TS.GEAR_KINDS[s.sport] && !TS.gearForSession(s, d, ranges)
+      : (TS.gearForSession(s, d, ranges) || {}).id === gearId);
+  }
 
   renderSessionStats(sessions);
 
@@ -1123,6 +1152,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterSport').value = sportParam;
     renderSessions();
   }
+  // Depuis Profil → Équipement : séances d'un équipement (?gear=id)
+  const gearParam = new URLSearchParams(location.search).get('gear');
+  if (gearParam) {
+    history.replaceState(null, '', location.pathname);
+    fillGearFilter();
+    const sel = document.getElementById('filterGear');
+    if ([...sel.options].some(o => o.value === gearParam)) {
+      sel.value = gearParam;
+      document.getElementById('filterSeason').value = 'all'; TS.setSeasonFilter('all'); applySeasonToDateFields('all');   // tous les km de la paire
+      if (document.getElementById('advancedFilters').style.display !== 'block') toggleAdvancedFilters();
+      renderSessions();
+    }
+  }
   // Depuis le message de nouveauté : nouvelle séance de musculation
   if (new URLSearchParams(location.search).get('nouvelle') === 'muscu') {
     history.replaceState(null, '', location.pathname);
@@ -1573,13 +1615,29 @@ function confirmDeleteAllSessions() {
   TS.toast('Toutes les séances ont été supprimées');
 }
 
+// Liste des équipements pour le filtre (y compris les anciens et rangés), groupés par sport ; cachée sans équipement
+function fillGearFilter() {
+  const sel = document.getElementById('filterGear');
+  if (!sel) return;
+  const keep = sel.value;
+  const gear = TS.getGear().filter(g => TS.sportOn(g.sport));
+  document.getElementById('filterGearGroup').style.display = gear.length ? '' : 'none';
+  document.getElementById('filterTerrainGroup').style.display = TS.sportOn('run') ? '' : 'none';
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const groups = ['run', 'velo', 'nat'].map(sp => [sp, gear.filter(g => g.sport === sp)]).filter(([, l]) => l.length);
+  sel.innerHTML = '<option value="">Tout l’équipement</option>'
+    + groups.map(([sp, l]) => `<optgroup label="${TS.GEAR_KINDS[sp]}">${l.map(g => `<option value="${g.id}">${esc(g.name)}${g.stored ? ' (rangé)' : ''}</option>`).join('')}</optgroup>`).join('')
+    + `<option value="${TS.GEAR_NONE}">Sans équipement</option>`;
+  sel.value = [...sel.options].some(o => o.value === keep) ? keep : '';
+}
+
 function clearFilters() {
   document.getElementById('filterSport').value = '';
   document.getElementById('filterSeason').value = 'all';
   TS.setSeasonFilter('all');
   document.getElementById('filterFrom').value  = '';
   document.getElementById('filterTo').value    = '';
-  ['filterDistMin','filterDistMax','filterDurMin','filterDurMax','filterEleMin','filterEleMax','filterRpeMin','filterRpeMax']
+  ['filterDistMin','filterDistMax','filterDurMin','filterDurMax','filterEleMin','filterEleMax','filterRpeMin','filterRpeMax','filterTerrain','filterGear']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   renderSessions();
 }
