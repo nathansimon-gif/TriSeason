@@ -79,7 +79,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   **musculation** : sport `muscu` (violet), `session.exercises = [{name, group, sets, reps, kg}]`
   ou, si les séries diffèrent, `{name, group, series: [{reps, kg, max}]}` (`max` = série au maximum) :
   toujours lire les séries avec `exSeries(e)` (charge d'une séance = série la plus lourde)
-  (gainage : secondes dans `reps`), catalogue `MUSCU_CATALOG` par groupe : `[nom, muscles]`
+  (exercice au temps : secondes dans `reps` ; unité au choix « Rép. / Temps » par exercice : `exHold(e)` = `e.hold` sinon `holdByName` (gainage, hollow body) ;
+  `isHoldExercise(nom)` = dernier choix `data.muscu_hold[nom]` (`rememberMuscuHold`), unité des records et de la progression : les séances dans l'autre unité n'y comptent pas), catalogue `MUSCU_CATALOG` par groupe : `[nom, muscles]`
   (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un),
   `muscuTargets(ex)` : muscles d'un exercice (exercice libre : ceux de son groupe),
   `MUSCU_ZONES` / `muscuZones(ex)` : zones de travail du choix d'exercice (d'après les muscles principaux),

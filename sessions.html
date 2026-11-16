@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204b"></script>
+  <script src="theme.js?v=20261204c"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204b"></script>
+  <script src="auth-guard.js?v=20261204c"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261204b">
+  <link rel="stylesheet" href="style.css?v=20261204c">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -298,10 +298,10 @@
           <label class="form-label" style="margin:0">Exercices</label>
           <button type="button" class="btn btn--ghost btn--sm" id="muscuRepeatBtn" onclick="repeatLastMuscu()">Reprendre la dernière séance</button>
         </div>
-        <div class="muscu-cols" aria-hidden="true"><span>Exercice</span><span>Séries</span><span>Rép.</span><span>kg</span><span></span></div>
+        <div class="muscu-cols" aria-hidden="true"><span>Exercice</span><span>Séries</span><span>Rép. / s</span><span>kg</span><span></span></div>
         <div id="muscuRows"></div>
         <button type="button" class="btn btn--ghost btn--sm" onclick="addMuscuRow()" style="align-self:flex-start">+ Ajouter un exercice</button>
-        <div class="form-hint">Charges différentes d'une série à l'autre, ou une série « Max » : « Détailler les séries » sous l'exercice. Gainage et exercices tenus : les secondes dans « Rép. ». Sans charge (pompes, tractions…) : « kg » vide.</div>
+        <div class="form-hint">Charges différentes d'une série à l'autre, ou une série « Max » : « Détailler les séries » sous l'exercice. Gainage, abdos ou tout exercice au temps : « Temps » sous l'exercice, puis les secondes. Sans charge (pompes, tractions…) : « kg » vide.</div>
       </div>
       <div class="form-group">
         <label class="form-label" data-tip="1 = très facile, 10 = effort maximal. Sert à calculer ta charge d'entraînement et ta forme.">Effort ressenti (1 à 10)</label>
@@ -376,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261204b"></script>
-<script src="import.js?v=20261204b"></script>
-<script src="app.js?v=20261204b"></script>
+<script src="fit-parser.js?v=20261204c"></script>
+<script src="import.js?v=20261204c"></script>
+<script src="app.js?v=20261204c"></script>
 <script>
 
 
@@ -700,6 +700,23 @@ function setMuscuPick(btn, name, group) {
   btn.dataset.group = (name && (TS.MUSCU_GROUP_OF[name] || group)) || '';
   btn.textContent = name || 'Choisir un exercice';
   btn.classList.toggle('muscu-pick--empty', !name);
+  // Unité par défaut de l'exercice choisi (dernier choix pour ce nom), sauf si la personne l'a déjà réglée sur cette ligne
+  const row = btn.closest('.muscu-row');
+  if (row && name && !row.dataset.holdTouched) setMuscuUnit(row, TS.isHoldExercise(name));
+}
+// Répétitions ou temps (secondes) : un choix par exercice, gardé pour la fois suivante
+function setMuscuUnit(row, hold) {
+  row.dataset.hold = hold ? '1' : '0';
+  row.querySelectorAll('.muscu-unit button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.unit === 'time') === !!hold)));
+  row.querySelectorAll('[data-k="reps"]').forEach(i => {
+    i.placeholder = hold ? 's' : 'rép.';
+    i.setAttribute('aria-label', hold ? 'Temps en secondes' : 'Répétitions');
+  });
+}
+function pickMuscuUnit(btn) {
+  const row = btn.closest('.muscu-row');
+  row.dataset.holdTouched = '1';
+  setMuscuUnit(row, btn.dataset.unit === 'time');
 }
 // Une ligne = un exercice. Forme simple : séries × rép. × kg. « Détailler les séries »
 // passe à une ligne par série (charges différentes, série « Max ») sans recréer l'exercice.
@@ -712,11 +729,16 @@ function addMuscuRow(ex) {
     + '<input class="form-input" type="number" min="1" step="1" inputmode="numeric" data-k="reps" aria-label="Répétitions" placeholder="rép." value="' + muscuNum(ex && ex.reps) + '">'
     + '<input class="form-input" type="number" min="0" step="0.5" inputmode="decimal" data-k="kg" aria-label="Charge en kg" placeholder="kg" value="' + muscuNum(ex && ex.kg) + '">'
     + '<button type="button" class="btn btn--ghost btn--sm btn--icon muscu-del" onclick="this.parentNode.remove()" title="Retirer cet exercice" aria-label="Retirer cet exercice">✕</button>'
-    + '<div class="muscu-detail"></div>';
+    + '<div class="muscu-foot"><span class="muscu-unit" role="group" aria-label="Compter en">'
+    + '<button type="button" data-unit="reps" onclick="pickMuscuUnit(this)">Rép.</button>'
+    + '<button type="button" data-unit="time" onclick="pickMuscuUnit(this)">Temps</button></span>'
+    + '<div class="muscu-detail"></div></div>';
   setMuscuPick(row.querySelector('.muscu-pick'), ex && ex.name, ex && ex.group);
   document.getElementById('muscuRows').appendChild(row);
   if (ex && Array.isArray(ex.series) && ex.series.length) setMuscuDetail(row, ex.series);
   else setMuscuDetail(row, null);
+  // Exercice déjà enregistré : son unité à lui (gardée même si le réglage a changé depuis)
+  setMuscuUnit(row, ex && ex.name ? TS.exHold(ex) : row.dataset.hold === '1');
   return row;
 }
 // series = null : forme simple (lien pour détailler) ; sinon une ligne par série
@@ -724,7 +746,7 @@ function setMuscuDetail(row, series) {
   const box = row.querySelector('.muscu-detail');
   row.classList.toggle('muscu-row--detail', !!series);
   if (!series) {
-    box.innerHTML = '<button type="button" class="link-btn muscu-detail__open" onclick="detailMuscuRow(this)">Détailler les séries (charges différentes, max)</button>';
+    box.innerHTML = '<button type="button" class="link-btn muscu-detail__open" onclick="detailMuscuRow(this)" title="Charges différentes d’une série à l’autre, série « Max »">Détailler les séries</button>';
     return;
   }
   box.innerHTML = '<div class="muscu-series"></div>'
@@ -747,6 +769,8 @@ function addMuscuSerie(el, x) {
     + '<button type="button" class="btn btn--ghost btn--sm btn--icon" onclick="removeMuscuSerie(this)" title="Retirer cette série" aria-label="Retirer cette série">✕</button>';
   list.appendChild(line);
   numberMuscuSeries(list);
+  const row = list.closest('.muscu-row');
+  if (row && row.dataset.hold) setMuscuUnit(row, row.dataset.hold === '1');
 }
 function numberMuscuSeries(list) {
   [...list.children].forEach((l, i) => { l.querySelector('.muscu-serie__n').textContent = 'S' + (i + 1); });
@@ -802,7 +826,11 @@ function readMuscuRows() {
       const get = k => row.querySelector(':scope > [data-k="' + k + '"]').value;
       Object.assign(ex, { sets: int(get('sets')), reps: int(get('reps')), kg: kgOf(get('kg')) });
     }
-    return clean(ex);
+    clean(ex);
+    // Unité : enregistrée seulement si elle diffère du défaut d'après le nom (gainage = temps)
+    const hold = row.dataset.hold === '1';
+    if (hold !== TS.holdByName(name)) ex.hold = hold;
+    return ex;
   }).filter(Boolean);
 }
 
@@ -965,6 +993,14 @@ function saveSessionForm() {
     session.distance = null; session.elevation = null;
     const exercises = readMuscuRows();
     if (exercises.length) session.exercises = exercises;
+    // Le choix « Rép. / Temps » réglé à la main sur un exercice sert pour la fois suivante
+    const touched = [...document.querySelectorAll('#muscuRows .muscu-row')].filter(r => r.dataset.holdTouched)
+      .map(r => r.querySelector('.muscu-pick').dataset.name).filter(Boolean);
+    if (touched.length) {
+      const d = TS.getData();
+      TS.rememberMuscuHold(exercises.filter(e => touched.includes(e.name)), d);
+      TS.saveData(d);
+    }
   }
   if (!session.date || !session.sport) { TS.toast('Date et sport obligatoires', 'error'); return; }
   // Course à laquelle la séance était reliée avant cette modification (si on édite)
