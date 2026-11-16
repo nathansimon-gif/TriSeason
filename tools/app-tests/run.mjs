@@ -2887,6 +2887,15 @@ async function main() {
     assert(pre === 'true' && closed, 'présélection / Plus tard');
   });
 
+  await test('Connexion avec Google refusée : message clair (site pas autorisé, fenêtre bloquée), jamais un code brut', async () => {
+    const v = await newUser({ uid: null, data: null });
+    await v.page.goto(`${BASE}/login.html`); await v.page.waitForTimeout(400);
+    const msgs = await v.page.evaluate(() => ['auth/unauthorized-domain', 'auth/popup-blocked', 'auth/operation-not-allowed'].map(code => friendlyError({ code })));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(msgs.every(m => !/auth\//.test(m) && /e-mail/.test(m)), JSON.stringify(msgs));
+  });
+
   await browser.close();
   server.close();
 
