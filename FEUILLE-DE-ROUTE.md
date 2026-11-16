@@ -139,7 +139,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
-| 16/11/2026 | — | **Sécurité de Firebase vérifiée** (lecture seule) : sans connexion, aucun accès aux comptes, tiroirs ni copies de secours ; données en Europe ; clé du rapport du lundi en lecture seule. Recommandations ajoutées dans « Faire le point… Firebase » (protection contre la suppression, validation en deux étapes, mots de passe, sauvegardes) |
+| 16/11/2026 | #94 | **Sécurité de Firebase vérifiée** (lecture seule) : sans connexion, aucun accès aux comptes, tiroirs ni copies de secours ; données en Europe ; clé du rapport du lundi en lecture seule. Recommandations ajoutées dans « Faire le point… Firebase » (protection contre la suppression, validation en deux étapes, mots de passe, sauvegardes) |
 | 16/11/2026 | #93 | Écran de démarrage : « Ouverture… » seulement à l’ouverture de l’appli, « Chargement… » quand on change de page. Connexion avec Google : domaine ajouté par Nathan dans Firebase, testé et fonctionnel |
 | 16/11/2026 | #92 | **Musculation au temps** : sous chaque exercice, choix « Rép. » ou « Temps » (secondes), pour le gainage, les abdos ou n'importe quel exercice ; le gainage reste au temps par défaut et peut passer en répétitions ; le choix est gardé pour la fois suivante ; les records et la progression suivent l'unité choisie (les anciennes séances gardent la leur) |
 | 16/11/2026 | #91 | Dashboard : la carte « Ce que Strava ne te montre pas » s’appelle maintenant **« Ta séance et ta nutrition »** (avant la demande à Strava, pour ne pas froisser l’examinateur). Dossier Strava : abonnement Strava de Nathan confirmé, demande portée à **1 000 sportifs** pour ne pas avoir à la refaire |
