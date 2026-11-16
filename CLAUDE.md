@@ -67,7 +67,8 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   (`muscuChallenge`, `bonus: true`) qui ne compte pas pour la série ;
   objectif d'eau `hydroGoal(data)` = `data.profile.hydro_goal` en ml, 1,5 L par défaut) ;
   équipement (`data.gear`, `gearRanges` / `gearStats`) : chaque équipement est en service de sa première utilisation
-  à la veille du suivant **du même sport et du même terrain** (`gearTerrain` : `tout` / `route` / `trail` / `manuel`, chaussures seulement),
+  à la veille du suivant **du même sport et du même terrain** (`gearTerrain` : `tout` / `route` / `trail` (chaussures) ou `vtt` (vélo) / `manuel` ;
+  `GEAR_OFFROAD` = { run: 'trail', velo: 'vtt' }, `isOffroadSession` = `s.trail` (course) ou `s.vtt` (vélo, Strava `MountainBikeRide`, montre « mountain »)),
   ou à son retrait ; une séance va sur `s.gear_id` (choisi dans la fenêtre de la séance) sinon `gearAuto` (course : chaussures trail si
   `isTrailSession` — `s.trail`, Strava `TrailRun`, montre, ou course `trail` reliée — puis tous terrains, puis route ;
   sortie non trail : route puis tous terrains, **jamais trail** ; rien en service : aucun ; une paire `manuel` n'est jamais prise

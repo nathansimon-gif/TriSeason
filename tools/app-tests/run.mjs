@@ -2713,7 +2713,7 @@ async function main() {
     await v.page.click('#advFilterToggle');
     await v.page.selectOption('#filterTerrain', 'trail'); await v.page.waitForTimeout(100);
     const trail = await ids();
-    await v.page.selectOption('#filterTerrain', 'route'); await v.page.waitForTimeout(100);
+    await v.page.selectOption('#filterTerrain', 'run-route'); await v.page.waitForTimeout(100);
     const route = await ids();
     await v.page.selectOption('#filterTerrain', ''); await v.page.selectOption('#filterGear', 'gr'); await v.page.waitForTimeout(100);
     const gr = await ids();
@@ -2758,6 +2758,50 @@ async function main() {
     assert(labels.join() === 'Du,Au', 'dates : ' + labels.join());
   });
 
+
+  await test('VTT comme le trail : vélo VTT et vélo de route en même temps, case « Sortie VTT », Strava ; filtres alignés, équipement selon le terrain', async () => {
+    const data = sampleData();
+    data.sessions = [
+      { id: 'v1', date: day(-6), sport: 'velo', duration: 2, distance: 60 },
+      { id: 'v2', date: day(-5), sport: 'velo', duration: 2, distance: 30, vtt: true },
+      { id: 'r1', date: day(-4), sport: 'run', duration: 1, distance: 10, trail: true },
+    ];
+    data.gear = [{ id: 'br', sport: 'velo', name: 'Vélo route', start: day(-30), terrain: 'route' }, { id: 'bv', sport: 'velo', name: 'VTT', start: day(-30), terrain: 'vtt' },
+      { id: 'gt', sport: 'run', name: 'Trail', start: day(-30), terrain: 'trail' }, { id: 'gr', sport: 'run', name: 'Route', start: day(-30), terrain: 'route' }];
+    const v = await newUser({ data, ctxOpts: { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(700);
+    const r = await v.page.evaluate(() => {
+      const d = TS.getData(), of = id => (TS.gearForSession(d.sessions.find(s => s.id === id), d) || {}).id, st = TS.gearStats(d);
+      return { v1: of('v1'), v2: of('v2'), active: [st.br.active, st.bv.active],
+        strava: TS.stravaToSession({ id: 7, sport_type: 'MountainBikeRide', start_date_local: '2026-01-02T08:00:00', elapsed_time: 3600, distance: 20000 }).vtt };
+    });
+    await v.page.click('#advFilterToggle');
+    // Alignement : tous les champs commencent à la même position
+    const aligned = await v.page.evaluate(() => { const xs = [...document.querySelectorAll('#advancedFilters .adv-c')].filter(c => c.offsetParent).map(c => Math.round(c.getBoundingClientRect().left)); return new Set(xs).size === 1; });
+    const fits = await v.page.evaluate(() => { const p = document.getElementById('advancedFilters'); return p.scrollWidth <= p.clientWidth; });
+    const terrains = await v.page.evaluate(() => [...document.querySelectorAll('#filterTerrain option')].map(o => o.value).join());
+    await v.page.selectOption('#filterTerrain', 'vtt'); await v.page.waitForTimeout(100);
+    const vttGear = await v.page.evaluate(() => [...document.querySelectorAll('#filterGear option')].map(o => o.value).filter(x => x && x !== 'none').join());
+    const vttIds = await v.page.evaluate(() => [...document.querySelectorAll('#sessionTable .ses-row__hit')].map(b => (b.getAttribute('onclick').match(/'([^']+)'/) || [])[1]).join());
+    await v.page.selectOption('#filterTerrain', 'trail'); await v.page.waitForTimeout(100);
+    const trailGear = await v.page.evaluate(() => [...document.querySelectorAll('#filterGear option')].map(o => o.value).filter(x => x && x !== 'none').join());
+    // Fenêtre de séance vélo : case « Sortie VTT » → vélo VTT en automatique
+    await v.page.click('#advFilterToggle');
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'velo'); await v.page.fill('#s_date', day(0)); await v.page.dispatchEvent('#s_date', 'change');
+    const lineTxt = await v.page.textContent('#trailLine');
+    await v.page.check('#s_trail');
+    const auto = await v.page.evaluate(() => document.querySelector('#s_gear option[value=""]').textContent);
+    await v.page.fill('#s_dur', '1:00:00'); await v.page.fill('#s_dist', '20');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const saved = await v.page.evaluate(d => TS.getSessions().find(s => s.date === d && s.sport === 'velo'), day(0));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.v1 === 'br' && r.v2 === 'bv' && r.active.join() === 'true,true' && r.strava === true, 'vélos : ' + JSON.stringify(r));
+    assert(aligned && fits, 'filtres alignés : ' + JSON.stringify([aligned, fits]));
+    assert(terrains === ',run-route,trail,velo-route,vtt', 'terrains : ' + terrains);
+    assert(vttGear === 'bv' && vttIds === 'v2' && trailGear === 'gt', 'équipement selon le terrain : ' + JSON.stringify([vttGear, vttIds, trailGear]));
+    assert(/Sortie VTT/.test(lineTxt) && /Automatique : VTT/.test(auto) && saved && saved.vtt === true && !saved.trail, 'séance VTT : ' + JSON.stringify([lineTxt, auto, saved]));
+  });
 
   await browser.close();
   server.close();

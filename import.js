@@ -189,6 +189,7 @@ function parseFIT(buffer) {
           elevation,
           notes,
           trail: sport === 'run' && /trail/i.test(String(fitSub)) ? true : null,   // sortie de trail (montre)
+          vtt: sport === 'velo' && /mountain/i.test(String(fitSub)) ? true : null,  // sortie VTT (montre)
           _skip: cls.skip || null,
           _source: 'fit'
         });

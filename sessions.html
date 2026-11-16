@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261202a"></script>
+  <script src="theme.js?v=20261203a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261202a"></script>
+  <script src="auth-guard.js?v=20261203a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261202a">
+  <link rel="stylesheet" href="style.css?v=20261203a">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -35,9 +35,15 @@
     .feeling-row__line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%; }
     .feeling-row__label { font-size:11px; color:var(--text-2); width:64px; flex-shrink:0; }
     .rpe-btns { display:flex; gap:3px; flex-wrap:wrap; }
-    /* Filtres avancés : chaque ligne peut passer à la ligne sur téléphone (les dates débordaient) */
-    #advancedFilters > div > div { flex-wrap:wrap; min-width:0; max-width:100%; }
-    #advancedFilters input[type="date"] { width:150px !important; max-width:42vw; }
+    /* Filtres avancés : grille nom / champs, tout aligné ; rien ne dépasse sur téléphone */
+    .adv-grid { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:10px 14px; align-items:center; }
+    .adv-row { display:contents; }
+    .adv-l { font-size:12px; color:var(--text-2); }
+    .adv-c { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; }
+    .adv-u { font-size:12px; color:var(--text-3); }
+    .adv-date { width:160px !important; max-width:100%; }
+    .adv-num { width:86px !important; }
+    .adv-sel { width:auto !important; max-width:100%; }
     .check-line { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer; flex-wrap:wrap; }
     .check-line input { width:18px; height:18px; accent-color:var(--accent); }
     .rpe-btn { min-width:28px; height:28px; padding:0 4px; border-radius:var(--r-sm); border:1px solid var(--border2); background:var(--surface2); color:var(--text-2); font:600 12px var(--mono); cursor:pointer; }
@@ -141,53 +147,30 @@
     <button class="btn btn--ghost btn--sm" onclick="toggleAdvancedFilters()" id="advFilterToggle" aria-expanded="false">Filtres ▾</button>
   </div>
   <div id="advancedFilters" class="card" style="display:none;margin-bottom:12px;padding:14px 16px">
-      <div style="display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:60px">Du</span>
-          <input class="form-input" type="date" id="filterFrom" onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Du">
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:60px">Au</span>
-          <input class="form-input" type="date" id="filterTo"   onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Au">
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:60px">Distance</span>
-          <input class="form-input" type="number" step="0.1" id="filterDistMin" onchange="renderSessions()" placeholder="Min" style="width:80px">
-          <span style="font-size:11px;color:var(--text-3)">à</span>
-          <input class="form-input" type="number" step="0.1" id="filterDistMax" onchange="renderSessions()" placeholder="Max" style="width:80px">
-          <span style="font-size:11px;color:var(--text-3)">km</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:50px">Durée</span>
-          <input class="form-input" type="text" id="filterDurMin" onchange="renderSessions()" placeholder="ex: 1h30" style="width:90px">
-          <span style="font-size:11px;color:var(--text-3)">à</span>
-          <input class="form-input" type="text" id="filterDurMax" onchange="renderSessions()" placeholder="ex: 2h" style="width:90px">
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:60px">Dénivelé</span>
-          <input class="form-input" type="number" step="10" id="filterEleMin" onchange="renderSessions()" placeholder="Min" style="width:80px">
-          <span style="font-size:11px;color:var(--text-3)">à</span>
-          <input class="form-input" type="number" step="10" id="filterEleMax" onchange="renderSessions()" placeholder="Max" style="width:80px">
-          <span style="font-size:11px;color:var(--text-3)">m</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--text-2);min-width:40px">Effort</span>
-          <input class="form-input" type="number" min="1" max="10" id="filterRpeMin" onchange="renderSessions()" placeholder="Min" style="width:70px">
-          <span style="font-size:11px;color:var(--text-3)">à</span>
-          <input class="form-input" type="number" min="1" max="10" id="filterRpeMax" onchange="renderSessions()" placeholder="Max" style="width:70px">
-        </div>
-        <div style="display:flex;align-items:center;gap:6px" id="filterTerrainGroup">
-          <span style="font-size:11px;color:var(--text-2);min-width:50px">Terrain</span>
-          <select class="form-select" id="filterTerrain" onchange="resetSessionPage();renderSessions()" style="width:auto" aria-label="Terrain (course à pied)">
+      <!-- Une ligne par filtre : le nom à gauche (même largeur pour tous), les champs alignés à droite -->
+      <div class="adv-grid">
+        <div class="adv-row"><span class="adv-l">Du</span>
+          <div class="adv-c"><input class="form-input adv-date" type="date" id="filterFrom" onchange="resetSessionPage();renderSessions()" aria-label="Du"></div></div>
+        <div class="adv-row"><span class="adv-l">Au</span>
+          <div class="adv-c"><input class="form-input adv-date" type="date" id="filterTo" onchange="resetSessionPage();renderSessions()" aria-label="Au"></div></div>
+        <div class="adv-row"><span class="adv-l">Distance</span>
+          <div class="adv-c"><input class="form-input adv-num" type="number" step="0.1" id="filterDistMin" onchange="renderSessions()" placeholder="Min" aria-label="Distance min">
+            <span class="adv-u">à</span><input class="form-input adv-num" type="number" step="0.1" id="filterDistMax" onchange="renderSessions()" placeholder="Max" aria-label="Distance max"><span class="adv-u">km</span></div></div>
+        <div class="adv-row"><span class="adv-l">Durée</span>
+          <div class="adv-c"><input class="form-input adv-num" type="text" id="filterDurMin" onchange="renderSessions()" placeholder="1h30" aria-label="Durée min">
+            <span class="adv-u">à</span><input class="form-input adv-num" type="text" id="filterDurMax" onchange="renderSessions()" placeholder="2h" aria-label="Durée max"></div></div>
+        <div class="adv-row"><span class="adv-l">Dénivelé</span>
+          <div class="adv-c"><input class="form-input adv-num" type="number" step="10" id="filterEleMin" onchange="renderSessions()" placeholder="Min" aria-label="Dénivelé min">
+            <span class="adv-u">à</span><input class="form-input adv-num" type="number" step="10" id="filterEleMax" onchange="renderSessions()" placeholder="Max" aria-label="Dénivelé max"><span class="adv-u">m</span></div></div>
+        <div class="adv-row"><span class="adv-l">Effort</span>
+          <div class="adv-c"><input class="form-input adv-num" type="number" min="1" max="10" id="filterRpeMin" onchange="renderSessions()" placeholder="Min" aria-label="Effort min">
+            <span class="adv-u">à</span><input class="form-input adv-num" type="number" min="1" max="10" id="filterRpeMax" onchange="renderSessions()" placeholder="Max" aria-label="Effort max"><span class="adv-u">/10</span></div></div>
+        <div class="adv-row" id="filterTerrainGroup"><span class="adv-l">Terrain</span>
+          <div class="adv-c"><select class="form-select adv-sel" id="filterTerrain" onchange="resetSessionPage();renderSessions()" aria-label="Terrain">
             <option value="">Toutes les sorties</option>
-            <option value="route">Course sur route</option>
-            <option value="trail">Trail</option>
-          </select>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px" id="filterGearGroup">
-          <span style="font-size:11px;color:var(--text-2);min-width:50px">Équipement</span>
-          <select class="form-select" id="filterGear" onchange="resetSessionPage();renderSessions()" style="width:auto;max-width:100%" aria-label="Équipement"></select>
-        </div>
+          </select></div></div>
+        <div class="adv-row" id="filterGearGroup"><span class="adv-l">Équipement</span>
+          <div class="adv-c"><select class="form-select adv-sel" id="filterGear" onchange="resetSessionPage();renderSessions()" aria-label="Équipement"></select></div></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
         <button class="btn btn--ghost btn--sm" onclick="clearFilters()">Effacer les filtres</button>
@@ -304,7 +287,7 @@
       </div>
       <!-- Équipement de la séance (chaussures, vélo, combinaison) et sortie de trail -->
       <div class="form-group" id="gearGroup" style="display:none">
-        <label class="check-line" id="trailLine" style="display:none"><input type="checkbox" id="s_trail" onchange="updateGearField()"> Sortie de trail <span class="form-hint" style="margin:0">(chemins, montagne)</span></label>
+        <label class="check-line" id="trailLine" style="display:none"><input type="checkbox" id="s_trail" onchange="updateGearField()"> <span id="trailText">Sortie de trail</span> <span class="form-hint" style="margin:0">(chemins, montagne)</span></label>
         <label class="form-label" for="s_gear" id="gearLabel">Chaussures</label>
         <select class="form-select" id="s_gear"></select>
         <div class="form-hint" id="gearHintLine"></div>
@@ -393,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261202a"></script>
-<script src="import.js?v=20261202a"></script>
-<script src="app.js?v=20261202a"></script>
+<script src="fit-parser.js?v=20261203a"></script>
+<script src="import.js?v=20261203a"></script>
+<script src="app.js?v=20261203a"></script>
 <script>
 
 
@@ -526,7 +509,11 @@ function renderSessions() {
   if (!isNaN(rpeMax))  sessions = sessions.filter(s => (s.rpe||0) <= rpeMax);
   // Terrain (course à pied) : trail = sortie de trail ; route = sortie de course qui n'est pas du trail
   const terrain = document.getElementById('filterTerrain')?.value;
-  if (terrain) { const d = TS.getData(); sessions = sessions.filter(s => s.sport === 'run' && TS.isTrailSession(s, d) === (terrain === 'trail')); }
+  // run-route / trail (course à pied), velo-route / vtt (vélo)
+  if (terrain) {
+    const d = TS.getData(), sp = terrain === 'trail' || terrain === 'run-route' ? 'run' : 'velo', off = terrain === 'trail' || terrain === 'vtt';
+    sessions = sessions.filter(s => s.sport === sp && TS.isOffroadSession(s, d) === off);
+  }
   // Équipement : séances comptées sur cette paire (ou ce vélo, cette combinaison)
   fillGearFilter();
   const gearId = document.getElementById('filterGear')?.value;
@@ -629,7 +616,7 @@ function openSessionModal(session = null) {
   if (document.getElementById('s_kcal')) document.getElementById('s_kcal').value = session?.kcal || '';
   if (document.getElementById('s_elevation')) document.getElementById('s_elevation').value = session?.elevation || '';
   setSensation(session?.sensation || null);
-  document.getElementById('s_trail').checked = !!session?.trail;
+  document.getElementById('s_trail').checked = !!(session && (session.sport === 'velo' ? session.vtt : session.trail));
   document.getElementById('s_gear').dataset.chosen = session?.gear_id || '';
   setScale('s_pain', session?.pain ?? null);
   painKeep = session?.pain ?? null;
@@ -681,19 +668,20 @@ function updateGearField() {
   const data = TS.getData();
   // Équipements rangés : plus proposés (sauf celui déjà choisi sur cette séance)
   const all = TS.getGear(data).filter(g => g.sport === sport && (!g.stored || g.id === keep));
-  document.getElementById('trailLine').style.display = sport === 'run' ? '' : 'none';
+  document.getElementById('trailLine').style.display = TS.GEAR_OFFROAD[sport] ? '' : 'none';
+  document.getElementById('trailText').textContent = sport === 'velo' ? 'Sortie VTT' : 'Sortie de trail';
   const grp = document.getElementById('gearGroup');
   grp.style.display = TS.GEAR_KINDS[sport] && (all.length || sport === 'run') ? '' : 'none';
   if (!TS.GEAR_KINDS[sport]) return;
   document.getElementById('gearLabel').textContent = TS.GEAR_KINDS[sport];
   document.getElementById('gearLabel').style.display = all.length ? '' : 'none';
   sel.style.display = all.length ? '' : 'none';
-  const probe = { sport, date, trail: sport === 'run' && document.getElementById('s_trail').checked,
+  const probe = { sport, date, trail: sport === 'run' && document.getElementById('s_trail').checked, vtt: sport === 'velo' && document.getElementById('s_trail').checked,
     comp_id: document.getElementById('s_comp_id').value || null };
   const auto = TS.gearAuto(probe, data);
   const ranges = TS.gearRanges(data);
   const usable = g => ranges[g.id] && date >= ranges[g.id].from && date <= ranges[g.id].to;
-  const label = g => g.name + (sport === 'run' && TS.gearTerrain(g) !== 'tout' ? ' (' + (TS.gearTerrain(g) === 'manuel' ? 'à la main' : TS.GEAR_TERRAINS[TS.gearTerrain(g)].toLowerCase()) + ')' : '');
+  const label = g => g.name + (TS.gearTerrainLabel(g) ? ' (' + TS.gearTerrainLabel(g).replace(/^choisie? /, '') + ')' : '');
   // En service ce jour-là d'abord, puis les autres (anciens ou pas encore utilisés), au cas où
   const list = all.filter(usable).concat(all.filter(g => !usable(g)));
   sel.innerHTML = `<option value="">Automatique${auto ? ' : ' + gearEscape(label(auto)) : ' : aucun'}</option>`
@@ -968,6 +956,7 @@ function saveSessionForm() {
     elevation: parseFloat(document.getElementById('s_elevation')?.value)||null,
     comp_id:   document.getElementById('s_comp_id')?.value || null,
     trail:     document.getElementById('s_sport').value === 'run' && document.getElementById('s_trail').checked ? true : null,
+    vtt:       document.getElementById('s_sport').value === 'velo' && document.getElementById('s_trail').checked ? true : null,
     gear_id:   TS.GEAR_KINDS[document.getElementById('s_sport').value] ? (document.getElementById('s_gear').value || null) : null,
   };
   const pain = painValue();
@@ -1620,9 +1609,26 @@ function fillGearFilter() {
   const sel = document.getElementById('filterGear');
   if (!sel) return;
   const keep = sel.value;
-  const gear = TS.getGear().filter(g => TS.sportOn(g.sport));
-  document.getElementById('filterGearGroup').style.display = gear.length ? '' : 'none';
-  document.getElementById('filterTerrainGroup').style.display = TS.sportOn('run') ? '' : 'none';
+  // Terrains proposés selon les sports suivis
+  const tsel = document.getElementById('filterTerrain'), tkeep = tsel.value;
+  const topts = [['', 'Toutes les sorties']];
+  if (TS.sportOn('run')) topts.push(['run-route', 'Course sur route'], ['trail', 'Trail']);
+  if (TS.sportOn('velo')) topts.push(['velo-route', 'Vélo sur route'], ['vtt', 'VTT']);
+  tsel.innerHTML = topts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  tsel.value = topts.some(([v]) => v === tkeep) ? tkeep : '';
+  document.getElementById('filterTerrainGroup').style.display = topts.length > 1 ? '' : 'none';
+  // Équipement : avec un terrain choisi, seulement ce qui va avec (en service, ancien ou rangé)
+  const terrain = tsel.value;
+  const fits = g => {
+    if (!terrain) return true;
+    const sp = terrain === 'trail' || terrain === 'run-route' ? 'run' : 'velo', off = terrain === 'trail' || terrain === 'vtt';
+    if (g.sport !== sp) return false;
+    const t = TS.gearTerrain(g);
+    return off ? t === TS.GEAR_OFFROAD[sp] || t === 'tout' : t !== TS.GEAR_OFFROAD[sp];
+  };
+  const all = TS.getGear().filter(g => TS.sportOn(g.sport));
+  const gear = all.filter(fits);
+  document.getElementById('filterGearGroup').style.display = all.length ? '' : 'none';
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const groups = ['run', 'velo', 'nat'].map(sp => [sp, gear.filter(g => g.sport === sp)]).filter(([, l]) => l.length);
   sel.innerHTML = '<option value="">Tout l’équipement</option>'
