@@ -144,6 +144,8 @@ async function main() {
     if (data && !('news_seen' in data)) data = { ...data, news_seen: ['muscu', 'sports', 'orka'] };
     // Résumé du mois déjà vu, sauf si le test le précise (month_seen: null pour le voir)
     if (data && !('month_seen' in data)) data = { ...data, month_seen: '9999-12' };
+    // Questionnaire de bienvenue déjà vu, sauf si le test le précise (welcome_done: null pour le voir)
+    if (data && !('welcome_done' in data)) data = { ...data, welcome_done: '2026-01-01' };
     const ctx = await browser.newContext({ serviceWorkers: 'block', timezoneId: TZ, viewport: { width: 1280, height: 900 }, ...ctxOpts });
     let currentUid = uid;
     await ctx.route(/gstatic\.com/, r => r.request().url().includes('app-compat')
@@ -2801,6 +2803,84 @@ async function main() {
     assert(terrains === ',run-route,trail,velo-route,vtt', 'terrains : ' + terrains);
     assert(vttGear === 'bv' && vttIds === 'v2' && trailGear === 'gt', 'équipement selon le terrain : ' + JSON.stringify([vttGear, vttIds, trailGear]));
     assert(/Sortie VTT/.test(lineTxt) && /Automatique : VTT/.test(auto) && saved && saved.vtt === true && !saved.trail, 'séance VTT : ' + JSON.stringify([lineTxt, auto, saved]));
+  });
+
+  await test('Questionnaire de bienvenue : nouveau compte, 3 écrans facultatifs, réglages enregistrés, pas revu ensuite', async () => {
+    const fresh = { profile: { name: '' }, weeks: {}, _migrated: true, sessions: [], competitions: [], records: [], weight: [],
+      nutrition: { meals: [], hydration: {}, fuel: [] }, welcome_done: null };
+    const v = await newUser({ data: fresh, ctxOpts: { viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true } });
+    await v.page.goto(`${BASE}/index.html`);
+    await v.page.waitForSelector('#welcome', { timeout: 5000 });
+    const chip = (g, val) => v.page.click(`#welcome [data-wq="${g}"] [data-v="${val}"]`);
+    const title1 = await v.page.textContent('#welcome .ms-page:not([hidden]) .ms-page__title');
+    const compHiddenBefore = await v.page.evaluate(() => document.getElementById('wqComp').hidden);
+    await chip('sports', 'velo'); await chip('sports', 'run'); await chip('level', 'regulier'); await chip('goal', 'competition');
+    await v.page.fill('#wqCompName', 'Marathon test');
+    await v.page.fill('#wqCompDate', day(60));
+    await v.page.selectOption('#wqCompType', 'RUN');
+    await v.page.selectOption('#wqCompDist', '42.195');
+    const ovf = [];
+    const overflow = () => v.page.evaluate(() => { const p = document.querySelector('#welcome .ms__pages'); return p.scrollWidth > p.clientWidth || document.documentElement.scrollWidth > window.innerWidth; });
+    ovf.push(await overflow());
+    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForTimeout(60);
+    await chip('rhythm', '3-4'); await chip('devices', 'garmin');
+    ovf.push(await overflow());
+    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForTimeout(60);
+    await v.page.fill('#wqWeight', '68.5'); await v.page.fill('#wqAge', '34');
+    await chip('nutri', 'later'); await chip('water', '2000');
+    ovf.push(await overflow());
+    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForTimeout(60);
+    const end = await v.page.evaluate(() => ({ text: document.querySelector('#welcome .ms-page:not([hidden])').innerText,
+      btn: document.querySelector('#welcome [data-wq-act="next"]').textContent, skip: document.querySelector('#welcome [data-wq-act="skip"]').hidden }));
+    ovf.push(await overflow());
+    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForTimeout(300);
+    const res = await v.page.evaluate(() => {
+      const d = TS.getData(), wk = TS.challengeHistory().current;
+      return { p: d.profile, weight: d.weight, comps: d.competitions, closed: !document.getElementById('welcome') && !document.documentElement.classList.contains('ms-open'),
+        challenges: wk.map(c => c.id + ':' + c.target), done: d.welcome_done };
+    });
+    await v.page.reload(); await v.page.waitForTimeout(1500);
+    const again = await v.page.evaluate(() => !!document.getElementById('welcome'));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(title1 === 'Ton sport', 'titre : ' + title1);
+    assert(compHiddenBefore, 'les champs de la compétition ne doivent apparaître qu’avec « Préparer une compétition »');
+    assert(!ovf.some(Boolean), 'défilement latéral : ' + JSON.stringify(ovf));
+    assert(/Vélo et course à pied/.test(end.text) && /Marathon test dans 60 jours/.test(end.text) && /3 séances/.test(end.text) && /2 L/.test(end.text), 'résumé : ' + end.text);
+    assert(end.btn === 'Aller au Dashboard' && end.skip, 'fin : ' + JSON.stringify(end));
+    assert(res.closed && !again, 'fermé et pas revu');
+    const p = res.p;
+    assert(JSON.stringify(p.sports) === '["velo","run"]' && p.level === 'regulier' && p.goal === 'competition' && p.weekly_sessions === '3-4'
+      && JSON.stringify(p.devices) === '["garmin"]' && p.age === 34 && p.nutrition_later === true && p.hydro_goal === 2000, 'profil : ' + JSON.stringify(p));
+    assert(res.weight.length === 1 && res.weight[0].value === 68.5 && res.weight[0].date === day(0), 'poids : ' + JSON.stringify(res.weight));
+    assert(res.comps.length === 1 && res.comps[0].name === 'Marathon test' && res.comps[0].date === day(60) && res.comps[0].distance === 42.195 && res.comps[0].type === 'RUN', 'course : ' + JSON.stringify(res.comps));
+    assert(res.challenges.includes('sessions:3') && !res.challenges.some(c => c.startsWith('meals')), 'défis : ' + res.challenges.join(', '));
+  });
+
+  await test('Questionnaire de bienvenue : jamais pour un compte qui a des séances ; « Passer » ne change rien ; refaisable depuis Profil', async () => {
+    const v = await newUser({ data: { ...sampleData(), welcome_done: null } });
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
+    const shown = await v.page.evaluate(() => !!document.getElementById('welcome'));
+    await v.page.goto(`${BASE}/profile.html#parametres`); await v.page.waitForTimeout(800);
+    const before = await v.page.evaluate(() => JSON.stringify(TS.getData().profile));
+    await v.page.click('#redoWelcome');
+    await v.page.waitForSelector('#welcome');
+    for (let i = 0; i < 3; i++) { await v.page.click('#welcome [data-wq-act="skip"]'); await v.page.waitForTimeout(50); }
+    const endTitle = await v.page.textContent('#welcome .ms-page:not([hidden]) .ms-page__title');
+    await v.page.click('#welcome [data-wq-act="next"]'); await v.page.waitForTimeout(300);
+    const after = await v.page.evaluate(() => JSON.stringify(TS.getData().profile));
+    // Une réponse déjà enregistrée est présélectionnée quand on refait le questionnaire
+    await v.page.evaluate(() => { const d = TS.getData(); d.profile.level = 'debut'; TS.saveData(d); });
+    await v.page.click('#redoWelcome'); await v.page.waitForSelector('#welcome');
+    const pre = await v.page.evaluate(() => document.querySelector('#welcome [data-wq="level"] [data-v="debut"]').getAttribute('aria-pressed'));
+    await v.page.click('#welcome [data-wq-act="close"]'); await v.page.waitForTimeout(300);
+    const closed = await v.page.evaluate(() => !document.getElementById('welcome'));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!shown, 'montré à un compte qui a déjà des séances');
+    assert(endTitle === 'C’est prêt', 'fin : ' + endTitle);
+    assert(before === after, 'Passer a changé le profil : ' + before + ' → ' + after);
+    assert(pre === 'true' && closed, 'présélection / Plus tard');
   });
 
   await browser.close();

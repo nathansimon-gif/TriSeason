@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261203a"></script>
+  <script src="theme.js?v=20261204a"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261203a"></script>
+  <script src="auth-guard.js?v=20261204a"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Profil</title>
-  <link rel="stylesheet" href="style.css?v=20261203a">
+  <link rel="stylesheet" href="style.css?v=20261204a">
   <style>
     .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar-actions { display: flex; gap: 10px; font-size: 11.5px; }
@@ -291,6 +291,7 @@
   <!-- ── Données et aide : des lignes simples ── -->
   <div class="section-card">
     <div class="section-card__title">Données et aide</div>
+    <button class="set-row set-row--link" id="redoWelcome" onclick="TS.showWelcome()"><span>Refaire le questionnaire de bienvenue<small>Tes sports, ton objectif, ton rythme, ta montre</small></span><i aria-hidden="true">›</i></button>
     <button class="set-row set-row--link" onclick="TS.exportData()"><span>Exporter mes données<small>Sauvegarde complète (fichier JSON)</small></span><i aria-hidden="true">›</i></button>
     <label class="set-row set-row--link"><span>Importer des données<small>Restaurer depuis une sauvegarde JSON</small></span><i aria-hidden="true">›</i>
       <input type="file" accept=".json" style="display:none" onchange="handleImport(event)"></label>
@@ -468,7 +469,7 @@
 </div>
 
 
-<script src="app.js?v=20261203a"></script>
+<script src="app.js?v=20261204a"></script>
 <script>
 function showAccountEmail(user) {
   const el = document.getElementById('accountEmail');

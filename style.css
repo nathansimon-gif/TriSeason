@@ -942,3 +942,22 @@ html.ms-open, html.ms-open body { overflow: hidden; }
 .mc__chips--sport { margin: 0 0 8px; }
 .mc__chips--sport .mc__chip { display: inline-flex; align-items: center; }
 .mc__chips--sport .sport-dot { margin-right: 5px; }
+
+/* ── Questionnaire de bienvenue (pages .ms) ─────────────────────────────── */
+.wq__pages { cursor: default; }
+.wq-q { display: block; margin-bottom: 18px; min-width: 0; }
+.wq-q__label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.wq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wq-chip { display: inline-flex; align-items: center; background: var(--surface); border: 1px solid var(--border2); color: var(--text-2);
+  font: 500 14px var(--font); padding: 9px 14px; border-radius: 999px; cursor: pointer; min-height: 40px; }
+.wq-chip:hover { color: var(--text); }
+.wq-chip[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: var(--accent-dim, var(--surface2)); }
+.wq-comp { display: grid; gap: 8px; margin: -6px 0 18px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.wq-comp[hidden] { display: none; }
+.wq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wq-row > [hidden] { display: none; }
+.wq-row:has(> [hidden]) { grid-template-columns: 1fr; }
+.wq-end { display: grid; gap: 8px; margin-top: 22px; }
+.wq-end .btn { justify-content: center; }
+.wq .ms__nav [hidden] { display: none; }
+.wq [data-wq-act="next"] { margin-left: auto; }

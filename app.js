@@ -452,7 +452,7 @@ function showConsentGate(uid) {
   check.addEventListener('change', () => { accept.disabled = !check.checked; });
   accept.addEventListener('click', () => {
     accept.disabled = true;
-    saveConsent(uid).then(() => gate.remove()).catch(err => {
+    saveConsent(uid).then(() => { gate.remove(); setTimeout(showNews, 300); }).catch(err => {
       accept.disabled = false;
       toast('Accord non enregistré : ' + err.message, 'error');
     });
@@ -555,6 +555,7 @@ function syncFromCloud(uid) {
       const localData = getData();
       if (compactStoredSessions(localData)) localStorage.setItem(DB_KEY, JSON.stringify(localData));
       pushToCloud(localData);
+      setTimeout(showNews, 700);
     }
     markActiveToday(uid);
     setTimeout(stravaAutoSync, 1500);
@@ -2108,7 +2109,11 @@ function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) 
       target, value: inWeek.filter(s => s.sport === sp).length });
   } else {
     const a = avg(wk => (idx.byWeek[wk] || []).length);
-    const target = Math.min(6, Math.max(2, Math.round(a) + 1));
+    // Sans séance récente : le rythme choisi dans le questionnaire de bienvenue sert de départ ;
+    // « je débute » : 4 séances au plus.
+    const start = !recent.length ? welcomeTarget(data) : null;
+    const cap = (data.profile || {}).level === 'debut' ? 4 : 6;
+    const target = Math.min(cap, start || Math.max(2, Math.round(a) + 1));
     list.push({ id: 'sessions', kind: practiced[0] || 'all', label: `${target} séances dans la semaine`, target, value: inWeek.length });
   }
 
@@ -2116,7 +2121,7 @@ function weeklyChallenges(weekKey, data = getData(), idx = activityIndex(data)) 
   if (muscu) list.push(muscu);
 
   const mealAvg = avg(wk => weekDays(wk).filter(d => idx.mealDays.has(d)).length);
-  if (mealAvg < 5) {
+  if (mealAvg < 5 && !nutritionLater(data)) {
     const target = Math.min(7, Math.max(3, Math.ceil(mealAvg) + 2));
     list.push({ id: 'meals', kind: 'nutri', label: `Repas notés ${target} jours`, target, value: days.filter(d => idx.mealDays.has(d)).length });
   } else {
@@ -2382,6 +2387,7 @@ const NEWS = [{
 }];
 function showNews() {
   if (!cloudLoaded || window.TS_LOGGED_OUT || document.getElementById('consentGate') || document.getElementById('newsModal')) return;
+  if (maybeShowWelcome()) return;
   const data = getData();
   const seen = data.news_seen || [];
   const todo = NEWS.filter(n => !seen.includes(n.id));
@@ -2948,6 +2954,242 @@ function maybeShowMonthSummary() {
   data.month_seen = last;
   saveData(data);
   return monthSummary(last, data).total.n ? showMonthSummary(last) : false;
+}
+
+// ── Questionnaire de bienvenue ──────────────────────────────────────────────
+// 3 écrans courts à la première ouverture du Dashboard d'un compte sans séance
+// (puis « Refaire le questionnaire » dans Profil → Paramètres). Chaque question est
+// facultative : « Passer » garde l'écran tel quel, « Suivant » enregistre ses réponses.
+// Rien d'autre n'est enregistré que dans le profil (data.profile.level, goal,
+// weekly_sessions, devices, nutrition_later, age, hydro_goal), « Mes sports », le poids
+// du jour et la course préparée. data.welcome_done = jour où il a été montré.
+const WELCOME_SPORTS = [['nat', 'Natation'], ['velo', 'Vélo'], ['run', 'Course à pied'], ['muscu', 'Musculation']];
+const WELCOME_LEVELS = [['debut', 'Je débute'], ['regulier', 'Je m’entraîne régulièrement'], ['competition', 'Je fais des compétitions']];
+const WELCOME_GOALS = [['premiere', 'Finir ma première course'], ['progresser', 'Progresser'], ['competition', 'Préparer une compétition'], ['forme', 'Garder la forme']];
+// Séances par semaine : la valeur sert de point de départ au défi de la semaine
+const WELCOME_RHYTHM = [['1-2', '1 à 2', 2], ['3-4', '3 à 4', 3], ['5-6', '5 à 6', 5], ['7+', '7 ou plus', 6]];
+const WELCOME_DEVICES = [['strava', 'Strava'], ['garmin', 'Garmin'], ['coros', 'Coros'], ['polar', 'Polar'], ['apple', 'Apple Watch'], ['suunto', 'Suunto'], ['aucune', 'Aucune']];
+const WELCOME_WATER = [1000, 1500, 2000, 2500, 3000];
+const WELCOME_COMP_TYPES = [['RUN', 'Course à pied'], ['TRI', 'Triathlon'], ['BIKE', 'Cyclisme'], ['NAT', 'Natation'], ['DUATH', 'Duathlon'], ['AQUA', 'Aquathlon']];
+const WELCOME_RUN_DIST = [[5, '5 km'], [10, '10 km'], [21.1, 'Semi-marathon'], [42.195, 'Marathon']];
+
+function welcomeTarget(data = getData()) {
+  const r = WELCOME_RHYTHM.find(x => x[0] === (data.profile || {}).weekly_sessions);
+  return r ? r[2] : null;
+}
+// Nutrition « plus tard » : tant qu'aucun repas n'est noté, les parties repas restent discrètes
+function nutritionLater(data = getData()) {
+  return !!(data.profile && data.profile.nutrition_later) && !((data.nutrition || {}).meals || []).length;
+}
+
+function maybeShowWelcome() {
+  if (!cloudLoaded || window.TS_LOGGED_OUT || document.getElementById('consentGate')) return false;
+  if (!/(^|\/)(index\.html)?$/.test(location.pathname)) return false;   // Dashboard seulement
+  const data = getData();
+  if (data.welcome_done || (data.sessions || []).length) return false;
+  return showWelcome();
+}
+
+function showWelcome() {
+  if (document.getElementById('welcome') || document.getElementById('monthSummary')) return false;
+  const data = getData();
+  data.welcome_done = data.welcome_done || localDateStr();
+  saveData(data);
+  const p = data.profile || {};
+  const chosen = sportsChosen(data);
+  const nextComp = (data.competitions || []).filter(c => c.date >= localDateStr()).sort((a, b) => a.date.localeCompare(b.date))[0];
+  // Réponses de départ : ce qui est déjà enregistré (questionnaire refait)
+  const st = {
+    sports: chosen ? chosen.slice() : [], level: p.level || null, goal: p.goal || null,
+    rhythm: p.weekly_sessions || null, devices: (p.devices || []).slice(),
+    nutri: p.nutrition_later ? 'later' : (p.nutrition_later === false ? 'now' : null),
+    water: p.hydro_goal || null, compId: null,
+  };
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const chips = (name, list, multi, sel) => `<div class="wq-chips" role="group" data-wq="${name}" data-multi="${multi ? 1 : ''}">${list.map(([v, l]) =>
+    `<button type="button" class="wq-chip" data-v="${v}" aria-pressed="${(multi ? sel.includes(v) : sel === v) ? 'true' : 'false'}">${
+      name === 'sports' ? `<span class="sport-dot sport-dot--${v}"></span>` : ''}${l}</button>`).join('')}</div>`;
+  const q = (label, html, id) => `<div class="wq-q"${id ? ` id="${id}"` : ''}><div class="wq-q__label">${label}</div>${html}</div>`;
+  const today = localDateStr();
+  const pages = [
+    `<div class="ms-page__kicker">Bienvenue · 1 / 3</div><h2 class="ms-page__title">Ton sport</h2>
+     ${q('Tes sports', chips('sports', WELCOME_SPORTS, true, st.sports))}
+     ${q('Ton niveau', chips('level', WELCOME_LEVELS, false, st.level))}
+     ${q('Ton objectif du moment', chips('goal', WELCOME_GOALS, false, st.goal))}
+     <div class="wq-comp" id="wqComp" ${st.goal === 'competition' ? '' : 'hidden'}>
+       <div class="wq-q__label">Ta compétition</div>
+       <input class="form-input" id="wqCompName" placeholder="Nom, ex : 10 km de Rennes" value="${esc(nextComp ? nextComp.name : '')}">
+       <div class="wq-row"><input class="form-input" type="date" id="wqCompDate" min="${today}" value="${nextComp ? nextComp.date : ''}" aria-label="Date">
+         <select class="form-select" id="wqCompType" aria-label="Type">${WELCOME_COMP_TYPES.map(([v, l]) =>
+           `<option value="${v}"${nextComp && nextComp.type === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+       <div class="wq-row"><select class="form-select" id="wqCompDist" aria-label="Distance"></select>
+         <input class="form-input" type="number" inputmode="decimal" step="0.1" min="0" id="wqCompKm" placeholder="Distance (km)" aria-label="Distance en km" hidden></div>
+     </div>`,
+    `<div class="ms-page__kicker">Bienvenue · 2 / 3</div><h2 class="ms-page__title">Ton rythme</h2>
+     ${q('Séances par semaine, en général', chips('rhythm', WELCOME_RHYTHM.map(r => [r[0], r[1]]), false, st.rhythm))}
+     ${q('Ta montre ou ton appli', chips('devices', WELCOME_DEVICES, true, st.devices))}
+     <p class="ms-note">Tes séances arriveront toutes seules depuis Strava, ou par import des fichiers de ta montre.</p>`,
+    `<div class="ms-page__kicker">Bienvenue · 3 / 3</div><h2 class="ms-page__title">Pour des chiffres justes</h2>
+     <div class="wq-row">
+       <label class="wq-q"><span class="wq-q__label">Ton poids (kg)</span><input class="form-input" type="number" inputmode="decimal" step="0.1" min="25" max="300" id="wqWeight" placeholder="70"></label>
+       <label class="wq-q"><span class="wq-q__label">Ton âge</span><input class="form-input" type="number" inputmode="numeric" min="8" max="110" id="wqAge" placeholder="30" value="${p.age || ''}"></label>
+     </div>
+     <p class="ms-note" style="margin:-6px 0 14px">Pour la puissance par kilo, tes zones de fréquence cardiaque et tes calories.</p>
+     ${q('Suivre ta nutrition', chips('nutri', [['now', 'Dès maintenant'], ['later', 'Plus tard']], false, st.nutri))}
+     ${q('Ton objectif d’eau par jour', chips('water', WELCOME_WATER.map(ml => [String(ml), formatLiters(ml)]), false, String(st.water || hydroGoal(data))))}`,
+    '',
+  ];
+  const box = document.createElement('div');
+  box.className = 'ms wq';
+  box.id = 'welcome';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-label', 'Bienvenue dans ORKA');
+  box.innerHTML = `<div class="ms__inner">
+    <div class="ms__top"><div class="ms__bars">${pages.map(() => '<i></i>').join('')}</div>
+      <button type="button" class="ms__close" data-wq-act="close">Plus tard</button></div>
+    <div class="ms__pages wq__pages">${pages.map((h, i) => `<section class="ms-page" data-i="${i}">${h}</section>`).join('')}</div>
+    <div class="ms__nav"><button type="button" class="btn btn--ghost" data-wq-act="skip">Passer</button>
+      <button type="button" class="btn btn--primary" data-wq-act="next">Suivant</button></div></div>`;
+  document.body.appendChild(box);
+  document.documentElement.classList.add('ms-open');
+  const $ = s => box.querySelector(s);
+
+  // Distance de la course : formats officiels (multisport), distances classiques (course à pied)
+  const fillDist = () => {
+    const type = $('#wqCompType').value, sel = $('#wqCompDist');
+    const want = nextComp && nextComp.type === type ? parseFloat(nextComp.distance) : null;
+    const opts = COMP_FORMATS[type] ? COMP_FORMATS[type].map(f => [f.km, f.rec]) : type === 'RUN' ? WELCOME_RUN_DIST : [];
+    sel.innerHTML = opts.map(([km, l]) => `<option value="${km}">${l}</option>`).join('') + '<option value="">Autre distance</option>';
+    const hit = opts.find(o => want && Math.abs(o[0] - want) < 0.01);
+    sel.value = hit ? String(hit[0]) : (want ? '' : sel.options[0].value);
+    sel.hidden = !opts.length;
+    $('#wqCompKm').hidden = !!sel.value && opts.length > 0;
+    if (want && !hit) $('#wqCompKm').value = want;
+  };
+  $('#wqCompType').addEventListener('change', fillDist);
+  $('#wqCompDist').addEventListener('change', () => { $('#wqCompKm').hidden = !!$('#wqCompDist').value; });
+  fillDist();
+
+  const pick = (name, v, multi) => {
+    const key = { sports: 'sports', level: 'level', goal: 'goal', rhythm: 'rhythm', devices: 'devices', nutri: 'nutri', water: 'water' }[name];
+    if (multi) {
+      let list = st[key];
+      list = list.includes(v) ? list.filter(x => x !== v) : list.concat(v);
+      if (name === 'devices') list = v === 'aucune' ? list.filter(x => x === 'aucune') : list.filter(x => x !== 'aucune');
+      st[key] = list;
+    } else st[key] = st[key] === v ? null : v;
+    const sel = st[key];
+    box.querySelectorAll(`[data-wq="${name}"] .wq-chip`).forEach(b =>
+      b.setAttribute('aria-pressed', String(multi ? sel.includes(b.dataset.v) : sel === b.dataset.v)));
+    if (name === 'goal') $('#wqComp').hidden = st.goal !== 'competition';
+  };
+
+  // Enregistre les réponses d'un écran. Renvoie false si une réponse est à corriger.
+  const save = i => {
+    if (i === 0) {
+      if (st.sports.length) setSportsChosen(st.sports);
+      const d = getData();
+      d.profile = d.profile || {};
+      ['level', 'goal'].forEach(k => { if (st[k]) d.profile[k] = st[k]; });
+      saveData(d);
+      if (st.goal === 'competition') {
+        const name = $('#wqCompName').value.trim(), date = $('#wqCompDate').value;
+        if (name || date) {
+          if (!name || !date) { toast('Indique le nom et la date de ta compétition, ou choisis « Passer »', 'error'); return false; }
+          if (date < localDateStr()) { toast('La date de ta compétition est déjà passée', 'error'); return false; }
+          const type = $('#wqCompType').value;
+          const km = parseFloat($('#wqCompDist').value) || parseFloat(String($('#wqCompKm').value).replace(',', '.')) || null;
+          const old = (getData().competitions || []).find(c => c.id === (st.compId || (nextComp && nextComp.id)));
+          const comp = Object.assign({}, old || { priority: 'A' }, { name, date, type, distance: km });
+          if (!km) delete comp.distance;
+          st.compId = saveCompetition(comp).id;
+        }
+      }
+    } else if (i === 1) {
+      const d = getData();
+      d.profile = d.profile || {};
+      if (st.rhythm) d.profile.weekly_sessions = st.rhythm;
+      if (st.devices.length) d.profile.devices = st.devices;
+      saveData(d);
+    } else if (i === 2) {
+      const w = parseFloat(String($('#wqWeight').value).replace(',', '.'));
+      const age = parseInt($('#wqAge').value, 10);
+      if ($('#wqWeight').value && !(w >= 25 && w <= 300)) { toast('Poids entre 25 et 300 kg', 'error'); return false; }
+      if ($('#wqAge').value && !(age >= 8 && age <= 110)) { toast('Âge entre 8 et 110 ans', 'error'); return false; }
+      if (w) saveWeight({ date: localDateStr(), value: Math.round(w * 10) / 10 });
+      const d = getData();
+      d.profile = d.profile || {};
+      if (age) d.profile.age = age;
+      if (st.nutri) d.profile.nutrition_later = st.nutri === 'later';
+      if (st.water) d.profile.hydro_goal = parseInt(st.water, 10);
+      saveData(d);
+    }
+    return true;
+  };
+
+  // Écran de fin : résumé de ce qui est réglé, puis Strava / import / Dashboard
+  const endPage = () => {
+    const d = getData(), prof = d.profile || {};
+    const sp = sportsShown(d).map(s => (WELCOME_SPORTS.find(x => x[0] === s) || [, s])[1].toLowerCase());
+    const sportTxt = sp.length > 1 ? sp.slice(0, -1).join(', ') + ' et ' + sp[sp.length - 1] : sp[0];
+    const comp = (d.competitions || []).filter(c => c.date >= localDateStr()).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const days = comp ? Math.round((parseLocalDate(comp.date) - parseLocalDate(localDateStr())) / 864e5) : null;
+    const lines = [
+      ['Tes sports', sportTxt.charAt(0).toUpperCase() + sportTxt.slice(1)],
+      comp ? ['Ta compétition', `${esc(comp.name)} ${days === 0 ? 'aujourd’hui' : days === 1 ? 'demain' : 'dans ' + days + ' jours'}`] : null,
+      welcomeTarget(d) ? ['Défi de la semaine', `${Math.min(prof.level === 'debut' ? 4 : 6, welcomeTarget(d))} séances pour commencer`] : null,
+      ['Objectif d’eau', formatLiters(hydroGoal(d)) + ' par jour'],
+      prof.nutrition_later ? ['Nutrition', 'plus tard, quand tu veux'] : null,
+    ].filter(Boolean);
+    const devs = prof.devices || [];
+    const strava = stravaAvailable() && !d.strava && !devs.includes('aucune');
+    return `<div class="ms-page__kicker">Bienvenue</div><h2 class="ms-page__title">C’est prêt</h2>
+      <div class="ms-lines">${lines.map(([l, v]) => `<div class="ms-line"><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+      <p class="ms-note">Tout se change ensuite dans Profil.</p>
+      <div class="wq-end">
+        ${strava ? '<button type="button" class="btn btn--primary" data-wq-act="strava">Connecter Strava</button>' : ''}
+        <a class="btn ${strava ? 'btn--ghost' : 'btn--primary'}" href="sessions.html#historique-strava">${devs.includes('aucune') ? 'Ajouter une séance' : 'Importer des fichiers de montre'}</a>
+      </div>`;
+  };
+
+  let cur = 0;
+  const go = i => {
+    if (i >= pages.length) return close();
+    cur = Math.max(0, i);
+    if (cur === pages.length - 1) box.querySelector(`.ms-page[data-i="${cur}"]`).innerHTML = endPage();
+    box.querySelectorAll('.ms-page').forEach((el, j) => { el.hidden = j !== cur; });
+    box.querySelectorAll('.ms__bars i').forEach((el, j) => el.classList.toggle('on', j <= cur));
+    const last = cur === pages.length - 1;
+    $('[data-wq-act="skip"]').hidden = last;
+    $('[data-wq-act="close"]').hidden = last;
+    $('[data-wq-act="next"]').textContent = last ? 'Aller au Dashboard' : 'Suivant';
+    $('[data-wq-act="next"]').className = 'btn ' + (last ? 'btn--ghost' : 'btn--primary');
+    $('.ms__pages').scrollTop = 0;
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    document.documentElement.classList.remove('ms-open');
+    box.classList.remove('open');
+    setTimeout(() => box.remove(), 200);
+    window.dispatchEvent(new CustomEvent('triseason:update', { detail: getData() }));
+  };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  box.addEventListener('click', e => {
+    const chip = e.target.closest('.wq-chip');
+    if (chip) { const g = chip.closest('[data-wq]'); pick(g.dataset.wq, chip.dataset.v, !!g.dataset.multi); return; }
+    const b = e.target.closest('[data-wq-act]');
+    if (!b) return;
+    const a = b.dataset.wqAct;
+    if (a === 'close') close();
+    else if (a === 'skip') go(cur + 1);
+    else if (a === 'strava') stravaConnect();
+    else if (a === 'next') { if (cur === pages.length - 1 || save(cur)) go(cur + 1); }
+  });
+  go(0);
+  requestAnimationFrame(() => box.classList.add('open'));
+  return true;
 }
 
 // ── Strava : les séances arrivent toutes seules ─────────────────────────────
@@ -4234,7 +4476,7 @@ window.TS = {
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
   MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   bodyWeightOn, isHoldExercise, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
-  monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, shiftMonth, monthName,
+  monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
   SPORTS, COMP_TYPES,
 };

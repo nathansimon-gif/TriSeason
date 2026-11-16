@@ -99,6 +99,11 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   (carte du corps SVG dans Sports → Muscu, `#carte-du-corps` ; Forme n'en montre qu'une ligne et un lien) ;
   **nouveautés** : `NEWS` / `showNews`, message une fois par compte (`data.news_seen`),
   seulement pour les comptes qui avaient déjà des séances) ;
+  **questionnaire de bienvenue** : `showWelcome` (3 écrans `.ms.wq` + « C'est prêt »), montré par `maybeShowWelcome` (appelé en premier par `showNews`)
+  sur le Dashboard d'un compte sans séance ni `data.welcome_done` ; « Refaire le questionnaire » dans Profil → Paramètres (`#redoWelcome`) ;
+  réponses dans `data.profile` : `level` (debut / regulier / competition), `goal`, `weekly_sessions` ('1-2'… '7+', `welcomeTarget` = départ du défi
+  de la semaine sans séance récente), `devices`, `age`, `nutrition_later` (`nutritionLater` : défi d'eau au lieu des repas tant qu'aucun repas), `hydro_goal` ;
+  + « Mes sports », poids du jour et course préparée (`saveCompetition`) ;
   **résumé du mois** : `monthSummary(ym)` (calcul) / `monthSummaryPages` / `showMonthSummary(ym)` (pages plein écran `.ms`),
   affiché une fois à l'ouverture du Dashboard pour le mois écoulé (`maybeShowMonthSummary`, appelé par `showNews` quand il n'y a
   pas de nouveauté ; `data.month_seen` = dernier mois vu), par le bouton « Résumé du mois » du calendrier, et par la liste des mois de Profil (`#resumes`, `renderMonthList`) ;
