@@ -135,7 +135,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
-| 16/11/2026 | — | Résumé du mois : regardé par Nathan sur son compte (octobre 2026), rien à changer pour l’instant ; la suite (pages partageables en image) rejoint la tâche « Partage en story ». Records de musculation : idées à regarder ensemble |
+| 16/11/2026 | #86 | Résumé du mois : regardé par Nathan sur son compte (octobre 2026), rien à changer pour l’instant ; la suite (pages partageables en image) rejoint la tâche « Partage en story ». Records de musculation : idées à regarder ensemble |
 | 15/11/2026 | #85 | Profil → Équipement sur téléphone : le **nom de la paire seul sur sa ligne**, l’état (« Pas encore utilisé », « Seuil bientôt atteint »…) et les boutons « Ranger » / « Modifier » en dessous (avant, ils se chevauchaient avec les noms longs) |
 | 15/11/2026 | #84 | Équipement : bouton « **Ranger** » sur chaque paire (ou vélo, combinaison) : elle n’est plus proposée dans les séances, ses kilomètres passés restent comptés, elle passe dans « Équipements rangés » (replié) avec un bouton « Ressortir » ; une paire encore en service est retirée le jour où on la range. Les anciennes paires non rangées restent repliées dans « Anciens équipements » et peuvent toujours être choisies sur une séance |
 | 15/11/2026 | #83 | Équipement, corrections : les chaussures **trail ne prennent que les sorties trail** (une sortie route sans paire route ou tous terrains en service n’a plus de chaussures, au lieu de prendre la paire trail) ; choix « **Aucune paire / aucun équipement pour cette séance** » dans la fenêtre de la séance ; une paire dont la première utilisation est à venir affiche « **Pas encore utilisé** » (au lieu de « Plus utilisé ») |
