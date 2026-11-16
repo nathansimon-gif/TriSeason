@@ -19,7 +19,7 @@ Avant d'envoyer, **remplace** :
 **Website:** https://nathansimon-gif.github.io/TriSeason/
 **Privacy policy:** https://nathansimon-gif.github.io/TriSeason/confidentialite.html
 **Contact:** tri.season.tracker@gmail.com
-**Requested capacity:** 100 connected athletes
+**Requested capacity:** 1,000 connected athletes
 
 **What the app does**
 
@@ -64,12 +64,15 @@ mouth (friends, club members), and most of them record their sessions with a
 Garmin, Coros, Polar or Apple Watch that already syncs to Strava: connecting
 Strava is the simplest way for them to get their sessions into the app.
 Without it, they have to export and import files by hand. We would like
-capacity for 100 athletes to cover the next months of testing.
+capacity for 1,000 athletes, so that we can keep welcoming new users over the
+coming year (club members, then a public launch) without asking again at each
+step. The app already stays far below the rate limits (see above), and we will
+keep the same usage as it grows.
 
 **Screenshots** (attached): every place where Strava data or the Strava
 connection appears in the app.
 
-1. Dashboard: weekly summary and the latest session (from Strava) next to the nutrition of that day
+1. Dashboard: weekly summary and the card "Your session and your nutrition" (latest session next to the nutrition of that day)
 2. Sessions list: each activity from Strava with its "View on Strava" link
 3. Session details
 4. Profile → Settings: Strava connected, last sync, "Disconnect Strava", "Powered by Strava"
@@ -100,5 +103,6 @@ confidentialité et accord explicite (RGPD).
 
 **Pourquoi plus de place** : [NB_USERS] comptes dont [NB_CONNECTED] avec Strava,
 proche de la limite de 10 ; de nouveaux testeurs arrivent par le bouche-à-oreille,
-et la plupart ont une montre qui envoie déjà tout à Strava. Demande : 100 sportifs
-pour les prochains mois de test.
+et la plupart ont une montre qui envoie déjà tout à Strava. Demande : 1 000 sportifs,
+pour accueillir les nouveaux pendant l'année qui vient (clubs, puis ouverture au public)
+sans refaire de demande ; l'appli reste très en dessous des limites d'appels.

@@ -60,7 +60,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 - [ ] 🤖🧑 **Demande de validation Strava** (pour dépasser 10 utilisateurs, gratuite, délai non garanti), en 3 étapes :
   1. 🧑 Télécharger les **logos officiels Strava** (developers.strava.com → Guidelines → « Download all assets »), les déposer dans un dossier `strava/` du dépôt GitHub (« Add files via upload ») et prévenir Claude
-  2. 🤖 Claude remplace le bouton « Connecter avec Strava » et la mention « Powered by Strava » par les logos officiels. **Texte de la demande et captures d'écran prêts** (dossier `tools/strava-dossier/`, 16/11/2026) : il manque le **nouveau nom**, le **logo**, les logos Strava, et vérifier si Strava demande un **abonnement payant** aux développeurs depuis juin 2026 (à décider par Nathan) ; puis Claude refait les captures
+  2. 🤖 Claude remplace le bouton « Connecter avec Strava » et la mention « Powered by Strava » par les logos officiels. **Texte de la demande et captures d'écran prêts** (dossier `tools/strava-dossier/`, 16/11/2026) : il manque le **nouveau nom**, le **logo**, les logos Strava (abonnement Strava de Nathan : OK ; demande : 1 000 sportifs) ; puis Claude refait les captures
   3. 🧑 Envoyer la demande depuis strava.com/settings/api
 - [ ] 🤖 *Plus tard* : séances en temps réel avec les alertes Strava (« webhooks »), au lieu d'attendre l'ouverture de l'appli. Demande que le serveur puisse écrire dans Firestore
 - [ ] 🧑 Répondre aux messages reçus sur tri.season.tracker@gmail.com via la page Aide (et noter ici les problèmes à corriger)
@@ -88,7 +88,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 ## Quand l'appli devient payante
 
 - [ ] 🧑 **Prix conseillés** (rapport du 18/10, à confirmer avec les testeurs) :
-  - **Sportifs** : **gratuit** (séances, Strava, Dashboard, sports, compétitions, records, défis et badges) + **« Performance » 2,99 €/mois ou 24,99 €/an** (Nutrition, Forme, carte « Ce que Strava ne te montre pas »). Plus tard, quand l'IA existera : « Performance + IA » autour de 4,99 €/mois
+  - **Sportifs** : **gratuit** (séances, Strava, Dashboard, sports, compétitions, records, défis et badges) + **« Performance » 2,99 €/mois ou 24,99 €/an** (Nutrition, Forme, carte « Ta séance et ta nutrition »). Plus tard, quand l'IA existera : « Performance + IA » autour de 4,99 €/mois
   - **Pros** : **« Pro » 12 €/mois** (10 clients inclus, +1 € par client en plus) et **« Pro + IA » 24 €/mois** (10 clients inclus, +0,50 € par client en plus)
   - Simulateur pour tester d'autres prix : claude.ai/artifact/YbZgjx1DvaoPJkrxahaUzM · rapport : claude.ai/artifact/Cwp3rux55rdrj5FCVZSZTs
 - [ ] 🧑 Avant de fixer les prix : poser 4 questions de prix aux testeurs (trop cher / cher / bon marché / trop bon marché), et montrer l'idée de l'espace pro à 3 ou 4 coachs ou nutritionnistes
@@ -135,6 +135,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/11/2026 | #91 | Dashboard : la carte « Ce que Strava ne te montre pas » s’appelle maintenant **« Ta séance et ta nutrition »** (avant la demande à Strava, pour ne pas froisser l’examinateur). Dossier Strava : abonnement Strava de Nathan confirmé, demande portée à **1 000 sportifs** pour ne pas avoir à la refaire |
 | 16/11/2026 | #91 | **Dossier pour Strava** (plus de 10 comptes connectés) préparé dans `tools/strava-dossier/` : texte de la demande en anglais avec sa traduction, 7 captures d'écran de tous les endroits où l'appli montre des données Strava, mode d'emploi et liste de ce qui manque (nom, logo, logos officiels Strava, abonnement) |
 | 16/11/2026 | #91 | Connexion avec Google : message clair quand Google refuse (site pas encore autorisé dans Firebase, fenêtre bloquée) au lieu d’un code d’erreur ; cause trouvée : l’adresse du site n’est pas dans les domaines autorisés de Firebase (à ajouter par Nathan, voir « Faire le point… Firebase ») |
 | 16/11/2026 | #90 | Questionnaire de bienvenue refait depuis Profil : « Aller au Dashboard » ouvre maintenant vraiment le Dashboard (avant, la fenêtre se fermait et on restait sur Profil) |

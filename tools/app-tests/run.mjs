@@ -325,7 +325,7 @@ async function main() {
     });
     assert(JSON.stringify(r) === JSON.stringify([['3 séances de vélo', 2, false], ['Repas notés 3 jours', 1, false]]), JSON.stringify(r));
   });
-  await test('Dashboard : carte « Ce que Strava ne te montre pas » (dernière séance + repas autour)', async () => {
+  await test('Dashboard : carte « Ta séance et ta nutrition » (dernière séance + repas autour)', async () => {
     await u.page.goto(`${BASE}/index.html`); await u.page.waitForTimeout(800);
     const full = (await u.page.innerText('#insightBody')).replace(/\s+/g, ' ');
     // Compte avec jours d'entraînement et de repos, et un ravitaillement
@@ -2088,7 +2088,7 @@ async function main() {
     assert(/69,8 kg/.test(p2.latest) && p2.cloud === 3 && /69,8 kg/.test(p2.sub), 'nouvelle pesée : ' + JSON.stringify(p2));
   });
 
-  await test('Sports décochés : « Ce que Strava ne te montre pas » prend la dernière séance d’un sport suivi', async () => {
+  await test('Sports décochés : « Ta séance et ta nutrition » prend la dernière séance d’un sport suivi', async () => {
     const data = sampleData(); data.profile.sports = ['run'];
     data.sessions.push({ id: 'v0', date: day(0), sport: 'velo', duration: 1, distance: 30 });
     const v = await newUser({ data });
