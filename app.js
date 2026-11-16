@@ -3083,6 +3083,7 @@ function stravaToSession(a) {
     notes: a.name || null,
     strava_id: a.id,
     trail: sport === 'run' && (a.sport_type === 'TrailRun' || a.type === 'TrailRun') ? true : null,   // sortie de trail
+    vtt: sport === 'velo' && /MountainBikeRide/.test(a.sport_type || a.type || '') ? true : null,    // sortie VTT (VTT électrique compris)
   });
 }
 
@@ -3116,6 +3117,7 @@ function archiveToSession(a) {
     np: a.np ? Math.round(a.np) : null, kcal: a.kcal ? Math.round(a.kcal) : null,
     notes: a.name ? a.name.slice(0, 80) : null, strava_id: a.id,
     trail: a.sport === 'run' && /trail/i.test(a.type || '') ? true : null,
+    vtt: a.sport === 'velo' && /mountain|vtt/i.test(a.type || '') ? true : null,
   };
   return compactSession(s);
 }
@@ -4012,8 +4014,22 @@ function storeGear(id, on = true) {
 // Terrain des chaussures (course à pied) : une paire « route » et une paire « trail » peuvent servir en même temps.
 // « manuel » : paire choisie seulement à la main sur la séance (fractionné, compétition…), jamais mise automatiquement,
 // et qui ne remplace aucune autre paire.
-const GEAR_TERRAINS = { tout: 'Tous terrains', route: 'Route', trail: 'Trail', manuel: 'Seulement quand je la choisis' };
-function gearTerrain(g) { return g.sport === 'run' && ['route', 'trail', 'manuel'].includes(g.terrain) ? g.terrain : 'tout'; }
+// Vélo : même principe avec « vtt » (sorties VTT, chemins) à la place de « trail ».
+const GEAR_TERRAINS = { tout: 'Tous terrains', route: 'Route', trail: 'Trail', vtt: 'VTT', manuel: 'Seulement quand je la choisis' };
+const GEAR_OFFROAD = { run: 'trail', velo: 'vtt' };   // terrain « hors route » de chaque sport
+function gearTerrain(g) {
+  const ok = g.sport === 'run' ? ['route', 'trail', 'manuel'] : g.sport === 'velo' ? ['route', 'vtt', 'manuel'] : [];
+  return ok.includes(g.terrain) ? g.terrain : 'tout';
+}
+// « choisie à la main » (chaussures) / « choisi à la main » (vélo), sinon le terrain en minuscules
+function gearTerrainLabel(g) {
+  const t = gearTerrain(g);
+  if (t === 'tout') return '';
+  return t === 'manuel' ? (g.sport === 'run' ? 'choisie à la main' : 'choisi à la main') : t === 'vtt' ? 'VTT' : GEAR_TERRAINS[t].toLowerCase();
+}
+function isVttSession(s) { return s.sport === 'velo' && !!s.vtt; }
+// Sortie « hors route » : trail (course à pied) ou VTT (vélo)
+function isOffroadSession(s, data = getData()) { return s.sport === 'run' ? isTrailSession(s, data) : isVttSession(s); }
 // Sortie de trail : cochée sur la séance (ou venue de Strava / de la montre), ou séance reliée à une course trail
 function isTrailSession(s, data = getData()) {
   if (s.sport !== 'run') return false;
@@ -4051,8 +4067,8 @@ function gearChoices(s, data = getData(), ranges = gearRanges(data)) {
 function gearAuto(s, data = getData(), ranges = gearRanges(data)) {
   const list = gearChoices(s, data, ranges).filter(g => gearTerrain(g) !== 'manuel');
   if (!list.length) return null;
-  if (s.sport !== 'run') return list[0];
-  const order = isTrailSession(s, data) ? ['trail', 'tout', 'route'] : ['route', 'tout'];
+  if (!GEAR_OFFROAD[s.sport]) return list[0];
+  const order = isOffroadSession(s, data) ? [GEAR_OFFROAD[s.sport], 'tout', 'route'] : ['route', 'tout'];
   for (const t of order) { const g = list.find(x => gearTerrain(x) === t); if (g) return g; }
   return null;
 }
@@ -4204,7 +4220,7 @@ window.TS = {
   exportData, importData, migrateWeeksToSessions,
   getGoals, saveGoal, deleteGoal,
   getGear, saveGear, deleteGear, gearRanges, gearForSession, gearStats, GEAR_KINDS, GEAR_DEFAULT_ALERT, GEAR_HINTS,
-  GEAR_TERRAINS, gearTerrain, isTrailSession, gearChoices, gearAuto, GEAR_NONE, storeGear,
+  GEAR_TERRAINS, GEAR_OFFROAD, gearTerrain, gearTerrainLabel, isVttSession, isOffroadSession, isTrailSession, gearChoices, gearAuto, GEAR_NONE, storeGear,
   toast, initTooltips,
   healthEnabled, enableHealth, disableHealth, getHealthPeriods, saveHealthPeriod, deleteHealthPeriod,
   cycleEnabled, enableCycle, disableCycle, addPeriodStart, removePeriodStart, setCycleMode, setPeriodDays, toggleCycleSign,

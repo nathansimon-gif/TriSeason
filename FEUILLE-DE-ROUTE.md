@@ -68,7 +68,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Dans 3 à 6 mois
 
-- [ ] 🤖 **Équipement, la suite** (si utile après essai) : terrains pour le vélo (route / VTT / gravel), comme pour les chaussures ; reprendre automatiquement les chaussures et vélos déclarés dans Strava (champ « gear » des activités) ; seuil en heures pour la combinaison
+- [ ] 🤖 **Équipement, la suite** (si utile après essai) : terrain « gravel » pour le vélo si besoin (route et VTT faits) ; reprendre automatiquement les chaussures et vélos déclarés dans Strava (champ « gear » des activités) ; seuil en heures pour la combinaison
 - [ ] 🤖 **Comptes inactifs depuis 3 ans** : les lister dans le rapport du lundi (engagement de la politique de confidentialité ; suppression manuelle sur décision de Nathan). Premiers comptes concernés : pas avant 2029
 - [ ] 🤖 **Préparer l'offre gratuite / payante dans le code** (savoir quelles pages sont gratuites ou payantes, sans rien faire payer encore)
 - [ ] 🧑 Faire relire la page *Confidentialité et mentions légales* par une personne compétente
@@ -136,6 +136,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 16/11/2026 | — | **VTT comme le trail** : un vélo peut être « Route », « VTT », « Tous terrains » ou « Seulement quand je le choisis » ; case « Sortie VTT » sur les séances de vélo (cochée toute seule pour les sorties VTT de Strava, de l’archive Strava et des montres) ; les sorties VTT vont sur le vélo VTT, les autres sur le vélo de route. **Filtres de Séances alignés** (noms à gauche, champs alignés) ; Terrain : course sur route, trail, vélo sur route, VTT ; avec un terrain choisi, la liste Équipement ne propose que ce qui va avec (en service, ancien ou rangé) |
 | 16/11/2026 | #87 | Filtres de Séances : dates sur deux lignes, « Du » et « Au » |
 | 16/11/2026 | #87 | **Séances** : nouveaux filtres **Terrain** (course sur route / trail) et **Équipement** (une paire, un vélo, une combinaison, ou « sans équipement ») ; lien « Voir les séances » sur chaque équipement de Profil ; « + Nouvelle séance » en premier ; filtres lisibles sur téléphone (les dates débordaient), « RPE » renommé « Effort ». **Dashboard sur ordinateur** (1100 px et plus) : deux colonnes (Ce que Strava ne te montre pas et Évolution à gauche ; défis, équipement, nutrition et records à droite), calendrier en dessous ; téléphone inchangé. **Compétitions** : plus d’onglet « Dashboard » surligné à tort dans la barre du bas |
 | 16/11/2026 | #87 | **Boutons « Ajouter » retirés du bandeau du haut** : Nutrition et Compétitions (déjà en haut de la page : « + Ajouter », « + Nouvelle course ») ; Séances (« + Nouvelle séance », à côté de « Importer des séances ») et Records (« + Ajouter un record », à côté du choix de saison) déplacés dans le haut de la page. Le bandeau ne garde que le profil et le menu |
