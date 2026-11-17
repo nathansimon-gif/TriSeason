@@ -1204,7 +1204,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (s) openSessionModal(s);
   }
   openImportFromHash();
+  openFeelingFromHash();
 });
+// Lien « Noter l'effort » (page Forme) : sessions.html#noter
+function openFeelingFromHash() {
+  if (location.hash !== '#noter') return;
+  history.replaceState(null, '', location.pathname);
+  askFeeling();
+}
+window.addEventListener('hashchange', openFeelingFromHash);
 // Lien « Importer mon archive Strava » / « Récupérer tout l'historique » (Profil) : sessions.html#historique-strava
 function openImportFromHash() {
   if (location.hash !== '#historique-strava') return;
@@ -1487,7 +1495,7 @@ const FEELINGS = [[1,'😫','Très mauvais'],[2,'😕','Mauvais'],[3,'😐','Neu
 function sessionsNeedingFeeling(ids) {
   const since = TS.localDateStr(new Date(Date.now() - 14 * 86400000));
   return TS.getSessions()
-    .filter(s => !s.sensation && s.date >= since && (!ids || ids.includes(s.id)))
+    .filter(s => (!s.sensation || !s.rpe) && s.date >= since && (!ids || ids.includes(s.id)))
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6);
 }
@@ -1537,7 +1545,7 @@ function renderFeelingNudge() {
   if (!el) return;
   const n = sessionsNeedingFeeling().length;
   el.innerHTML = n ? `<div class="feeling-nudge">
-      <span style="flex:1">${n} séance${n > 1 ? 's' : ''} récente${n > 1 ? 's' : ''} sans ressenti.</span>
+      <span style="flex:1">${n} séance${n > 1 ? 's' : ''} récente${n > 1 ? 's' : ''} sans ressenti ou effort.</span>
       <button class="btn btn--primary btn--sm" onclick="askFeeling()">Noter ressenti et effort</button>
     </div>` : '';
 }

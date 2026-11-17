@@ -2986,6 +2986,27 @@ async function main() {
     assert(strong.ok === 4 && strong.all && !strong.noUpper && !strong.noDigit && !strong.noSpecial && strong.accent, JSON.stringify(strong));
   });
 
+  await test('Forme : séances récentes sans effort noté signalées sous le graphique (comptées comme du repos), lien pour les noter', async () => {
+    const d = sampleData();
+    d.sessions.push({ id: 'n1', date: day(-1), sport: 'run', duration: 1, distance: 10, sensation: 4 },
+                    { id: 'n2', date: day(-3), sport: 'velo', duration: 2, distance: 50 },
+                    { id: 'n3', date: day(-30), sport: 'run', duration: 1, distance: 10 });
+    const v = await newUser({ data: d });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(900);
+    const note = await v.page.evaluate(() => { const el = document.getElementById('pmcRpeNote'); return { hidden: el.hidden, text: el.textContent }; });
+    await v.page.click('#pmcRpeNote a'); await v.page.waitForTimeout(900);
+    const modal = await v.page.evaluate(() => ({ open: document.getElementById('feelingModal').classList.contains('open'),
+      rows: [...document.querySelectorAll('#feelingRows .feeling-row')].map(r => r.id) }));
+    const ok = await newUser();
+    await ok.page.goto(`${BASE}/forme.html`); await ok.page.waitForTimeout(900);
+    const none = await ok.page.evaluate(() => document.getElementById('pmcRpeNote').hidden);
+    assert(!v.errors.length && !ok.errors.length, v.errors[0] || ok.errors[0]);
+    await v.ctx.close(); await ok.ctx.close();
+    assert(!note.hidden && /^2 séances de ces 2 dernières semaines sans effort noté/.test(note.text.trim()) && /comme du repos/.test(note.text), 'message : ' + JSON.stringify(note));
+    assert(modal.open && modal.rows.includes('feel-n1') && modal.rows.includes('feel-n2') && !modal.rows.includes('feel-n3'), 'fenêtre « noter » : ' + JSON.stringify(modal));
+    assert(none, 'message affiché alors que toutes les séances ont un effort');
+  });
+
   await browser.close();
   server.close();
 
