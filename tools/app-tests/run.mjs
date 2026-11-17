@@ -3007,6 +3007,31 @@ async function main() {
     assert(none, 'message affiché alors que toutes les séances ont un effort');
   });
 
+  await test('Forme : charge à la bonne échelle (1 h à 7/10 = 49), « fatigue » après une grosse semaine, « frais » après du repos', async () => {
+    const make = (recentDays, rest) => {
+      const d = sampleData();
+      d.sessions = [];
+      for (let i = rest + 7; i <= 70; i++) d.sessions.push({ id: 'b' + i, date: day(-i), sport: 'run', duration: 1, distance: 10, rpe: 6 });
+      for (let i = rest; i < rest + recentDays; i++) d.sessions.push({ id: 'h' + i, date: day(-i), sport: 'velo', duration: 2.5, distance: 80, rpe: 9 });
+      return d;
+    };
+    const read = async (data) => {
+      const v = await newUser({ data });
+      await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(900);
+      const r = await v.page.evaluate(() => ({ tss: TS.calcTSS(1, 7), head: document.querySelector('#tsbInterpretation .tsb-head__t').textContent,
+        tiles: [...document.querySelectorAll('.tsb-tile__val')].map(x => x.textContent) }));
+      assert(!v.errors.length, v.errors[0]);
+      await v.ctx.close();
+      return r;
+    };
+    const heavy = await read(make(7, 0));     // 7 jours très chargés jusqu'à aujourd'hui
+    const fresh = await read(make(0, 14));    // 2 semaines de repos après un entraînement régulier
+    assert(heavy.tss === 49, 'charge d’une heure à 7/10 : ' + heavy.tss);
+    assert(/^Fatigue/.test(heavy.head), 'grosse semaine : ' + heavy.head + ' ' + heavy.tiles.join(' '));
+    assert(/frais|fraîcheur/i.test(fresh.head), 'après du repos : ' + fresh.head + ' ' + fresh.tiles.join(' '));
+    assert(heavy.tiles.every(x => !/\./.test(x)), 'chiffres avec un point : ' + heavy.tiles.join(' '));
+  });
+
   await browser.close();
   server.close();
 

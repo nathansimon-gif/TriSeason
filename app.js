@@ -1394,9 +1394,12 @@ function calcPace(durH, distKm, sport) {
   return null;
 }
 
+// Charge d'une séance d'après l'effort ressenti : heures × effort² (1 h à 7/10 = 49), à la même
+// échelle que le TSS habituel (1 h au seuil ≈ 100), pour que les repères de la page Forme
+// (+15 très frais, −10 / −25 fatigue…) soient justes. Jusqu'au 17/11/2026, divisé par 100 par erreur.
 function calcTSS(durH, rpe) {
   if (!durH || !rpe) return 0;
-  return Math.round(durH * rpe * rpe / 100 * 10) / 10;
+  return Math.round(durH * rpe * rpe * 10) / 10;
 }
 
 function calcWkg(powerW, date = null) {
