@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204d"></script>
+  <script src="theme.js?v=20261204e"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204d"></script>
+  <script src="auth-guard.js?v=20261204e"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ORKA — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261204d">
+  <link rel="stylesheet" href="style.css?v=20261204e">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -96,6 +96,9 @@
     .hp-sports input { accent-color:var(--accent); }
       /* Ta forme : le résumé en grand, les chiffres en dessous */
     .tsb-head { margin:2px 0 14px; }
+    .pmc-rpe-note { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface2); font-size:12.5px; color:var(--text-2); line-height:1.45; }
+    .pmc-rpe-note span { flex:1 1 220px; }
+    .pmc-rpe-note[hidden] { display:none; }
     .tsb-head__t { font-size:20px; font-weight:600; letter-spacing:-.01em; }
     .tsb-head__s { font-size:13px; color:var(--text-2); margin-top:2px; line-height:1.5; }
     .opt-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--border); }
@@ -142,6 +145,7 @@
     <div style="position:relative;height:220px;overflow:hidden">
       <canvas id="chartPMC"></canvas>
     </div>
+    <div id="pmcRpeNote" class="pmc-rpe-note" hidden></div>
     <div id="pmcBandsNote" style="display:none;margin-top:6px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:rgba(240,185,65,.25);vertical-align:-1px;margin-right:5px"></span>Fond jaune : blessure, maladie ou arrêt noté (Blessures, maladie et reprise)</div>
     <div id="pmcCycleNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:10px;height:10px;background:var(--cycle-dim);border:1px solid var(--cycle);box-sizing:border-box;vertical-align:-1px;margin-right:5px"></span>Fond rose : règles notées (Cycle menstruel)</div>
     <div id="pmcPainNote" style="display:none;margin-top:4px;font-size:11px;color:var(--text-3)"><span style="display:inline-block;width:3px;height:10px;background:var(--cycle);vertical-align:-1px;margin:0 8px 0 4px"></span>Barres roses en bas : douleur notée ce jour-là, plus haute = plus forte (1 à 10)</div>
@@ -321,7 +325,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261204d"></script>
+<script src="app.js?v=20261204e"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -484,7 +488,19 @@ function renderBodyMapCard() {
     : 'Aucune séance de musculation ces 4 dernières semaines.';
 }
 
+// Séances récentes sans effort noté : elles comptent pour 0 dans la charge, comme un jour de repos
+function renderRpeNote() {
+  const el = document.getElementById('pmcRpeNote');
+  const since = TS.localDateStr(new Date(Date.now() - 14 * 86400000));
+  const n = TS.getSessions().filter(s => s.date >= since && s.duration && !s.rpe && TS.sportOn(s.sport)).length;
+  el.hidden = !n;
+  el.innerHTML = n ? `<span>${n} séance${n > 1 ? 's' : ''} de ces 2 dernières semaines sans effort noté : ${n > 1 ? 'elles comptent' : 'elle compte'} comme du repos, ta forme est peut-être meilleure ici qu’en vrai.</span>
+    <a class="btn btn--sm" href="sessions.html#noter">Noter l’effort</a>` : '';
+}
+
+const frNum = v => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 function renderPMC() {
+  renderRpeNote();
   const sessions = TS.getSessions().filter(s => s.date && s.duration && s.rpe);
   if (sessions.length < 5) {
     document.getElementById('tsbTiles').innerHTML =
@@ -523,9 +539,9 @@ function renderPMC() {
   const tsbColor = last.tsb > 5 ? 'var(--green)' : last.tsb < -20 ? 'var(--red)' : 'var(--yellow)';
 
   document.getElementById('tsbTiles').innerHTML = `
-    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.ctl)}"><div class="tsb-tile__val" style="color:var(--accent2)">${last.ctl}</div><div class="tsb-tile__label">CTL (Fitness) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.ctl)}">?</span></div></div>
-    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.atl)}"><div class="tsb-tile__val" style="color:var(--run)">${last.atl}</div><div class="tsb-tile__label">ATL (Fatigue) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.atl)}">?</span></div></div>
-    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.tsb)}"><div class="tsb-tile__val" style="color:${tsbColor}">${last.tsb > 0 ? '+' : ''}${last.tsb}</div><div class="tsb-tile__label">TSB (Forme) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.tsb)}">?</span></div></div>`;
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.ctl)}"><div class="tsb-tile__val" style="color:var(--accent2)">${frNum(last.ctl)}</div><div class="tsb-tile__label">CTL (Fitness) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.ctl)}">?</span></div></div>
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.atl)}"><div class="tsb-tile__val" style="color:var(--run)">${frNum(last.atl)}</div><div class="tsb-tile__label">ATL (Fatigue) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.atl)}">?</span></div></div>
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.tsb)}"><div class="tsb-tile__val" style="color:${tsbColor}">${last.tsb > 0 ? '+' : ''}${frNum(last.tsb)}</div><div class="tsb-tile__label">TSB (Forme) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.tsb)}">?</span></div></div>`;
 
   // Interpretation
   let msg;

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204d"></script>
+  <script src="theme.js?v=20261204e"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204d"></script>
+  <script src="auth-guard.js?v=20261204e"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261204d">
+  <link rel="stylesheet" href="style.css?v=20261204e">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -376,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261204d"></script>
-<script src="import.js?v=20261204d"></script>
-<script src="app.js?v=20261204d"></script>
+<script src="fit-parser.js?v=20261204e"></script>
+<script src="import.js?v=20261204e"></script>
+<script src="app.js?v=20261204e"></script>
 <script>
 
 
@@ -1204,7 +1204,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (s) openSessionModal(s);
   }
   openImportFromHash();
+  openFeelingFromHash();
 });
+// Lien « Noter l'effort » (page Forme) : sessions.html#noter
+function openFeelingFromHash() {
+  if (location.hash !== '#noter') return;
+  history.replaceState(null, '', location.pathname);
+  askFeeling();
+}
+window.addEventListener('hashchange', openFeelingFromHash);
 // Lien « Importer mon archive Strava » / « Récupérer tout l'historique » (Profil) : sessions.html#historique-strava
 function openImportFromHash() {
   if (location.hash !== '#historique-strava') return;
@@ -1487,7 +1495,7 @@ const FEELINGS = [[1,'😫','Très mauvais'],[2,'😕','Mauvais'],[3,'😐','Neu
 function sessionsNeedingFeeling(ids) {
   const since = TS.localDateStr(new Date(Date.now() - 14 * 86400000));
   return TS.getSessions()
-    .filter(s => !s.sensation && s.date >= since && (!ids || ids.includes(s.id)))
+    .filter(s => (!s.sensation || !s.rpe) && s.date >= since && (!ids || ids.includes(s.id)))
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6);
 }
@@ -1537,7 +1545,7 @@ function renderFeelingNudge() {
   if (!el) return;
   const n = sessionsNeedingFeeling().length;
   el.innerHTML = n ? `<div class="feeling-nudge">
-      <span style="flex:1">${n} séance${n > 1 ? 's' : ''} récente${n > 1 ? 's' : ''} sans ressenti.</span>
+      <span style="flex:1">${n} séance${n > 1 ? 's' : ''} récente${n > 1 ? 's' : ''} sans ressenti ou effort.</span>
       <button class="btn btn--primary btn--sm" onclick="askFeeling()">Noter ressenti et effort</button>
     </div>` : '';
 }

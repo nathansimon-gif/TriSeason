@@ -124,6 +124,7 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Idées écartées (et pourquoi)
 
+- ~~Estimer tout seul l’effort des séances non notées à partir de la fréquence cardiaque~~ — écarté par Nathan le 17/11/2026 : certaines personnes montent très haut en cardio sans que l’effort soit intense, ce qui fausserait la forme. À la place : un message sous le graphique de forme pour noter l’effort (PR #95)
 - ~~Page Sports plus courte (cartes secondaires repliées en une ligne)~~ — maquette montrée le 16/11/2026, pas nécessaire pour l’instant selon Nathan (à reprendre si la page s’allonge)
 - ~~Records de musculation pour le gainage lesté (exercices tenus avec une charge)~~ — écarté par Nathan le 16/11/2026 : pas utile pour l’instant
 - ~~Connexion directe à Garmin Connect~~ — Garmin a suspendu les nouvelles inscriptions à son programme développeurs (2026). Passer par Strava, où la plupart des montres envoient déjà leurs séances
@@ -139,6 +140,8 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 | Date | PR | Quoi |
 |---|---|---|
+| 17/11/2026 | #95 | **Forme : chiffres corrigés** : la charge de chaque séance était divisée par 100 par erreur depuis le début (1 h à 7/10 comptait 0,49 au lieu de 49), si bien que la page Forme disait presque toujours « Charge équilibrée ». Maintenant à l’échelle habituelle des outils d’entraînement : les messages « Bonne fraîcheur », « Fatigue marquée »… apparaissent au bon moment (sur le compte le plus suivi, 3 derniers mois : 93 jours « équilibrée » avant, 55 « équilibrée », 30 « bonne fraîcheur », 8 « fatigue » après). Rien d’enregistré n’est modifié : tout est recalculé à partir des séances ; la « condition de fond » du résumé du mois change d’échelle aussi |
+| 17/11/2026 | #95 | **Forme** : sous le graphique de forme, un message signale les séances des 2 dernières semaines **sans effort noté** (elles comptent comme du repos, donc la forme peut sembler meilleure qu’en vrai), avec un bouton « Noter l’effort » qui ouvre la fenêtre de notation dans Séances ; cette fenêtre propose maintenant aussi les séances qui ont un ressenti mais pas d’effort. Chiffres des cases de forme écrits avec une virgule. |
 | 16/11/2026 | #94 | **Création de compte** : mot de passe d’au moins 8 caractères avec une majuscule, un chiffre et un caractère spécial ; les règles s’affichent sous le champ et se cochent au fil de la saisie ; les comptes existants se connectent comme avant |
 | 16/11/2026 | #94 | **Sécurité de Firebase vérifiée** (lecture seule) : sans connexion, aucun accès aux comptes, tiroirs ni copies de secours ; données en Europe (eur3), chiffrées par Google ; clé du rapport du lundi en lecture seule. Réglé ensuite par Nathan et vérifié : **protection contre la suppression** de la base activée, **règles des mots de passe** appliquées dans Firebase ; **validation en deux étapes** déjà active sur son compte Google. Règles de la console comparées par Nathan : identiques à `firestore.rules`. Reste à voir : sauvegardes automatiques (forfait Blaze), e-mail « Mot de passe oublié », registre des traitements, relecture de la politique de confidentialité |
 | 16/11/2026 | #93 | Écran de démarrage : « Ouverture… » seulement à l’ouverture de l’appli, « Chargement… » quand on change de page. Connexion avec Google : domaine ajouté par Nathan dans Firebase, testé et fonctionnel |
