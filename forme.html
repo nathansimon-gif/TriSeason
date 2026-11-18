@@ -498,6 +498,9 @@ function renderRpeNote() {
     <a class="btn btn--sm" href="sessions.html#noter">Noter l’effort</a>` : '';
 }
 
+// Couleurs de la forme : condition (CTL) bleu-vert, fatigue (ATL) framboise, forme (TSB) citron vert.
+// Écrites en dur pour Chart.js : theme.js les convertit en thème clair (MAP).
+const PMC_COLORS = { ctl: '#2fb8a6', atl: '#dc3d6a', tsb: '#b9ec4a' };
 const frNum = v => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 function renderPMC() {
   renderRpeNote();
@@ -536,12 +539,13 @@ function renderPMC() {
   });
 
   const last = series[series.length - 1];
-  const tsbColor = last.tsb > 5 ? 'var(--green)' : last.tsb < -20 ? 'var(--red)' : 'var(--yellow)';
+  // Mêmes couleurs que les courbes du graphique (PMC_COLORS) pour s'y retrouver d'un coup d'œil ;
+  // l'état (frais, équilibré, fatigue) est dit par le titre au-dessus.
 
   document.getElementById('tsbTiles').innerHTML = `
-    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.ctl)}"><div class="tsb-tile__val" style="color:var(--accent2)">${frNum(last.ctl)}</div><div class="tsb-tile__label">CTL (Fitness) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.ctl)}">?</span></div></div>
-    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.atl)}"><div class="tsb-tile__val" style="color:var(--run)">${frNum(last.atl)}</div><div class="tsb-tile__label">ATL (Fatigue) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.atl)}">?</span></div></div>
-    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.tsb)}"><div class="tsb-tile__val" style="color:${tsbColor}">${last.tsb > 0 ? '+' : ''}${frNum(last.tsb)}</div><div class="tsb-tile__label">TSB (Forme) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.tsb)}">?</span></div></div>`;
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.ctl)}"><div class="tsb-tile__val" style="color:${PMC_COLORS.ctl}">${frNum(last.ctl)}</div><div class="tsb-tile__label">CTL (Fitness) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.ctl)}">?</span></div></div>
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.atl)}"><div class="tsb-tile__val" style="color:${PMC_COLORS.atl}">${frNum(last.atl)}</div><div class="tsb-tile__label">ATL (Fatigue) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.atl)}">?</span></div></div>
+    <div class="tsb-tile" data-tip="${tipAttr(TILE_TIPS.tsb)}"><div class="tsb-tile__val" style="color:${PMC_COLORS.tsb}">${last.tsb > 0 ? '+' : ''}${frNum(last.tsb)}</div><div class="tsb-tile__label">TSB (Forme) <span class="tip-icon" style="margin-left:4px;vertical-align:middle" data-tip="${tipAttr(TILE_TIPS.tsb)}">?</span></div></div>`;
 
   // Interpretation
   let msg;
@@ -605,14 +609,14 @@ function renderPMC() {
     data: {
       labels: recent.map(s => new Date(s.day+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})),
       datasets: [
-        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:'#2fb8a6', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:'#dc3d6a', backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
-        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:'#34c48b', backgroundColor:'rgba(52,196,139,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
+        { label:'CTL (fitness)', data: recent.map(s=>s.ctl), borderColor:PMC_COLORS.ctl, backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'ATL (fatigue)', data: recent.map(s=>s.atl), borderColor:PMC_COLORS.atl, backgroundColor:'transparent', tension:.3, pointRadius:0, borderWidth:2 },
+        { label:'TSB (forme)',   data: recent.map(s=>s.tsb), borderColor:PMC_COLORS.tsb, backgroundColor:'rgba(185,236,74,.08)', tension:.3, pointRadius:0, borderWidth:2, fill:true },
       ]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#a3abb9', font:{size:11}, boxWidth:8 } } },
+      plugins:{ legend:{ labels:{ color:'#a3abb9', font:{size:11}, boxWidth:14, boxHeight:3 } } },
       scales:{
         x:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383', font:{size:9}, maxTicksLimit:10, maxRotation:0} },
         y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{color:'#6b7383', font:{size:10}} }
