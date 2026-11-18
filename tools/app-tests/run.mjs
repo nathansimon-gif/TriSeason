@@ -3032,6 +3032,22 @@ async function main() {
     assert(heavy.tiles.every(x => !/\./.test(x)), 'chiffres avec un point : ' + heavy.tiles.join(' '));
   });
 
+  await test('Aide et Confidentialité : lien « Retour » sous la barre d’état de l’iPhone (safe-area) et assez grand pour le doigt', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } });
+    const out = {};
+    for (const [page, cls] of [['aide', 'help'], ['confidentialite', 'legal']]) {
+      await v.page.goto(`${BASE}/${page}.html`); await v.page.waitForTimeout(300);
+      out[page] = await v.page.evaluate(c => {
+        const b = document.querySelector('.' + c + ' .back').getBoundingClientRect();
+        const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('');
+        return { h: Math.round(b.height), top: Math.round(b.top), safe: new RegExp('\\.' + c + ' \\{[^}]*safe-area-inset-top').test(css) };
+      }, cls);
+    }
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    Object.entries(out).forEach(([p, r]) => assert(r.h >= 44 && r.top >= 16 && r.safe, p + ' : ' + JSON.stringify(r)));
+  });
+
   await browser.close();
   server.close();
 

@@ -8,12 +8,13 @@
   <title>ORKA — Aide et contact</title>
   <link rel="stylesheet" href="style.css?v=20261204e">
   <style>
-    .help { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; color: var(--text-2); font-size: 14px; line-height: 1.65; }
+    /* Appli installée sur iPhone : la page commence sous l'heure et la batterie (safe-area) */
+    .help { max-width: 760px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 20px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 64px) max(16px, env(safe-area-inset-left, 0px)); color: var(--text-2); font-size: 14px; line-height: 1.65; }
     .help h1 { color: var(--text); font-size: 26px; font-weight: 600; margin-bottom: 4px; }
     .help h2 { color: var(--text); font-size: 17px; font-weight: 600; margin: 28px 0 12px; }
     .help .lead { margin-bottom: 20px; }
     .help a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-    .help .back { display: inline-block; margin-bottom: 20px; font-size: 13px; color: var(--text-2); }
+    .help .back { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px 0 0; margin-bottom: 8px; font-size: 14px; color: var(--text-2); }
     .faq details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; }
     .faq summary { cursor: pointer; padding: 12px 14px; color: var(--text); font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
     .faq summary::-webkit-details-marker { display: none; }
