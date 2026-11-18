@@ -3048,6 +3048,24 @@ async function main() {
     Object.entries(out).forEach(([p, r]) => assert(r.h >= 44 && r.top >= 16 && r.safe, p + ' : ' + JSON.stringify(r)));
   });
 
+  await test('Forme : les chiffres des 3 cases ont la couleur de leur courbe (thème sombre et clair)', async () => {
+    const res = {};
+    for (const theme of ['dark', 'light']) {
+      const v = await newUser();
+      await v.ctx.addInitScript(t => { try { localStorage.setItem('triseason_theme', t); } catch (e) {} }, theme);
+      await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(1000);
+      res[theme] = await v.page.evaluate(() => {
+        const hex = c => { if (c.startsWith('#')) return c.toLowerCase(); const m = c.match(/\d+/g); return m ? '#' + m.slice(0, 3).map(x => (+x).toString(16).padStart(2, '0')).join('') : c.toLowerCase(); };
+        const ch = Chart.getChart(document.getElementById('chartPMC'));
+        return { tiles: [...document.querySelectorAll('.tsb-tile__val')].map(e => hex(getComputedStyle(e).color)),
+          lines: ch.data.datasets.slice(0, 3).map(d => hex(String(d.borderColor))) };
+      });
+      assert(!v.errors.length, v.errors[0]);
+      await v.ctx.close();
+    }
+    Object.entries(res).forEach(([t, r]) => assert(r.tiles.join() === r.lines.join() && new Set(r.lines).size === 3, t + ' : ' + JSON.stringify(r)));
+  });
+
   await browser.close();
   server.close();
 
