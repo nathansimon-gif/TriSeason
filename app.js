@@ -595,6 +595,7 @@ function saveData(data) {
   // Déconnexion en cours : une minuterie en retard ne doit pas réécrire les données effacées
   if (window.TS_LOGGED_OUT) return;
   localStorage.setItem(DB_KEY, JSON.stringify(data));
+  ownExCache = null;
   window.dispatchEvent(new CustomEvent('triseason:update', { detail: data }));
   pushToCloud(data);
 }
@@ -3789,9 +3790,57 @@ const parseTargets = (str) => {
 const MUSCU_GROUPS = MUSCU_CATALOG.map(([g, list]) => [g, list.map(e => e[0])]);
 const MUSCU_GROUP_OF = {}, MUSCU_TARGETS = {};
 MUSCU_CATALOG.forEach(([g, list]) => list.forEach(([n, m]) => { MUSCU_GROUP_OF[n] = g; MUSCU_TARGETS[n] = parseTargets(m); }));
+// ── Exercices créés par la personne ─────────────────────────────────────────
+// data.muscu_exercises = [{ name, main: 'pecs', sub: ['triceps', …] }] : un muscle principal
+// (obligatoire) et des muscles secondaires (facultatifs, comptent pour moitié). Gardés pour les
+// séances suivantes, proposés dans « Mes exercices » et dans la zone de leur muscle principal.
+// Groupe de l'exercice (classement, records) : celui de son muscle principal (MUSCLE_GROUP).
+const MUSCLE_GROUP = {
+  pecs: 'Pectoraux', dorsaux: 'Dos', trapezes: 'Dos', lombaires: 'Dos', epaules: 'Épaules',
+  biceps: 'Bras', triceps: 'Bras', avantbras: 'Bras', quadriceps: 'Jambes', ischios: 'Jambes',
+  fessiers: 'Jambes', adducteurs: 'Jambes', mollets: 'Jambes', abdos: 'Abdos et gainage', obliques: 'Abdos et gainage',
+};
+var ownExCache = null;   // remis à zéro à chaque enregistrement (saveData) ou relecture du compte
+window.addEventListener('triseason:update', () => { ownExCache = null; });
+function muscuOwnExercises(data) {
+  if (data) return data.muscu_exercises || [];
+  if (!ownExCache) ownExCache = getData().muscu_exercises || [];
+  return ownExCache;
+}
+const exKey = n => String(n || '').trim().toLowerCase();
+function muscuOwnExercise(name, data) { return muscuOwnExercises(data).find(e => exKey(e.name) === exKey(name)) || null; }
+// Crée ou modifie un exercice. Renvoie { name, group } ou { error }.
+function saveMuscuExercise({ name, main, sub = [] }, oldName = null) {
+  name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!name) return { error: 'Donne un nom à l’exercice' };
+  if (!MUSCLES[main]) return { error: 'Choisis le muscle principal' };
+  if (Object.keys(MUSCU_GROUP_OF).some(n => exKey(n) === exKey(name))) return { error: 'Cet exercice existe déjà dans la liste : choisis-le directement' };
+  const data = getData();
+  const list = (data.muscu_exercises || []).filter(e => exKey(e.name) !== exKey(oldName || name));
+  if (list.some(e => exKey(e.name) === exKey(name))) return { error: 'Tu as déjà un exercice à ce nom' };
+  const ex = { name, main, sub: [...new Set(sub)].filter(m => MUSCLES[m] && m !== main) };
+  if (!ex.sub.length) delete ex.sub;
+  list.push(ex);
+  data.muscu_exercises = list.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  // Renommé : les séances déjà faites suivent le nouveau nom
+  if (oldName && oldName !== name) (data.sessions || []).forEach(s => (s.exercises || []).forEach(e => { if (e.name === oldName) e.name = name; }));
+  if (oldName && oldName !== name && data.muscu_hold && oldName in data.muscu_hold) { data.muscu_hold[name] = data.muscu_hold[oldName]; delete data.muscu_hold[oldName]; }
+  (data.sessions || []).forEach(s => (s.exercises || []).forEach(e => { if (e.name === name) e.group = MUSCLE_GROUP[main]; }));
+  saveData(data);
+  return { name, group: MUSCLE_GROUP[main] };
+}
+// Retire l'exercice de la liste ; les séances déjà faites le gardent (muscles de son groupe)
+function deleteMuscuExercise(name) {
+  const data = getData();
+  data.muscu_exercises = (data.muscu_exercises || []).filter(e => exKey(e.name) !== exKey(name));
+  if (!data.muscu_exercises.length) delete data.muscu_exercises;
+  saveData(data);
+}
 // Muscles travaillés par un exercice de séance ({ muscle: 1 ou 0,5 }), {} si inconnu
 function muscuTargets(ex) {
   if (MUSCU_TARGETS[ex.name]) return MUSCU_TARGETS[ex.name];
+  const own = muscuOwnExercise(ex.name);
+  if (own) { const t = { [own.main]: 1 }; (own.sub || []).forEach(m => { t[m] = 0.5; }); return t; }
   return ex.group && MUSCU_GROUP_TARGETS[ex.group] ? parseTargets(MUSCU_GROUP_TARGETS[ex.group]) : {};
 }
 // Zones de travail du choix d'exercice : un exercice apparaît dans chaque zone d'un de
@@ -3806,12 +3855,19 @@ function muscuZones(ex) {
   const main = Object.keys(t).filter(k => t[k] === 1);
   return MUSCU_ZONES.filter(([, ms]) => ms.some(m => main.includes(m))).map(([z]) => z);
 }
-// Exercices libres déjà utilisés (pas dans le catalogue), avec leur groupe, du plus récent au plus ancien
+// Mes exercices : ceux créés (avec leurs muscles) puis les exercices libres déjà utilisés
+// (pas dans le catalogue), du plus récent au plus ancien. own: true = créé avec ses muscles.
 function muscuCustomExercises(data = getData()) {
   const seen = new Map();
   (data.sessions || []).filter(s => s.sport === 'muscu').sort((a, b) => b.date.localeCompare(a.date))
     .forEach(s => (s.exercises || []).forEach(e => { if (!MUSCU_GROUP_OF[e.name] && !seen.has(e.name)) seen.set(e.name, e.group || null); }));
-  return [...seen].map(([name, group]) => ({ name, group }));
+  const own = (data.muscu_exercises || []).map(e => ({ name: e.name, group: MUSCLE_GROUP[e.main] || null, own: true }));
+  const ownKeys = new Set(own.map(e => exKey(e.name)));
+  const used = [...seen].filter(([name]) => !ownKeys.has(exKey(name))).map(([name, group]) => ({ name, group }));
+  // Créés : dans l'ordre de dernière utilisation, les jamais faits à la fin
+  const order = [...seen.keys()].map(exKey);
+  own.sort((a, b) => ((order.indexOf(exKey(a.name)) + 1) || 1e9) - ((order.indexOf(exKey(b.name)) + 1) || 1e9));
+  return own.concat(used);
 }
 function hasMuscu(data = getData()) { return (data.sessions || []).some(s => s.sport === 'muscu'); }
 // Sports à afficher : les 3 sports, plus la musculation si l'utilisateur en fait
@@ -4465,7 +4521,35 @@ function initPullToRefresh() {
     location.reload();
   }
 }
+// ── Page de derrière immobile pendant qu'une fenêtre est ouverte ────────────
+// Sans ça, sur iPhone, la page derrière défile pendant qu'on remplit une fenêtre (doigt
+// hors de la fenêtre, champ qui prend le focus…) et on se retrouve ailleurs (souvent tout en
+// bas) en la fermant. La page est figée à sa position et y revient à la fermeture.
+let scrollLockY = null;
+function syncScrollLock() {
+  const open = !!document.querySelector('.modal-overlay.open');
+  const body = document.body;
+  if (open && scrollLockY == null) {
+    scrollLockY = window.scrollY;
+    Object.assign(body.style, { position: 'fixed', top: -scrollLockY + 'px', left: '0', right: '0', width: '100%' });
+    document.documentElement.classList.add('modal-lock');
+  } else if (!open && scrollLockY != null) {
+    const y = scrollLockY;
+    scrollLockY = null;
+    ['position', 'top', 'left', 'right', 'width'].forEach(k => { body.style[k] = ''; });
+    document.documentElement.classList.remove('modal-lock');
+    window.scrollTo(0, y);
+  }
+}
+function initScrollLock() {
+  const isOverlay = n => n.nodeType === 1 && n.classList.contains('modal-overlay');
+  new MutationObserver(muts => {
+    if (muts.some(m => isOverlay(m.target) || [...m.addedNodes].some(isOverlay) || [...m.removedNodes].some(isOverlay))) syncScrollLock();
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initScrollLock();
   initPullToRefresh();
   let msg = null;
   try { msg = sessionStorage.getItem(PTR_MSG_KEY); sessionStorage.removeItem(PTR_MSG_KEY); } catch {}
@@ -4505,9 +4589,9 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCLE_GROUP, muscuOwnExercise, saveMuscuExercise, deleteMuscuExercise, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   bodyWeightOn, isHoldExercise, exHold, holdByName, rememberMuscuHold, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
-  monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
+  syncScrollLock, monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
   SPORTS, COMP_TYPES,
 };

@@ -347,10 +347,27 @@ input, select, textarea { font-family: var(--font); }
 .mp-item:hover, .mp-item:focus-visible { background: var(--surface2); outline: none; }
 .mp-item--on { border-left-color: var(--muscu); background: var(--muscu-dim); }
 .mp-muscles { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
-.mp-new { padding: 10px; border: 1px dashed var(--border2); border-radius: var(--r-sm); font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.mp-new { display: block; width: 100%; text-align: left; background: none; cursor: pointer; padding: 11px 10px; border: 1px dashed var(--border2); border-radius: var(--r-sm); font: 500 13.5px var(--font); color: var(--text); margin: 4px 0 8px; }
+.mp-new:hover { border-color: var(--muscu); }
+.mp-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
+.mp-row .mp-item { border-bottom: 0; flex: 1; min-width: 0; }
+.mp-edit { flex-shrink: 0; background: none; border: 0; color: var(--text-3); font: 500 12px var(--font); padding: 0 10px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.mp-edit:hover { color: var(--text); }
+.mp-form { padding: 4px 2px 6px; }
+.mp-form__title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.mp-form__l { margin-top: 14px; }
+.mp-form__opt { font-weight: 400; color: var(--text-3); }
+.mp-form__actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+  position: sticky; bottom: 0; background: var(--surface); padding: 10px 0 2px; border-top: 1px solid var(--border); }
+.mp-form__del { margin-right: auto; font-size: 12.5px; color: var(--text-3); }
+
 .mp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .mp-chip { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; }
 .mp-chip:hover { border-color: var(--muscu); }
+.mp-chip--on, .mp-chip--on:hover { background: var(--muscu); border-color: var(--muscu); color: #fff; }
+.mp-chip:disabled { opacity: .35; cursor: default; }
+.mp-form .mp-chips { gap: 5px; }
+.mp-form .mp-chip { padding: 5px 10px; font-size: 12.5px; }
 /* Carte du corps (musculation) */
 .bm-figs { display: flex; gap: 14px; justify-content: center; }
 .bm-fig { margin: 0; text-align: center; flex: 1; max-width: 170px; }

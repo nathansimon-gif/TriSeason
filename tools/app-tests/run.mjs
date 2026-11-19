@@ -1446,7 +1446,7 @@ async function main() {
     assert(/Squat<\/b> 4 × 8 × 80 kg/.test(dash.html) && /Tonnage/.test(dash.html) && dash.week === 1, 'détail du jour : ' + dash.html.slice(0, 300));
   });
 
-  await test('Musculation : recherche d’exercice (machines, muscles) et exercice libre rangé dans un groupe', async () => {
+  await test('Musculation : recherche d’exercice (machines, muscles) et exercice créé avec son muscle', async () => {
     const v = await newUser();
     await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
     await v.page.click('text=+ Nouvelle séance');
@@ -1467,7 +1467,9 @@ async function main() {
     const machine = await names('machine');
     const accents = await names('ecarte');
     await v.page.fill('#mpSearch', 'Mollets debout (machine)');
-    await v.page.click('#mpList .mp-chip[data-group="Jambes"]');
+    await v.page.click('#mpList [data-mp-create]');
+    await v.page.click('#mpList [data-mp-main="mollets"]');
+    await v.page.click('#mpList [data-mp-act="save"]');
     await v.page.fill('#s_date', day(-1)); await v.page.fill('#s_dur', '0:45:00');
     await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
     const r = await v.page.evaluate(() => {
@@ -1487,7 +1489,7 @@ async function main() {
     assert(tri.includes('Dips') && tri.includes('Tirage triceps (poulie)') && !tri.includes('Développé couché (barre)'), 'triceps : ' + tri.join());
     assert(machine.length >= 15 && machine.every(n => /machine/i.test(n)), 'machine : ' + machine.join());
     assert(accents.includes('Écarté (haltères ou poulie)'), 'recherche sans accents : ' + accents.join());
-    assert(r.ex.name === 'Mollets debout (machine)' && r.ex.group === 'Jambes' && r.targets.quadriceps === 1, 'exercice libre : ' + JSON.stringify(r));
+    assert(r.ex.name === 'Mollets debout (machine)' && r.ex.group === 'Jambes' && r.targets.mollets === 1, 'exercice libre : ' + JSON.stringify(r));
     assert(r.mine.includes('Mollets debout (machine)') && mine[0] === 'Mes exercices', 'Mes exercices : ' + mine.join());
   });
 
@@ -3064,6 +3066,62 @@ async function main() {
       await v.ctx.close();
     }
     Object.entries(res).forEach(([t, r]) => assert(r.tiles.join() === r.lines.join() && new Set(r.lines).size === 3, t + ' : ' + JSON.stringify(r)));
+  });
+
+  await test('Musculation : créer son exercice (muscle principal + secondaires), gardé pour la suite, rangé dans sa zone, modifiable', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance');
+    await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRows .muscu-pick');
+    await v.page.click('#mpList [data-mp-create=""]');
+    await v.page.fill('#mpName', 'Pompes archer');
+    await v.page.click('#mpList [data-mp-act="save"]');   // sans muscle principal : refusé
+    const refused = await v.page.evaluate(() => !!document.querySelector('#mpList .mp-form') && !(TS.getData().muscu_exercises || []).length);
+    await v.page.click('#mpList [data-mp-main="pecs"]');
+    await v.page.click('#mpList [data-mp-sub="triceps"]'); await v.page.click('#mpList [data-mp-sub="abdos"]');
+    const pecsSubOff = await v.page.evaluate(() => document.querySelector('#mpList [data-mp-sub="pecs"]').disabled);
+    const overflow = await v.page.evaluate(() => { const m = document.querySelector('#muscuPicker .modal'); return m.scrollWidth > m.clientWidth; });
+    await v.page.click('#mpList [data-mp-act="save"]'); await v.page.waitForTimeout(200);
+    const picked = await v.page.evaluate(() => { const b = document.querySelector('#muscuRows .muscu-pick'); return { name: b.dataset.name, group: b.dataset.group, open: document.getElementById('muscuPicker').classList.contains('open') }; });
+    const saved = await v.page.evaluate(() => ({ def: TS.getData().muscu_exercises, t: TS.muscuTargets({ name: 'Pompes archer' }), zones: TS.muscuZones({ name: 'Pompes archer' }) }));
+    // Réouvrir : dans « Mes exercices » et dans la zone Pectoraux, même sans l'avoir encore fait
+    await v.page.click('#muscuRows .muscu-pick');
+    await v.page.click('#mpList [data-zone="Pectoraux"]');
+    const inZone = await v.page.$$eval('#mpList .mp-item[data-name="Pompes archer"]', els => els.length);
+    const search = await (async () => { await v.page.fill('#mpSearch', 'archer'); return v.page.$$eval('#mpList .mp-item', els => els.map(e => e.dataset.name)); })();
+    // Modifier : muscle principal → triceps
+    await v.page.click('#mpList [data-edit-ex="Pompes archer"]');
+    await v.page.click('#mpList [data-mp-main="triceps"]');
+    await v.page.click('#mpList [data-mp-act="save"]'); await v.page.waitForTimeout(200);
+    const edited = await v.page.evaluate(() => ({ def: TS.getData().muscu_exercises[0], t: TS.muscuTargets({ name: 'Pompes archer' }) }));
+    // Nom d'un exercice de la liste : refusé
+    const dup = await v.page.evaluate(() => TS.saveMuscuExercise({ name: 'squat', main: 'quadriceps' }).error);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(refused, 'enregistré sans muscle principal');
+    assert(pecsSubOff && !overflow, 'muscle principal grisé en secondaire / débordement : ' + pecsSubOff + ' ' + overflow);
+    assert(picked.name === 'Pompes archer' && picked.group === 'Pectoraux' && !picked.open, 'choisi dans la séance : ' + JSON.stringify(picked));
+    assert(saved.def.length === 1 && saved.def[0].main === 'pecs' && saved.def[0].sub.join() === 'triceps,abdos' && saved.t.pecs === 1 && saved.t.triceps === 0.5 && saved.zones.join() === 'Pectoraux', 'enregistré : ' + JSON.stringify(saved));
+    assert(inZone >= 1 && search[0] === 'Pompes archer', 'proposé ensuite : ' + inZone + ' ' + search.join());
+    assert(edited.def.main === 'triceps' && edited.t.triceps === 1 && !(edited.def.sub || []).includes('triceps') && edited.t.pecs === undefined, 'modifié : ' + JSON.stringify(edited));
+    assert(/existe déjà/.test(dup || ''), 'doublon du catalogue : ' + dup);
+  });
+
+  await test('Fenêtre ouverte : la page de derrière ne défile pas et revient à sa place à la fermeture', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 700 }, hasTouch: true, isMobile: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate(() => window.scrollTo(0, 300)); await v.page.waitForTimeout(100);
+    const before = await v.page.evaluate(() => window.scrollY);
+    await v.page.evaluate(() => editSession(TS.getSessions()[0].id)); await v.page.waitForTimeout(300);
+    const locked = await v.page.evaluate(() => ({ pos: getComputedStyle(document.body).position, cls: document.documentElement.classList.contains('modal-lock') }));
+    await v.page.evaluate(() => window.scrollTo(0, 99999)); await v.page.waitForTimeout(100);   // essai de faire défiler derrière
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(500);
+    const after = await v.page.evaluate(() => ({ y: window.scrollY, pos: getComputedStyle(document.body).position }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(locked.pos === 'fixed' && locked.cls, 'page pas figée : ' + JSON.stringify(locked));
+    assert(Math.abs(after.y - before) < 5 && after.pos !== 'fixed', 'position après enregistrement : ' + before + ' → ' + JSON.stringify(after));
   });
 
   await browser.close();

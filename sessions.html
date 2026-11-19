@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204e"></script>
+  <script src="theme.js?v=20261204f"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204e"></script>
+  <script src="auth-guard.js?v=20261204f"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261204e">
+  <link rel="stylesheet" href="style.css?v=20261204f">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -376,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261204e"></script>
-<script src="import.js?v=20261204e"></script>
-<script src="app.js?v=20261204e"></script>
+<script src="fit-parser.js?v=20261204f"></script>
+<script src="import.js?v=20261204f"></script>
+<script src="app.js?v=20261204f"></script>
 <script>
 
 
@@ -841,6 +841,8 @@ let muscuPickBtn = null;
 const mpNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 function openMuscuPicker(btn) {
   muscuPickBtn = btn;
+  mpForm = null;
+  document.getElementById('mpSearch').hidden = false;
   const q = document.getElementById('mpSearch');
   q.value = '';
   const cur = btn.dataset.name;
@@ -859,9 +861,77 @@ function muscuPickerItem(name, group, targets) {
   const sub = Object.keys(targets).filter(k => targets[k] < 1).map(k => TS.MUSCLES[k].toLowerCase());
   const label = main.join(', ') + (sub.length ? ' · ' + sub.join(', ') : '');
   const cur = muscuPickBtn && muscuPickBtn.dataset.name === name;
-  return '<button type="button" class="mp-item' + (cur ? ' mp-item--on' : '') + '" data-name="' + escHtml(name) + '" data-group="' + escHtml(group || '') + '">'
+  const item = '<button type="button" class="mp-item' + (cur ? ' mp-item--on' : '') + '" data-name="' + escHtml(name) + '" data-group="' + escHtml(group || '') + '">'
     + escHtml(name) + (label ? '<span class="mp-muscles">' + escHtml(label) + '</span>' : '') + '</button>';
+  // Exercice créé par la personne (ou libre déjà utilisé) : ses muscles se modifient
+  if (TS.MUSCU_GROUP_OF[name]) return item;
+  return '<div class="mp-row">' + item + '<button type="button" class="mp-edit" data-edit-ex="' + escHtml(name) + '" aria-label="Modifier ' + escHtml(name) + '" title="Modifier les muscles">Modifier</button></div>';
 }
+// ── Créer (ou modifier) un exercice : nom, un muscle principal, des muscles secondaires ──
+let mpForm = null;   // { name, main, sub: Set, old }
+function openExerciseForm(name, old) {
+  const own = old ? TS.muscuOwnExercise(old) : null;
+  let main = own ? own.main : null, sub = new Set(own ? own.sub || [] : []);
+  if (old && !own) {   // exercice libre déjà utilisé : on part des muscles de son groupe
+    const t = TS.muscuTargets({ name: old, group: (TS.muscuCustomExercises().find(e => e.name === old) || {}).group });
+    main = Object.keys(t).find(k => t[k] === 1) || null;
+    Object.keys(t).filter(k => k !== main).forEach(k => sub.add(k));
+  }
+  mpForm = { name: own ? own.name : (name || ''), main, sub, old: old || null };
+  renderExerciseForm();
+}
+function renderExerciseForm() {
+  const f = mpForm;
+  const chips = (kind) => Object.entries(TS.MUSCLES).map(([k, label]) => {
+    const on = kind === 'main' ? f.main === k : f.sub.has(k);
+    const off = kind === 'sub' && f.main === k;
+    return '<button type="button" class="mp-chip' + (on ? ' mp-chip--on' : '') + '" data-mp-' + kind + '="' + k + '" aria-pressed="' + on + '"' + (off ? ' disabled' : '') + '>' + escHtml(label) + '</button>';
+  }).join('');
+  document.getElementById('mpSearch').hidden = true;
+  document.getElementById('mpList').innerHTML = '<div class="mp-form">'
+    + '<div class="mp-form__title">' + (f.old ? 'Modifier l’exercice' : 'Créer un exercice') + '</div>'
+    + '<label class="form-label" for="mpName">Nom</label>'
+    + '<input class="form-input" id="mpName" maxlength="60" placeholder="ex. Pompes surélevées" value="' + escHtml(f.name) + '">'
+    + '<div class="form-label mp-form__l">Muscle principal</div><div class="mp-chips">' + chips('main') + '</div>'
+    + '<div class="form-label mp-form__l">Autres muscles travaillés <span class="mp-form__opt">(facultatif)</span></div><div class="mp-chips">' + chips('sub') + '</div>'
+    + '<div class="mp-form__actions">' + (f.old && TS.muscuOwnExercise(f.old) ? '<button type="button" class="link-btn mp-form__del" data-mp-act="delete">Retirer de mes exercices</button>' : '')
+    + '<button type="button" class="btn btn--ghost btn--sm" data-mp-act="cancel">Annuler</button>'
+    + '<button type="button" class="btn btn--primary btn--sm" data-mp-act="save">' + (f.old ? 'Enregistrer' : 'Créer l’exercice') + '</button></div></div>';
+}
+function closeExerciseForm() {
+  mpForm = null;
+  document.getElementById('mpSearch').hidden = false;
+  renderMuscuPicker();
+}
+document.addEventListener('input', e => { if (e.target.id === 'mpName' && mpForm) mpForm.name = e.target.value; });
+document.addEventListener('click', e => {
+  const ed = e.target.closest('#mpList [data-edit-ex]');
+  if (ed) { openExerciseForm(null, ed.dataset.editEx); return; }
+  const cr = e.target.closest('#mpList [data-mp-create]');
+  if (cr) { openExerciseForm(cr.dataset.mpCreate); return; }
+  if (!mpForm) return;
+  const m = e.target.closest('[data-mp-main]'), sb = e.target.closest('[data-mp-sub]'), act = e.target.closest('[data-mp-act]');
+  if (m) { mpForm.main = m.dataset.mpMain; mpForm.sub.delete(mpForm.main); renderExerciseForm(); return; }
+  if (sb) { const k = sb.dataset.mpSub; if (mpForm.sub.has(k)) mpForm.sub.delete(k); else mpForm.sub.add(k); renderExerciseForm(); return; }
+  if (!act) return;
+  if (act.dataset.mpAct === 'cancel') return closeExerciseForm();
+  if (act.dataset.mpAct === 'delete') {
+    if (!confirm('Retirer « ' + mpForm.old + ' » de tes exercices ? Les séances déjà faites le gardent.')) return;
+    TS.deleteMuscuExercise(mpForm.old);
+    return closeExerciseForm();
+  }
+  const r = TS.saveMuscuExercise({ name: mpForm.name, main: mpForm.main, sub: [...mpForm.sub] }, mpForm.old);
+  if (r.error) { TS.toast(r.error, 'error'); return; }
+  // Renommé : les lignes déjà ouvertes dans la séance suivent le nouveau nom
+  if (mpForm.old && mpForm.old !== r.name) document.querySelectorAll('#muscuRows .muscu-pick').forEach(b => { if (b.dataset.name === mpForm.old) setMuscuPick(b, r.name, r.group); });
+  const wasEdit = !!mpForm.old;
+  mpForm = null;
+  document.getElementById('mpSearch').hidden = false;
+  TS.toast(wasEdit ? 'Exercice modifié' : 'Exercice créé : il est gardé pour tes prochaines séances');
+  if (wasEdit || !muscuPickBtn) return renderMuscuPicker();
+  setMuscuPick(muscuPickBtn, r.name, r.group);
+  closeMuscuPicker();
+});
 function renderMuscuPicker() {
   const raw = document.getElementById('mpSearch').value.trim();
   const words = mpNorm(raw).split(/\s+/).filter(Boolean);
@@ -881,9 +951,7 @@ function renderMuscuPicker() {
   exact = all.some(n => mpNorm(n) === mpNorm(raw));
   if (raw && !exact) {
     const name = raw.slice(0, 60);
-    const add = '<div class="mp-new"><div>Ajouter « <b>' + escHtml(name) + '</b> » : quel groupe de muscles ?</div><div class="mp-chips">'
-      + TS.MUSCU_CATALOG.map(([g]) => '<button type="button" class="mp-chip" data-name="' + escHtml(name) + '" data-group="' + escHtml(g) + '">' + escHtml(g) + '</button>').join('')
-      + '<button type="button" class="mp-chip" data-name="' + escHtml(name) + '" data-group="">Autre</button></div></div>';
+    const add = '<button type="button" class="mp-new" data-mp-create="' + escHtml(name) + '">+ Créer l’exercice « <b>' + escHtml(name) + '</b> » et choisir ses muscles</button>';
     html = html ? html + add : add;   // proposé après les résultats, ou seul s'il n'y en a pas
   }
   if (!html) html = '<div class="mp-empty">Écris le nom d’un exercice ou d’un muscle.</div>';
@@ -898,10 +966,11 @@ function renderMuscuZones() {
   if (mine.length) zones.push(['Mes exercices', mine.map(e => [e.name, e.group])]);
   TS.MUSCU_ZONES.forEach(([z]) => {
     const list = [];
+    mine.forEach(e => { if (e.own && TS.muscuZones(e).includes(z)) list.push([e.name, e.group]); });
     TS.MUSCU_CATALOG.forEach(([g, ex]) => ex.forEach(([n]) => { if (TS.muscuZones({ name: n }).includes(z)) list.push([n, g]); }));
     zones.push([z, list]);
   });
-  document.getElementById('mpList').innerHTML = zones.map(([z, list]) => {
+  document.getElementById('mpList').innerHTML = '<button type="button" class="mp-new" data-mp-create="">+ Créer un exercice</button>' + zones.map(([z, list]) => {
     const open = mpOpen.has(z);
     return '<button type="button" class="mp-zone" data-zone="' + escHtml(z) + '" aria-expanded="' + open + '">'
       + '<span>' + escHtml(z) + '</span><span class="mp-zone__n">' + list.length + '</span><span class="mp-zone__chev" aria-hidden="true">›</span></button>'
