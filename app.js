@@ -4527,7 +4527,9 @@ function initPullToRefresh() {
 // bas) en la fermant. La page est figée à sa position et y revient à la fermeture.
 let scrollLockY = null;
 function syncScrollLock() {
-  const open = !!document.querySelector('.modal-overlay.open');
+  // Toute fenêtre : .modal-overlay ouverte, pages plein écran (résumé du mois, comparaison,
+  // questionnaire de bienvenue : html.ms-open) et écran d'accord (#consentGate)
+  const open = !!document.querySelector('.modal-overlay.open, #consentGate') || document.documentElement.classList.contains('ms-open');
   const body = document.body;
   if (open && scrollLockY == null) {
     scrollLockY = window.scrollY;
@@ -4538,14 +4540,17 @@ function syncScrollLock() {
     scrollLockY = null;
     ['position', 'top', 'left', 'right', 'width'].forEach(k => { body.style[k] = ''; });
     document.documentElement.classList.remove('modal-lock');
-    window.scrollTo(0, y);
+    window.scrollTo({ top: y, left: 0, behavior: 'instant' });   // pas d'animation (scroll-behavior: smooth)
   }
 }
 function initScrollLock() {
-  const isOverlay = n => n.nodeType === 1 && n.classList.contains('modal-overlay');
+  const isOverlay = n => n.nodeType === 1 && (n.classList.contains('modal-overlay') || n.id === 'consentGate');
   new MutationObserver(muts => {
     if (muts.some(m => isOverlay(m.target) || [...m.addedNodes].some(isOverlay) || [...m.removedNodes].some(isOverlay))) syncScrollLock();
   }).observe(document.body, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
+  // Pages plein écran : html.ms-open
+  new MutationObserver(syncScrollLock).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  syncScrollLock();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -3124,6 +3124,37 @@ async function main() {
     assert(Math.abs(after.y - before) < 5 && after.pos !== 'fixed', 'position après enregistrement : ' + before + ' → ' + JSON.stringify(after));
   });
 
+  await test('Toutes les pages : page de derrière figée pendant une fenêtre (fenêtres, pages plein écran), remise à sa place ensuite', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 700 }, hasTouch: true, isMobile: true } });
+    const bad = [];
+    for (const p of PAGES) {
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(500);
+      const r = await v.page.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const ov = document.querySelector('.modal-overlay');
+        if (!ov) return { none: true };
+        window.scrollTo(0, 150); await wait(50);
+        const y0 = window.scrollY;
+        ov.classList.add('open'); await wait(50);
+        const fixed = getComputedStyle(document.body).position === 'fixed';
+        ov.classList.remove('open'); await wait(50);
+        return { fixed, back: Math.abs(window.scrollY - y0) < 3, y0 };
+      });
+      if (!r.none && !(r.fixed && r.back)) bad.push(p + ' ' + JSON.stringify(r));
+    }
+    // Page plein écran (questionnaire de bienvenue, résumé du mois) : même chose
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate(() => window.scrollTo(0, 200)); await v.page.waitForTimeout(50);
+    await v.page.evaluate(() => TS.showWelcome()); await v.page.waitForTimeout(100);
+    const ms = await v.page.evaluate(() => getComputedStyle(document.body).position);
+    await v.page.click('#welcome [data-wq-act="close"]'); await v.page.waitForTimeout(400);
+    const msAfter = await v.page.evaluate(() => ({ pos: getComputedStyle(document.body).position, y: window.scrollY }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!bad.length, 'pages : ' + bad.join(' | '));
+    assert(ms === 'fixed' && msAfter.pos !== 'fixed' && Math.abs(msAfter.y - 200) < 3, 'plein écran : ' + ms + ' ' + JSON.stringify(msAfter));
+  });
+
   await browser.close();
   server.close();
 

@@ -138,7 +138,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   « Chargement de tes données… ») ; `html.ts-loading-data` = cartes « en cours
   de chargement » quand il n'y a pas de copie locale et que le compte est relu ;
   `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
-- **Fenêtres** (`.modal-overlay.open`) : la page de derrière est figée (`initScrollLock` / `syncScrollLock`, app.js, `html.modal-lock`)
+- **Fenêtres** (`.modal-overlay.open`, `html.ms-open`, `#consentGate`) : la page de derrière est figée (`initScrollLock` / `syncScrollLock`, app.js, `html.modal-lock`)
   et revient à sa position à la fermeture.
 - **Téléphone** : champs de saisie à 16 px sur écran tactile (sinon l'iPhone zoome
   tout seul), `body { overflow-x: clip }` et fenêtres `.modal` en `overflow-x: hidden` :
