@@ -81,7 +81,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   toujours lire les séries avec `exSeries(e)` (charge d'une séance = série la plus lourde)
   (exercice au temps : secondes dans `reps` ; unité au choix « Rép. / Temps » par exercice : `exHold(e)` = `e.hold` sinon `holdByName` (gainage, hollow body) ;
   `isHoldExercise(nom)` = dernier choix `data.muscu_hold[nom]` (`rememberMuscuHold`), unité des records et de la progression : les séances dans l'autre unité n'y comptent pas), catalogue `MUSCU_CATALOG` par groupe : `[nom, muscles]`
-  (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un),
+  (clés de `MUSCLES`, « - » = secondaire ; ne jamais renommer un exercice, en ajouter un ; autres noms courants pour la recherche : `MUSCU_ALIASES`),
   `muscuTargets(ex)` : muscles d'un exercice (catalogue, puis exercice créé, sinon ceux de son groupe) ;
   **exercices créés** : `data.muscu_exercises = [{name, main, sub}]` (`saveMuscuExercise` / `deleteMuscuExercise` / `muscuOwnExercise`,
   groupe = `MUSCLE_GROUP[main]`), formulaire dans la fenêtre de choix (`openExerciseForm`), proposés dans « Mes exercices » et la zone de leur muscle principal ;

@@ -859,7 +859,8 @@ function closeMuscuPicker() {
 function muscuPickerItem(name, group, targets) {
   const main = Object.keys(targets).filter(k => targets[k] === 1).map(k => TS.MUSCLES[k]);
   const sub = Object.keys(targets).filter(k => targets[k] < 1).map(k => TS.MUSCLES[k].toLowerCase());
-  const label = main.join(', ') + (sub.length ? ' · ' + sub.join(', ') : '');
+  const alias = TS.MUSCU_ALIASES[name];
+  const label = (alias ? alias + ' · ' : '') + main.join(', ') + (sub.length ? ' · ' + sub.join(', ') : '');
   const cur = muscuPickBtn && muscuPickBtn.dataset.name === name;
   const item = '<button type="button" class="mp-item' + (cur ? ' mp-item--on' : '') + '" data-name="' + escHtml(name) + '" data-group="' + escHtml(group || '') + '">'
     + escHtml(name) + (label ? '<span class="mp-muscles">' + escHtml(label) + '</span>' : '') + '</button>';
@@ -937,7 +938,7 @@ function renderMuscuPicker() {
   const words = mpNorm(raw).split(/\s+/).filter(Boolean);
   // Muscles principaux seulement : « triceps » ne remonte pas tous les développés couchés
   const hay = (name, group, targets) => { const main = Object.keys(targets).filter(k => targets[k] === 1);
-    return mpNorm([name, group || ''].concat(main, main.map(k => TS.MUSCLES[k])).join(' ')); };
+    return mpNorm([name, group || '', TS.MUSCU_ALIASES[name] || ''].concat(main, main.map(k => TS.MUSCLES[k])).join(' ')); };
   const match = (name, group, targets) => words.every(w => hay(name, group, targets).includes(w));
   if (!raw) { renderMuscuZones(); return; }
   let html = '', exact = false;
@@ -948,7 +949,8 @@ function renderMuscuPicker() {
     if (items.length) html += '<div class="mp-group">' + escHtml(g) + '</div>' + items.map(([n]) => muscuPickerItem(n, g, TS.muscuTargets({ name: n }))).join('');
   });
   const all = TS.MUSCU_CATALOG.flatMap(([, list]) => list.map(e => e[0])).concat(TS.muscuCustomExercises().map(e => e.name));
-  exact = all.some(n => mpNorm(n) === mpNorm(raw));
+  exact = all.some(n => mpNorm(n) === mpNorm(raw))
+    || Object.values(TS.MUSCU_ALIASES).some(a => a.split(', ').some(x => mpNorm(x) === mpNorm(raw)));   // « chest press » : déjà dans la liste
   if (raw && !exact) {
     const name = raw.slice(0, 60);
     const add = '<button type="button" class="mp-new" data-mp-create="' + escHtml(name) + '">+ Créer l’exercice « <b>' + escHtml(name) + '</b> » et choisir ses muscles</button>';

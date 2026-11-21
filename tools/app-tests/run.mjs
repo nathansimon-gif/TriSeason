@@ -3155,6 +3155,22 @@ async function main() {
     assert(ms === 'fixed' && msAfter.pos !== 'fixed' && Math.abs(msAfter.y - 200) < 3, 'plein écran : ' + ms + ' ' + JSON.stringify(msAfter));
   });
 
+  await test('Musculation : noms courants des machines (chest press, leg press…) trouvés par la recherche, sans renommer les exercices', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRows .muscu-pick');
+    const find = async q => { await v.page.fill('#mpSearch', q); return v.page.evaluate(() => ({ names: [...document.querySelectorAll('#mpList .mp-item')].map(e => e.dataset.name),
+      sub: (document.querySelector('#mpList .mp-item .mp-muscles') || {}).textContent || '', create: !!document.querySelector('#mpList [data-mp-create]') })); };
+    const chest = await find('chest press'), legp = await find('leg press'), dl = await find('deadlift');
+    const keys = await v.page.evaluate(() => Object.keys(TS.MUSCU_ALIASES).filter(n => !TS.MUSCU_GROUP_OF[n]));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(chest.names[0] === 'Développé couché (machine)' && /^chest press · Pectoraux/.test(chest.sub) && !chest.create, 'chest press : ' + JSON.stringify(chest));
+    assert(legp.names.includes('Presse à cuisses (assise)') && dl.names.includes('Soulevé de terre'), 'leg press / deadlift : ' + legp.names + ' ' + dl.names);
+    assert(!keys.length, 'autres noms pour des exercices absents de la liste : ' + keys.join());
+  });
+
   await browser.close();
   server.close();
 
