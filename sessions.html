@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204f"></script>
+  <script src="theme.js?v=20261204g"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204f"></script>
+  <script src="auth-guard.js?v=20261204g"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261204f">
+  <link rel="stylesheet" href="style.css?v=20261204g">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -376,9 +376,9 @@
   </div>
 </div>
 
-<script src="fit-parser.js?v=20261204f"></script>
-<script src="import.js?v=20261204f"></script>
-<script src="app.js?v=20261204f"></script>
+<script src="fit-parser.js?v=20261204g"></script>
+<script src="import.js?v=20261204g"></script>
+<script src="app.js?v=20261204g"></script>
 <script>
 
 
@@ -859,7 +859,8 @@ function closeMuscuPicker() {
 function muscuPickerItem(name, group, targets) {
   const main = Object.keys(targets).filter(k => targets[k] === 1).map(k => TS.MUSCLES[k]);
   const sub = Object.keys(targets).filter(k => targets[k] < 1).map(k => TS.MUSCLES[k].toLowerCase());
-  const label = main.join(', ') + (sub.length ? ' · ' + sub.join(', ') : '');
+  const alias = TS.MUSCU_ALIASES[name];
+  const label = (alias ? alias + ' · ' : '') + main.join(', ') + (sub.length ? ' · ' + sub.join(', ') : '');
   const cur = muscuPickBtn && muscuPickBtn.dataset.name === name;
   const item = '<button type="button" class="mp-item' + (cur ? ' mp-item--on' : '') + '" data-name="' + escHtml(name) + '" data-group="' + escHtml(group || '') + '">'
     + escHtml(name) + (label ? '<span class="mp-muscles">' + escHtml(label) + '</span>' : '') + '</button>';
@@ -937,7 +938,7 @@ function renderMuscuPicker() {
   const words = mpNorm(raw).split(/\s+/).filter(Boolean);
   // Muscles principaux seulement : « triceps » ne remonte pas tous les développés couchés
   const hay = (name, group, targets) => { const main = Object.keys(targets).filter(k => targets[k] === 1);
-    return mpNorm([name, group || ''].concat(main, main.map(k => TS.MUSCLES[k])).join(' ')); };
+    return mpNorm([name, group || '', TS.MUSCU_ALIASES[name] || ''].concat(main, main.map(k => TS.MUSCLES[k])).join(' ')); };
   const match = (name, group, targets) => words.every(w => hay(name, group, targets).includes(w));
   if (!raw) { renderMuscuZones(); return; }
   let html = '', exact = false;
@@ -948,7 +949,8 @@ function renderMuscuPicker() {
     if (items.length) html += '<div class="mp-group">' + escHtml(g) + '</div>' + items.map(([n]) => muscuPickerItem(n, g, TS.muscuTargets({ name: n }))).join('');
   });
   const all = TS.MUSCU_CATALOG.flatMap(([, list]) => list.map(e => e[0])).concat(TS.muscuCustomExercises().map(e => e.name));
-  exact = all.some(n => mpNorm(n) === mpNorm(raw));
+  exact = all.some(n => mpNorm(n) === mpNorm(raw))
+    || Object.values(TS.MUSCU_ALIASES).some(a => a.split(', ').some(x => mpNorm(x) === mpNorm(raw)));   // « chest press » : déjà dans la liste
   if (raw && !exact) {
     const name = raw.slice(0, 60);
     const add = '<button type="button" class="mp-new" data-mp-create="' + escHtml(name) + '">+ Créer l’exercice « <b>' + escHtml(name) + '</b> » et choisir ses muscles</button>';

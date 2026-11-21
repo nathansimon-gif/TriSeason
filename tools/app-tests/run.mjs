@@ -3124,6 +3124,53 @@ async function main() {
     assert(Math.abs(after.y - before) < 5 && after.pos !== 'fixed', 'position après enregistrement : ' + before + ' → ' + JSON.stringify(after));
   });
 
+  await test('Toutes les pages : page de derrière figée pendant une fenêtre (fenêtres, pages plein écran), remise à sa place ensuite', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 700 }, hasTouch: true, isMobile: true } });
+    const bad = [];
+    for (const p of PAGES) {
+      await v.page.goto(`${BASE}/${p}.html`); await v.page.waitForTimeout(500);
+      const r = await v.page.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const ov = document.querySelector('.modal-overlay');
+        if (!ov) return { none: true };
+        window.scrollTo(0, 150); await wait(50);
+        const y0 = window.scrollY;
+        ov.classList.add('open'); await wait(50);
+        const fixed = getComputedStyle(document.body).position === 'fixed';
+        ov.classList.remove('open'); await wait(50);
+        return { fixed, back: Math.abs(window.scrollY - y0) < 3, y0 };
+      });
+      if (!r.none && !(r.fixed && r.back)) bad.push(p + ' ' + JSON.stringify(r));
+    }
+    // Page plein écran (questionnaire de bienvenue, résumé du mois) : même chose
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate(() => window.scrollTo(0, 200)); await v.page.waitForTimeout(50);
+    await v.page.evaluate(() => TS.showWelcome()); await v.page.waitForTimeout(100);
+    const ms = await v.page.evaluate(() => getComputedStyle(document.body).position);
+    await v.page.click('#welcome [data-wq-act="close"]'); await v.page.waitForTimeout(400);
+    const msAfter = await v.page.evaluate(() => ({ pos: getComputedStyle(document.body).position, y: window.scrollY }));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!bad.length, 'pages : ' + bad.join(' | '));
+    assert(ms === 'fixed' && msAfter.pos !== 'fixed' && Math.abs(msAfter.y - 200) < 3, 'plein écran : ' + ms + ' ' + JSON.stringify(msAfter));
+  });
+
+  await test('Musculation : noms courants des machines (chest press, leg press…) trouvés par la recherche, sans renommer les exercices', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRows .muscu-pick');
+    const find = async q => { await v.page.fill('#mpSearch', q); return v.page.evaluate(() => ({ names: [...document.querySelectorAll('#mpList .mp-item')].map(e => e.dataset.name),
+      sub: (document.querySelector('#mpList .mp-item .mp-muscles') || {}).textContent || '', create: !!document.querySelector('#mpList [data-mp-create]') })); };
+    const chest = await find('chest press'), legp = await find('leg press'), dl = await find('deadlift');
+    const keys = await v.page.evaluate(() => Object.keys(TS.MUSCU_ALIASES).filter(n => !TS.MUSCU_GROUP_OF[n]));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(chest.names[0] === 'Développé couché (machine)' && /^chest press · Pectoraux/.test(chest.sub) && !chest.create, 'chest press : ' + JSON.stringify(chest));
+    assert(legp.names.includes('Presse à cuisses (assise)') && dl.names.includes('Soulevé de terre'), 'leg press / deadlift : ' + legp.names + ' ' + dl.names);
+    assert(!keys.length, 'autres noms pour des exercices absents de la liste : ' + keys.join());
+  });
+
   await browser.close();
   server.close();
 

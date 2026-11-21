@@ -3780,6 +3780,22 @@ const MUSCU_CATALOG = [
     ['Rotation du buste (machine ou poulie)', 'obliques'],
   ]],
 ];
+// Autres noms courants (souvent anglais, ceux écrits sur les machines en salle) : trouvés par la
+// recherche et affichés sous le nom. Le nom de l'exercice, lui, ne change jamais.
+const MUSCU_ALIASES = {
+  'Développé couché (barre)': 'bench press', 'Développé couché (haltères)': 'dumbbell press', 'Développé couché (machine)': 'chest press',
+  'Développé incliné': 'incline press', 'Développé incliné (machine)': 'incline chest press', 'Pec fly (machine)': 'butterfly, pec deck',
+  'Écarté (haltères ou poulie)': 'fly', 'Écarté à la poulie (vis-à-vis)': 'cable crossover', 'Pompes': 'push-up',
+  'Tirage vertical': 'lat pulldown', 'Tirage horizontal': 'seated row', 'Tractions': 'pull-up', 'Tractions assistées (machine)': 'assisted pull-up',
+  'Rowing (machine)': 'row machine', 'Soulevé de terre': 'deadlift', 'Extensions lombaires (banc)': 'back extension',
+  'Développé militaire': 'overhead press', 'Développé épaules (machine)': 'shoulder press', 'Élévations latérales': 'lateral raise',
+  'Oiseau (arrière d’épaule)': 'rear delt fly', 'Rowing menton': 'upright row', 'Tirage triceps (poulie)': 'triceps pushdown',
+  'Barre au front': 'skull crusher', 'Curl pupitre': 'preacher curl', 'Curl marteau': 'hammer curl',
+  'Presse à cuisses (assise)': 'leg press', 'Presse à cuisses (45°)': 'leg press', 'Soulevé de terre jambes tendues': 'romanian deadlift, RDL',
+  'Fentes': 'lunges', 'Fentes bulgares': 'bulgarian split squat', 'Mollets': 'calf raise', 'Mollets assis (machine)': 'seated calf raise',
+  'Abducteurs (machine)': 'abductor', 'Adducteurs (machine)': 'adductor', 'Gainage (planche)': 'plank', 'Gainage latéral': 'side plank',
+  'Relevé de jambes': 'leg raise', 'Roue abdominale': 'ab wheel', 'Rotation du buste (machine ou poulie)': 'torso rotation, woodchopper',
+};
 // Muscles par défaut d'un groupe (exercice libre rangé dans un groupe)
 const MUSCU_GROUP_TARGETS = { 'Pectoraux': 'pecs', 'Dos': 'dorsaux', 'Épaules': 'epaules', 'Bras': 'biceps triceps', 'Jambes': 'quadriceps fessiers ischios', 'Abdos et gainage': 'abdos' };
 const parseTargets = (str) => {
@@ -4527,7 +4543,9 @@ function initPullToRefresh() {
 // bas) en la fermant. La page est figée à sa position et y revient à la fermeture.
 let scrollLockY = null;
 function syncScrollLock() {
-  const open = !!document.querySelector('.modal-overlay.open');
+  // Toute fenêtre : .modal-overlay ouverte, pages plein écran (résumé du mois, comparaison,
+  // questionnaire de bienvenue : html.ms-open) et écran d'accord (#consentGate)
+  const open = !!document.querySelector('.modal-overlay.open, #consentGate') || document.documentElement.classList.contains('ms-open');
   const body = document.body;
   if (open && scrollLockY == null) {
     scrollLockY = window.scrollY;
@@ -4538,14 +4556,17 @@ function syncScrollLock() {
     scrollLockY = null;
     ['position', 'top', 'left', 'right', 'width'].forEach(k => { body.style[k] = ''; });
     document.documentElement.classList.remove('modal-lock');
-    window.scrollTo(0, y);
+    window.scrollTo({ top: y, left: 0, behavior: 'instant' });   // pas d'animation (scroll-behavior: smooth)
   }
 }
 function initScrollLock() {
-  const isOverlay = n => n.nodeType === 1 && n.classList.contains('modal-overlay');
+  const isOverlay = n => n.nodeType === 1 && (n.classList.contains('modal-overlay') || n.id === 'consentGate');
   new MutationObserver(muts => {
     if (muts.some(m => isOverlay(m.target) || [...m.addedNodes].some(isOverlay) || [...m.removedNodes].some(isOverlay))) syncScrollLock();
   }).observe(document.body, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
+  // Pages plein écran : html.ms-open
+  new MutationObserver(syncScrollLock).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  syncScrollLock();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -4589,7 +4610,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCLE_GROUP, muscuOwnExercise, saveMuscuExercise, deleteMuscuExercise, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCLE_GROUP, MUSCU_ALIASES, muscuOwnExercise, saveMuscuExercise, deleteMuscuExercise, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   bodyWeightOn, isHoldExercise, exHold, holdByName, rememberMuscuHold, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   syncScrollLock, monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
