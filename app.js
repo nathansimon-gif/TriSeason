@@ -1505,7 +1505,7 @@ const NUTRI_FACTORS = {
 const NUTRI_OUTCOMES = {
   sensation: { label: 'Ressenti', unit: '/5' },
   rpe:       { label: 'Effort ressenti', unit: '/10' },   // plus bas = séance vécue comme plus facile
-  perf:      { label: 'Vitesse vs ton habitude', unit: '%' },
+  perf:      { label: 'Performance vs ton habitude', unit: '%' },   // vitesse (natation, vélo, course) ou charge (musculation)
 };
 const NUTRI_MIN_GROUP = 3;      // séances minimum de chaque côté pour comparer
 const NUTRI_MIN_SPORT_REF = 5;  // séances minimum d'un sport pour calculer "ton habitude"
@@ -1577,11 +1577,15 @@ function getNutritionImpact(filters = {}) {
     const speeds = (data.sessions || []).filter(s => s.sport === sp).map(sessionSpeed).filter(v => v);
     refSpeed[sp] = speeds.length >= NUTRI_MIN_SPORT_REF ? median(speeds) : null;
   });
+  // Musculation : pas de vitesse, on compare la charge de la séance (durée × effort ressenti²) à ta charge habituelle
+  const loadOf = s => (s.duration > 0 && s.rpe >= 1 ? calcTSS(s.duration, s.rpe) : null);
+  const loads = (data.sessions || []).filter(s => s.sport === 'muscu').map(loadOf).filter(v => v);
+  refSpeed.muscu = loads.length >= NUTRI_MIN_SPORT_REF ? median(loads) : null;
 
   const points = sessions.map(s => {
     const prev = daily[shiftDay(s.date, -1)];
     const day  = daily[s.date];
-    const speed = sessionSpeed(s);
+    const speed = s.sport === 'muscu' ? loadOf(s) : sessionSpeed(s);   // vitesse, ou charge pour la musculation
     const ref = refSpeed[s.sport];
     return {
       id: s.id, date: s.date, sport: s.sport,

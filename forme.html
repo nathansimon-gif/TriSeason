@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204j"></script>
+  <script src="theme.js?v=20261204k"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204j"></script>
+  <script src="auth-guard.js?v=20261204k"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ORKA — Forme & Prévisions</title>
-  <link rel="stylesheet" href="style.css?v=20261204j">
+  <link rel="stylesheet" href="style.css?v=20261204k">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     .confidence-badge {
@@ -171,7 +171,7 @@
         <select class="form-select" id="niOutcome" onchange="renderNutritionImpact()">
           <option value="sensation">Ressenti de la séance</option>
           <option value="rpe">Effort ressenti</option>
-          <option value="perf">Vitesse vs ton habitude</option>
+          <option value="perf">Performance vs ton habitude</option>
         </select>
       </label>
       <label class="ni-control"><span>Sport</span>
@@ -180,6 +180,7 @@
           <option value="nat">Natation</option>
           <option value="velo">Vélo</option>
           <option value="run">Course</option>
+          <option value="muscu">Musculation</option>
         </select>
       </label>
     </div>
@@ -325,7 +326,7 @@
   <a href="forme.html" class="mobile-nav__item active"><span class="mobile-nav__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg></span>Forme</a>
 </nav>
 
-<script src="app.js?v=20261204j"></script>
+<script src="app.js?v=20261204k"></script>
 <script>
 let charts = {};
 Chart.defaults.animation = false;
@@ -1118,8 +1119,9 @@ function renderObservations() {
 
 
 // ── Nutrition × performance ─────────────────────────────────────────────────
-const NI_SPORT_COLORS = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)' };
-const NI_SPORT_LABELS = { nat: 'Natation', velo: 'Vélo', run: 'Course' };
+const NI_SPORT_COLORS = { nat: 'var(--nat)', velo: 'var(--velo)', run: 'var(--run)', muscu: 'var(--muscu)' };
+const NI_SPORT_LABELS = { nat: 'Natation', velo: 'Vélo', run: 'Course', muscu: 'Musculation' };
+const NI_SPORTS = ['nat', 'velo', 'run', 'muscu'];
 
 function niCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
@@ -1163,7 +1165,8 @@ function renderNutritionImpact() {
     const outcomeHint = o === 'sensation'
       ? 'renseigne ton <b>ressenti</b> (les visages) quand tu enregistres une séance'
       : o === 'rpe' ? 'note l’<b>effort ressenti</b> (de 1 à 10) quand tu enregistres une séance'
-      : 'garde <b>distance et durée</b> sur tes séances (il faut au moins 5 séances d’un sport pour connaître ton habitude)';
+      : (sport === 'muscu' ? 'garde <b>durée et effort ressenti</b> sur tes séances de musculation (il faut au moins 5 séances pour connaître ton habitude)'
+        : 'garde <b>distance et durée</b> sur tes séances (il faut au moins 5 séances d’un sport pour connaître ton habitude ; en musculation : durée et effort ressenti)');
     const factorHint = f === 'hydration'
       ? 'note ton <b>hydratation</b> dans Nutrition les jours où tu t’entraînes'
       : 'saisis tes <b>repas avec les glucides</b> dans Nutrition' + (f.endsWith('_prev') ? ', surtout la veille de tes séances' : ' les jours où tu t’entraînes');
@@ -1205,7 +1208,7 @@ function renderNutritionImpact() {
   const diff = cmp.high.avg - cmp.low.avg;
   const meaningful = o === 'sensation' ? Math.abs(diff) >= 0.4 : o === 'rpe' ? Math.abs(diff) >= 0.5 : Math.abs(diff) >= 2;
   const thr = niFmtFactor(f, cmp.threshold);
-  const outcomeTxt = o === 'sensation' ? 'ton ressenti moyen' : o === 'rpe' ? 'ton effort ressenti moyen' : 'ta vitesse par rapport à ton habitude';
+  const outcomeTxt = o === 'sensation' ? 'ton ressenti moyen' : o === 'rpe' ? 'ton effort ressenti moyen' : 'ta performance par rapport à ton habitude';
   let headline;
   if (!meaningful) {
     headline = `Pas de différence nette pour l’instant : avec plus ou moins ${niDe(factor.short)}, ${outcomeTxt} reste proche.`;
@@ -1215,7 +1218,7 @@ function renderNutritionImpact() {
       ? `${Math.abs(diff).toFixed(1).replace('.', ',')} point${Math.abs(diff) >= 2 ? 's' : ''} de ressenti en plus`
       : o === 'rpe'
       ? `un effort ressenti ${Math.abs(diff).toFixed(1).replace('.', ',')} point${Math.abs(diff) >= 2 ? 's' : ''} plus élevé`   // le groupe nommé est toujours celui où la valeur est la plus haute
-      : `une vitesse ${Math.abs(diff).toFixed(1).replace('.', ',')} % plus élevée`;
+      : `une performance ${Math.abs(diff).toFixed(1).replace('.', ',')} % plus élevée`;
     headline = `Tes séances avec <b>${better} ${niDe(factor.short)}</b> (${better === 'plus' ? 'au-dessus de' : 'jusqu’à'} ${thr}) vont avec <b>${gap}</b> en moyenne.`;
   }
 
@@ -1235,12 +1238,12 @@ function renderNutritionImpact() {
     </div>
     <div class="ni-legend" id="niLegend"></div>
     <div style="position:relative;height:240px"><canvas id="chartNutriImpact" aria-label="Chaque point est une séance : ${factor.label} en horizontal, ${TS.NUTRI_OUTCOMES[o].label} en vertical"></canvas></div>
-    <div class="ni-note">Chaque point est une séance. ${o === 'perf' ? '« Vitesse vs ton habitude » compare la vitesse de la séance à ta vitesse médiane dans ce sport : une séance volontairement lente (récupération) tire donc vers le bas.' : ''}
+    <div class="ni-note">Chaque point est une séance. ${o === 'perf' ? '« Performance vs ton habitude » compare la séance à ta médiane dans ce sport : la vitesse en natation, vélo et course, la charge (durée × effort ressenti) en musculation. Une séance volontairement lente ou légère (récupération) tire donc vers le bas.' : ''}
       ${cmp.n < 20 ? 'Avec ' + cmp.n + ' séances, la tendance reste fragile : elle se précisera avec le temps.' : ''}
       Ce n’est pas une preuve de cause à effet.</div>`;
 
   const pts = res.points.filter(p => p.factors[f] !== null && p.outcomes[o] !== null);
-  const sports = ['nat', 'velo', 'run'].filter(sp => pts.some(p => p.sport === sp));
+  const sports = NI_SPORTS.filter(sp => pts.some(p => p.sport === sp));
   document.getElementById('niLegend').innerHTML = sports.map(sp =>
     `<span><span class="sport-dot sport-dot--${sp}"></span>${NI_SPORT_LABELS[sp]}</span>`).join('');
   const surface = niCss('--surface') || '#151a22';

@@ -3263,6 +3263,36 @@ async function main() {
     assert(panelClosed, 'panneau refermé après le choix');
   });
 
+  await test('Forme, nutrition × séances : la musculation compte avec sa charge (durée × effort), pas avec une vitesse', async () => {
+    const d = sampleData();
+    d.sessions = []; d.nutrition.meals = [];
+    // 12 séances de muscu, charge croissante, glucides la veille bas puis haut
+    for (let i = 1; i <= 12; i++) {
+      const rpe = i % 2 ? 4 : 8;                         // séances légères et dures
+      d.sessions.push({ id: 'mu' + i, date: day(-i * 2), sport: 'muscu', duration: 1, rpe, sensation: 3, exercises: [{ name: 'Squat', sets: 3, reps: 8, kg: 60 }] });
+      d.nutrition.meals.push({ id: 'g' + i, date: day(-i * 2 - 1), type: 'dîner', desc: 'repas', glucides: i % 2 ? 80 : 240 });
+    }
+    d.profile.sports = ['nat', 'velo', 'run', 'muscu'];
+    const v = await newUser({ data: d });
+    await v.page.goto(`${BASE}/forme.html`); await v.page.waitForTimeout(900);
+    const opt = await v.page.evaluate(() => !!document.querySelector('#niSport option[value="muscu"]'));
+    const r = await v.page.evaluate(() => {
+      const res = TS.getNutritionImpact({ sport: 'muscu' });
+      return { ref: res.refSpeed.muscu, n: res.points.length, perfs: res.points.map(p => p.outcomes.perf), outcome: TS.NUTRI_OUTCOMES.perf.label };
+    });
+    await v.page.selectOption('#niSport', 'muscu'); await v.page.selectOption('#niOutcome', 'perf'); await v.page.waitForTimeout(400);
+    const ui = await v.page.evaluate(() => ({ head: (document.querySelector('#niBody .ni-headline') || {}).textContent || '', legend: (document.getElementById('niLegend') || {}).textContent || '', canvas: !!document.getElementById('chartNutriImpact') }));
+    // Sans habitude connue (moins de 5 séances) : pas de point « performance »
+    const few = await v.page.evaluate(() => { const data = TS.getData(); data.sessions = data.sessions.slice(0, 3); localStorage.setItem('triseason_data', JSON.stringify(data)); return TS.getNutritionImpact({ sport: 'muscu' }).points.every(p => p.outcomes.perf === null); });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(opt, 'sport Musculation absent de la liste');
+    assert(r.n === 12 && r.ref > 0 && r.perfs.every(x => x !== null), 'charge de muscu : ' + JSON.stringify(r));
+    assert(r.outcome === 'Performance vs ton habitude', 'libellé : ' + r.outcome);
+    assert(ui.canvas && /Musculation/.test(ui.legend) && /performance/.test(ui.head), 'affichage : ' + JSON.stringify(ui));
+    assert(few, 'performance calculée sans assez de séances pour connaître l’habitude');
+  });
+
   await browser.close();
   server.close();
 
