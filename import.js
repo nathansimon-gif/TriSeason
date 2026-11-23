@@ -99,8 +99,23 @@ function parseGPX(xmlText) {
 }
 
 // ── FIT Parser ────────────────────────────────────────────────────────────────
+// fit-parser.js (580 Ko) n'est chargé qu'au premier import d'un fichier .fit, pas à chaque
+// ouverture de la page Séances. Même version (?v=) que import.js.
+const FIT_PARSER_SRC = (document.currentScript && document.currentScript.src || '').replace(/import\.js/, 'fit-parser.js');
+function loadFitParser() {
+  if (window.FitParser) return Promise.resolve();
+  if (window.__fitLoading) return window.__fitLoading;
+  window.__fitLoading = new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = FIT_PARSER_SRC || 'fit-parser.js';
+    sc.onload = () => resolve();
+    sc.onerror = () => { window.__fitLoading = null; reject(new Error('Parseur FIT non chargé (vérifie la connexion)')); };
+    document.head.appendChild(sc);
+  });
+  return window.__fitLoading;
+}
 function parseFIT(buffer) {
-  return new Promise((resolve, reject) => {
+  return loadFitParser().then(() => new Promise((resolve, reject) => {
     if (!window.FitParser) {
       reject(new Error('Parseur FIT non chargé'));
       return;
@@ -197,7 +212,7 @@ function parseFIT(buffer) {
         reject(new Error('Erreur lors du parsing FIT : ' + e.message));
       }
     });
-  });
+  }));
 }
 
 // ── Sport detection ───────────────────────────────────────────────────────────
@@ -510,5 +525,5 @@ function parseStravaCsv(text) {
 }
 
 // ── Expose ────────────────────────────────────────────────────────────────────
-window.TriImport = { parseActivityFile, detectSport, classifyFit, classifyText,
+window.TriImport = { parseActivityFile, parseFIT, detectSport, classifyFit, classifyText,
   readStravaArchive, parseStravaCsv, parseStravaDate, parseCsv, readZipEntry };

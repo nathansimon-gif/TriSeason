@@ -3208,6 +3208,20 @@ async function main() {
     assert(both.here && both.other && both.first && both.cloud === 3, 'saisies des deux appareils : ' + JSON.stringify(both));
   });
 
+  await test('Import : le parseur .fit (580 Ko) n’est chargé qu’au premier import, pas à l’ouverture de Séances', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    const before = await v.page.evaluate(() => ({ script: !!document.querySelector('script[src*="fit-parser"]'), parser: !!window.FitParser }));
+    const after = await v.page.evaluate(async () => {
+      try { await window.TriImport.parseFIT(new Uint8Array([0, 1, 2, 3]).buffer); } catch (e) { /* fichier invalide : on veut seulement le chargement */ }
+      return { parser: !!window.FitParser, script: !!document.querySelector('script[src*="fit-parser"]') };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(!before.script && !before.parser, 'chargé dès l’ouverture : ' + JSON.stringify(before));
+    assert(after.parser && after.script, 'pas chargé au premier import : ' + JSON.stringify(after));
+  });
+
   await browser.close();
   server.close();
 
