@@ -26,6 +26,10 @@ performances sportives (triathlon : natation, vélo, course à pied).
 - **Priorités** : simple à utiliser pour quelqu'un qui découvre l'appli, chiffres
   justes (dates, durées à la seconde, records), données jamais perdues.
 
+## Garder le code léger
+
+À chaque modification, vérifier si une partie du code ne sert plus (fonction, réglage, règle, texte) à cause du changement, et la retirer **dans la même demande de fusion**, seulement si elle est liée au changement. Vérifier les appels (y compris depuis d'autres pages et la liste `window.TS`) avant de supprimer. Ne pas nettoyer hors sujet : le noter dans la feuille de route pour une étape à part. Le signaler dans la description de la demande de fusion.
+
 ## Feuille de route
 
 `FEUILLE-DE-ROUTE.md` (racine) est la to-do list partagée avec le propriétaire,
