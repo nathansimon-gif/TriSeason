@@ -151,7 +151,9 @@
 
   <h3>Durée de conservation</h3>
   <ul>
-    <li>Tant que ton compte existe. Tu peux tout supprimer à tout moment (voir ci-dessous) : la suppression est immédiate et définitive.</li>
+    <li>Tant que ton compte existe. Tu peux tout supprimer à tout moment (voir ci-dessous) : la suppression est immédiate et définitive
+      dans l'appli. Chez Google, les données effacées disparaissent ensuite aussi de ses systèmes techniques internes, selon ses propres délais
+      (de l'ordre de quelques mois au plus) ; elles n'y sont plus accessibles ni à toi ni à l'éditeur.</li>
     <li>Compte inactif : supprimé après <b>3 ans</b> sans connexion, après un e-mail de prévenance.</li>
   </ul>
 
@@ -166,15 +168,17 @@
     <li><b>Accès et portabilité</b> : Profil → Paramètres → « Exporter mes données » (fichier complet au format JSON).</li>
     <li><b>Rectification</b> : directement dans l'appli (chaque séance, repas, record est modifiable).</li>
     <li><b>Effacement</b> : Profil → Paramètres → « Effacer toutes mes données » (le compte reste ouvert) ou « Supprimer mon compte » (tout est supprimé).</li>
-    <li><b>Retrait du consentement</b> : à tout moment, en supprimant ton compte ; pour l'option « Blessures, maladie et reprise »,
-      en la désactivant (ses informations sont effacées). Le retrait ne remet pas en cause ce qui a été fait avant.</li>
+    <li><b>Retrait du consentement</b> : à tout moment, en supprimant ton compte ; pour les options « Blessures, maladie et reprise »
+      et « Cycle menstruel », en les désactivant (leurs informations sont effacées aussitôt) ; pour Strava, en le déconnectant. Le retrait ne remet pas en cause ce qui a été fait avant.</li>
     <li><b>Opposition et limitation</b>, et toute autre demande : écris à <a href="mailto:tri.season.tracker@gmail.com">tri.season.tracker@gmail.com</a>. Réponse sous un mois.</li>
     <li><b>Réclamation</b> : tu peux saisir la CNIL (<a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr/fr/plaintes</a>).</li>
   </ul>
 
   <h3>Sécurité</h3>
-  <p>Les échanges sont chiffrés (HTTPS). Chaque compte ne peut lire et modifier que ses propres données
-  (règles de sécurité Firebase). En cas de violation de données présentant un risque, les personnes concernées
+  <p>Les échanges sont chiffrés (HTTPS) et les données sont chiffrées sur les serveurs de Google (chiffrement
+  au repos, par défaut chez Firebase). Chaque compte ne peut lire et modifier que ses propres données
+  (règles de sécurité Firebase). Les mots de passe sont gérés par Firebase (ORKA n'y a jamais accès) et doivent faire au moins
+  8 caractères avec une majuscule, un chiffre et un caractère spécial. La base de données est protégée contre une suppression accidentelle. En cas de violation de données présentant un risque, les personnes concernées
   et la CNIL seront prévenues dans les délais prévus par la loi.</p>
 
   <h3>Âge minimum</h3>
