@@ -53,7 +53,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   compétitions, records, poids, profil, saisons, synchro des compétitions et
   records automatiques, formats FFTri, helpers de dates et d'allure,
   `getNutritionImpact` : croisement nutrition × séances affiché dans Forme (résultats : ressenti,
-  effort ressenti `rpe`, vitesse vs habitude ; la carte « Avant tes courses » de Nutrition montre eau et kcal à J-7) ;
+  effort ressenti `rpe`, performance vs habitude : vitesse en natation / vélo / course, **charge** `calcTSS` en musculation, sport `muscu` compris ; la carte « Avant tes courses » de Nutrition montre eau et kcal à J-7) ;
   `FUEL_PRESETS` / `fuelCarbs` : glucides des ravitaillements (valeurs indicatives
   des fabricants, octobre 2026, à mettre à jour si les formules changent) ; ravitaillement relié à une
   séance : `session_id` + moment `timing` (minutes, saisi et affiché en « 1h15 » : `parseFuelTime` /
