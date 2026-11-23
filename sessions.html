@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <script src="theme.js?v=20261204i"></script>
+  <script src="theme.js?v=20261204j"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-  <script src="auth-guard.js?v=20261204i"></script>
+  <script src="auth-guard.js?v=20261204j"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d1016">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="ORKA">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>ORKA — Séances</title>
-  <link rel="stylesheet" href="style.css?v=20261204i">
+  <link rel="stylesheet" href="style.css?v=20261204j">
   <style>
     .sensation-btn {
       font-size:22px; background:var(--surface2); border:1px solid var(--border);
@@ -296,8 +296,12 @@
       <div class="form-group" id="muscuGroup" style="display:none">
         <div class="muscu-head">
           <label class="form-label" style="margin:0">Exercices</label>
-          <button type="button" class="btn btn--ghost btn--sm" id="muscuRepeatBtn" onclick="repeatLastMuscu()">Reprendre la dernière séance</button>
+          <span style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="btn btn--ghost btn--sm" id="muscuSaveTplBtn" onclick="saveMuscuTemplateAsk()" style="display:none">Enregistrer comme modèle</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="muscuRepeatBtn" onclick="toggleMuscuTemplates()" aria-expanded="false">Reprendre une séance</button>
+          </span>
         </div>
+        <div id="muscuTemplates" class="muscu-tpl" hidden></div>
         <div class="muscu-cols" aria-hidden="true"><span>Exercice</span><span>Séries</span><span>Rép. / s</span><span>kg</span><span></span></div>
         <div id="muscuRows"></div>
         <button type="button" class="btn btn--ghost btn--sm" onclick="addMuscuRow()" style="align-self:flex-start">+ Ajouter un exercice</button>
@@ -376,8 +380,8 @@
   </div>
 </div>
 
-<script src="import.js?v=20261204i"></script>
-<script src="app.js?v=20261204i"></script>
+<script src="import.js?v=20261204j"></script>
+<script src="app.js?v=20261204j"></script>
 <script>
 
 
@@ -1002,17 +1006,76 @@ function fillMuscuRows(list) {
 }
 function updateMuscuRepeat() {
   const last = TS.lastMuscuSession(editId);
+  const tpls = TS.muscuTemplates();
   const btn = document.getElementById('muscuRepeatBtn');
-  btn.style.display = last ? '' : 'none';
-  if (last) btn.title = 'Exercices du ' + TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  btn.style.display = last || tpls.length ? '' : 'none';
+  if (last) btn.title = 'Dernière séance du ' + TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  if (!document.getElementById('muscuTemplates').hidden) renderMuscuTemplates();
+  updateMuscuSaveTpl();
+}
+// Bouton « Enregistrer comme modèle » : seulement quand la séance a au moins un exercice nommé
+function updateMuscuSaveTpl() {
+  const any = [...document.querySelectorAll('#muscuRows .muscu-pick')].some(b => b.dataset.name);
+  document.getElementById('muscuSaveTplBtn').style.display = any ? '' : 'none';
+}
+// Panneau « Reprendre une séance » : modèles (séance PEC…) puis la dernière séance
+function toggleMuscuTemplates() {
+  const box = document.getElementById('muscuTemplates');
+  const open = box.hidden;
+  box.hidden = !open;
+  document.getElementById('muscuRepeatBtn').setAttribute('aria-expanded', String(open));
+  if (open) renderMuscuTemplates();
+}
+function renderMuscuTemplates() {
+  const last = TS.lastMuscuSession(editId);
+  const tpls = TS.muscuTemplates();
+  const lastDay = last ? TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '';
+  document.getElementById('muscuTemplates').innerHTML = '<div class="muscu-tpl__title">Reprendre une séance</div>'
+    + (tpls.length ? tpls.map(t => '<div class="muscu-tpl__row"><button type="button" class="muscu-tpl__pick" data-tpl="' + t.id + '">'
+        + '<b>' + escHtml(t.name) + '</b><span>' + t.exercises.length + ' exercice' + (t.exercises.length > 1 ? 's' : '') + ' · ' + escHtml(t.exercises.map(e => e.name).slice(0, 3).join(', ')) + (t.exercises.length > 3 ? '…' : '') + '</span></button>'
+        + '<button type="button" class="muscu-tpl__del" data-tpl-del="' + t.id + '" aria-label="Supprimer le modèle ' + escHtml(t.name) + '" title="Supprimer le modèle">✕</button></div>').join('')
+      : '<div class="form-hint">Pas encore de modèle. Après une séance, « Enregistrer comme modèle » le garde ici.</div>')
+    + (last ? '<button type="button" class="muscu-tpl__pick muscu-tpl__pick--last" id="muscuRepeatLast"><b>Dernière séance</b><span>du ' + lastDay + ' · ' + last.exercises.length + ' exercice' + (last.exercises.length > 1 ? 's' : '') + '</span></button>' : '');
+}
+// Remplit la séance avec un modèle : exercices du modèle, charges et répétitions de la dernière fois
+function applyMuscuTemplate(id) {
+  const tpl = TS.muscuTemplates().find(t => t.id === id);
+  if (!tpl) return;
+  fillMuscuRows(TS.templateExercises(tpl, editId));
+  document.getElementById('muscuTemplates').hidden = true;
+  document.getElementById('muscuRepeatBtn').setAttribute('aria-expanded', 'false');
+  updateMuscuSaveTpl();
+  TS.toast('Modèle « ' + tpl.name + ' » repris : ajuste les charges et les répétitions.');
 }
 // Recopie les exercices de la dernière séance de musculation (à ajuster ensuite)
 function repeatLastMuscu() {
   const last = TS.lastMuscuSession(editId);
   if (!last) return;
   fillMuscuRows(last.exercises.map(e => Object.assign({}, e)));
+  document.getElementById('muscuTemplates').hidden = true;
+  document.getElementById('muscuRepeatBtn').setAttribute('aria-expanded', 'false');
+  updateMuscuSaveTpl();
   TS.toast('Exercices du ' + TS.parseLocalDate(last.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + ' repris : ajuste les charges si besoin.');
 }
+// Enregistre les exercices de la séance en cours comme modèle
+function saveMuscuTemplateAsk() {
+  const exercises = readMuscuRows();
+  const name = window.prompt('Nom du modèle (ex. Séance PEC) :', '');
+  if (name === null) return;
+  const r = TS.saveMuscuTemplate(name, exercises.map(e => ({ name: e.name, group: e.group, hold: e.hold, sets: e.sets || (e.series && e.series.length) || 1 })));
+  if (r.error) { TS.toast(r.error, 'error'); return; }
+  TS.toast('Modèle « ' + r.name + ' » enregistré');
+  renderMuscuTemplates();
+}
+document.addEventListener('click', e => {
+  const pick = e.target.closest('#muscuTemplates [data-tpl]');
+  if (pick) return applyMuscuTemplate(pick.dataset.tpl);
+  const del = e.target.closest('#muscuTemplates [data-tpl-del]');
+  if (del) { const t = TS.muscuTemplates().find(x => x.id === del.dataset.tplDel); if (confirm('Supprimer le modèle « ' + (t ? t.name : '') + ' » ?')) { TS.deleteMuscuTemplate(del.dataset.tplDel); renderMuscuTemplates(); } return; }
+  if (e.target.closest('#muscuRepeatLast')) repeatLastMuscu();
+});
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#muscuRows')) updateMuscuSaveTpl(); });
+document.addEventListener('change', e => { if (e.target.closest && e.target.closest('#muscuRows')) updateMuscuSaveTpl(); });
 
 function editSession(id) {
   const s = TS.getSessions().find(s=>s.id===id);

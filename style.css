@@ -368,6 +368,17 @@ input, select, textarea { font-family: var(--font); }
 .mp-chip:disabled { opacity: .35; cursor: default; }
 .mp-form .mp-chips { gap: 5px; }
 .mp-form .mp-chip { padding: 5px 10px; font-size: 12.5px; }
+/* Modèles de séance de musculation */
+.muscu-tpl { border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface2); padding: 10px; margin: 6px 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.muscu-tpl[hidden] { display: none; }
+.muscu-tpl__title { font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+.muscu-tpl__row { display: flex; align-items: stretch; gap: 6px; }
+.muscu-tpl__pick { flex: 1; min-width: 0; text-align: left; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-sm); padding: 9px 10px; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.muscu-tpl__pick b { font-size: 14px; font-weight: 600; }
+.muscu-tpl__pick span { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.muscu-tpl__pick:hover { border-color: var(--muscu); }
+.muscu-tpl__pick--last { border-style: dashed; }
+.muscu-tpl__del { background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-3); padding: 0 10px; cursor: pointer; }
 /* Carte du corps (musculation) */
 .bm-figs { display: flex; gap: 14px; justify-content: center; }
 .bm-fig { margin: 0; text-align: center; flex: 1; max-width: 170px; }
