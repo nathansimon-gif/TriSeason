@@ -521,17 +521,25 @@ input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .modal-overlay {
   position: fixed; inset: 0; z-index: 200;
   background: rgba(0,0,0,.6);
-  display: flex; align-items: center; justify-content: center; padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  /* iPhone : la fenêtre reste sous l'heure / la batterie / l'encoche et au-dessus de la barre du bas */
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   opacity: 0; pointer-events: none; transition: opacity .2s;
 }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal {
   background: var(--surface); border: 1px solid var(--border2);
   border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 520px;
-  max-height: 92vh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  max-height: min(92vh, 100%); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
   transform: translateY(4px); transition: transform .15s;
 }
 .modal-overlay.open .modal { transform: none; }
+/* Champs date / heure natifs (iPhone) : jamais plus larges que leur colonne, texte à gauche comme les autres champs */
+.form-input[type="date"], .form-input[type="time"], .form-input[type="datetime-local"] {
+  display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;
+  -webkit-appearance: none; appearance: none; text-align: left;
+}
+.form-input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .modal__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .modal__title  { font-size: 16px; font-weight: 600; }
 .modal__close  {

@@ -3293,6 +3293,26 @@ async function main() {
     assert(few, 'performance calculée sans assez de séances pour connaître l’habitude');
   });
 
+  await test('Fenêtres sur iPhone : sous l’encoche (marges de sécurité), champ date jamais plus large que la fenêtre', async () => {
+    const v = await newUser({ ctxOpts: { viewport: { width: 390, height: 700 }, hasTouch: true, isMobile: true } });
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(600);
+    await v.page.evaluate(() => editSession(TS.getSessions()[0].id)); await v.page.waitForTimeout(400);
+    const r = await v.page.evaluate(() => {
+      const css = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } });
+      const ov = css.find(x => x.selectorText === '.modal-overlay');
+      const d = document.getElementById('s_date'), m = document.querySelector('#sessionModal .modal');
+      const dr = d.getBoundingClientRect(), mr = m.getBoundingClientRect(), cs = getComputedStyle(d), ms = getComputedStyle(m);
+      return { safe: /safe-area-inset-top/.test(ov.cssText) && /safe-area-inset-bottom/.test(ov.cssText),
+        inside: dr.right <= mr.right - parseFloat(ms.paddingRight) + 1 && dr.left >= mr.left, minW: cs.minWidth, align: cs.textAlign,
+        top: Math.round(mr.top), maxH: ms.maxHeight, over: m.scrollWidth > m.clientWidth };
+    });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(r.safe, 'marges de sécurité absentes de .modal-overlay');
+    assert(r.inside && r.minW === '0px' && r.align === 'left' && !r.over, 'champ date : ' + JSON.stringify(r));
+    assert(r.top >= 20, 'fenêtre trop haute : ' + r.top);
+  });
+
   await browser.close();
   server.close();
 
