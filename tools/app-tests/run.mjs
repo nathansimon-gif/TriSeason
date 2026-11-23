@@ -1426,7 +1426,7 @@ async function main() {
     // Nouvelle séance : reprendre la dernière
     await v.page.click('text=+ Nouvelle séance');
     await v.page.selectOption('#s_sport', 'muscu');
-    await v.page.click('#muscuRepeatBtn');
+    await v.page.click('#muscuRepeatBtn'); await v.page.click('#muscuRepeatLast');
     const repeated = await v.page.evaluate(() => [...document.querySelectorAll('#muscuRows .muscu-row')].map(r => r.querySelector('.muscu-pick').dataset.name + '/' + r.querySelector('[data-k="kg"]').value));
     await v.page.evaluate(() => closeModal());
     // Dashboard : jour de la séance, totaux, charge (CTL/ATL)
@@ -3220,6 +3220,47 @@ async function main() {
     await v.ctx.close();
     assert(!before.script && !before.parser, 'chargé dès l’ouverture : ' + JSON.stringify(before));
     assert(after.parser && after.script, 'pas chargé au premier import : ' + JSON.stringify(after));
+  });
+
+  await test('Musculation : modèle de séance (« Séance PEC ») : enregistré depuis une séance, repris avec les dernières charges, modifiable', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/sessions.html`); await v.page.waitForTimeout(500);
+    const row = n => `#muscuRows .muscu-row:nth-child(${n}) `;
+    const pick = async (n, q, name) => { await v.page.click(row(n) + '.muscu-pick'); await v.page.fill('#mpSearch', q); await v.page.click(`#mpList [data-name="${name}"]`); };
+    // Séance A (il y a 5 jours) : squat 4×8 à 80 kg
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.fill('#s_date', day(-5)); await v.page.fill('#s_dur', '0:50:00');
+    await pick(1, 'squat', 'Squat'); await v.page.fill(row(1) + '[data-k="sets"]', '4'); await v.page.fill(row(1) + '[data-k="reps"]', '8'); await v.page.fill(row(1) + '[data-k="kg"]', '80');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    // Séance B : squat 4×6 à 90 kg + crunch au temps 3×30 s ; enregistrée comme modèle « Séance PEC »
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.fill('#s_date', day(-2)); await v.page.fill('#s_dur', '0:50:00');
+    await pick(1, 'squat', 'Squat'); await v.page.fill(row(1) + '[data-k="sets"]', '4'); await v.page.fill(row(1) + '[data-k="reps"]', '6'); await v.page.fill(row(1) + '[data-k="kg"]', '90');
+    await v.page.click('text=+ Ajouter un exercice'); await pick(2, 'crunch', 'Crunch'); await v.page.click(row(2) + '.muscu-unit [data-unit="time"]');
+    await v.page.fill(row(2) + '[data-k="sets"]', '3'); await v.page.fill(row(2) + '[data-k="reps"]', '30');
+    const saveVisible = await v.page.evaluate(() => getComputedStyle(document.getElementById('muscuSaveTplBtn')).display !== 'none');
+    await v.page.evaluate(() => { window.prompt = () => 'Séance PEC'; });
+    await v.page.click('#muscuSaveTplBtn');
+    await v.page.click('#sessionModal .btn--primary'); await v.page.waitForTimeout(300);
+    const tpl = await v.page.evaluate(() => TS.muscuTemplates().map(t => ({ name: t.name, ex: t.exercises })));
+    // Séance C : reprendre le modèle
+    await v.page.click('text=+ Nouvelle séance'); await v.page.selectOption('#s_sport', 'muscu');
+    await v.page.click('#muscuRepeatBtn');
+    const listed = await v.page.$$eval('#muscuTemplates .muscu-tpl__pick b', els => els.map(e => e.textContent));
+    await v.page.click('#muscuTemplates [data-tpl]');
+    const filled = await v.page.evaluate(() => [...document.querySelectorAll('#muscuRows .muscu-row')].map(r => ({ name: r.querySelector('.muscu-pick').dataset.name,
+      sets: r.querySelector('[data-k="sets"]').value, reps: r.querySelector('[data-k="reps"]').value, kg: r.querySelector('[data-k="kg"]').value, time: r.dataset.hold })));
+    // modifiable : on change un poids
+    await v.page.fill(row(1) + '[data-k="kg"]', '95');
+    const panelClosed = await v.page.evaluate(() => document.getElementById('muscuTemplates').hidden);
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(saveVisible, 'bouton « Enregistrer comme modèle » absent avec des exercices');
+    assert(tpl.length === 1 && tpl[0].name === 'Séance PEC' && tpl[0].ex.length === 2 && tpl[0].ex[0].sets === 4 && tpl[0].ex[1].hold === true, 'modèle enregistré : ' + JSON.stringify(tpl));
+    assert(listed.join() === 'Séance PEC' || listed.includes('Séance PEC'), 'modèle listé : ' + listed.join());
+    assert(filled.length === 2 && filled[0].name === 'Squat' && filled[0].sets === '4' && filled[0].reps === '6' && filled[0].kg === '90', 'charges de la dernière fois : ' + JSON.stringify(filled));
+    assert(filled[1].name === 'Crunch' && filled[1].time === '1' && filled[1].reps === '30' && filled[1].sets === '3', 'crunch au temps : ' + JSON.stringify(filled));
+    assert(panelClosed, 'panneau refermé après le choix');
   });
 
   await browser.close();

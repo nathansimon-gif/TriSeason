@@ -3987,6 +3987,51 @@ function setSportsChosen(list) {
   saveData(data);
   return backfill;
 }
+// ── Modèles de séance de musculation (« séance PEC ») ──────────────────────────
+// data.muscu_templates = [{ id, name, exercises: [{ name, group, hold?, sets }] }] : seulement les
+// noms, les groupes et le nombre de séries. Les poids et répétitions viennent de la dernière fois
+// que chaque exercice a été fait (templateExercises), et restent modifiables dans la séance.
+function muscuTemplates(data = getData()) { return data.muscu_templates || []; }
+function saveMuscuTemplate(name, exercises, data = getData()) {
+  name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!name) return { error: 'Donne un nom au modèle' };
+  const list = (exercises || []).filter(e => e && e.name).map(e => {
+    const t = { name: e.name, sets: Math.max(1, Math.round(e.sets || (e.series && e.series.length) || 1)) };
+    if (e.group) t.group = e.group;
+    if (e.hold != null) t.hold = !!e.hold;
+    return t;
+  });
+  if (!list.length) return { error: 'Ajoute au moins un exercice avant d’enregistrer le modèle' };
+  const tpls = (data.muscu_templates || []).filter(t => exKey(t.name) !== exKey(name));
+  const tpl = { id: newId(), name, exercises: list };
+  tpls.unshift(tpl);
+  data.muscu_templates = tpls.slice(0, 30);
+  saveData(data);
+  return { id: tpl.id, name };
+}
+function deleteMuscuTemplate(id, data = getData()) {
+  data.muscu_templates = (data.muscu_templates || []).filter(t => t.id !== id);
+  if (!data.muscu_templates.length) delete data.muscu_templates;
+  saveData(data);
+}
+// Dernière fois qu'un exercice a été fait (hors séance en cours)
+function lastExerciseOf(name, beforeId = null, data = getData()) {
+  const hit = (data.sessions || []).filter(s => s.sport === 'muscu' && s.id !== beforeId)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .flatMap(s => (s.exercises || []).filter(e => e.name === name))[0];
+  return hit ? JSON.parse(JSON.stringify(hit)) : null;
+}
+// Exercices d'un modèle prêts à être remplis : séries du modèle, charges et répétitions de la dernière fois
+function templateExercises(tpl, beforeId = null, data = getData()) {
+  return tpl.exercises.map(e => {
+    const last = lastExerciseOf(e.name, beforeId, data);
+    const ex = { name: e.name, group: e.group || MUSCU_GROUP_OF[e.name] || null };
+    if (e.hold != null) ex.hold = e.hold;
+    if (last && Array.isArray(last.series) && last.series.length) ex.series = last.series.map(x => ({ reps: x.reps, kg: x.kg, max: x.max }));
+    else { ex.sets = e.sets; if (last) { ex.reps = last.reps; ex.kg = last.kg; } }
+    return ex;
+  });
+}
 function lastMuscuSession(beforeId) {
   return getSessions({ sport: 'muscu' }).find(s => s.id !== beforeId && (s.exercises || []).length) || null;
 }
@@ -4642,7 +4687,7 @@ window.TS = {
   stravaDisconnect, stravaToSession, SERVER_URL: TS_SERVER_URL,
   planStravaArchive, applyStravaArchive, stravaFetchHistory, dataBytes, DATA_MAX_BYTES, dataMaxBytes,
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
-  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCLE_GROUP, MUSCU_ALIASES, muscuOwnExercise, saveMuscuExercise, deleteMuscuExercise, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
+  MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCLE_GROUP, MUSCU_ALIASES, muscuTemplates, saveMuscuTemplate, deleteMuscuTemplate, templateExercises, lastExerciseOf, muscuOwnExercise, saveMuscuExercise, deleteMuscuExercise, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   bodyWeightOn, isHoldExercise, exHold, holdByName, rememberMuscuHold, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
   syncScrollLock, mergeUnsent, monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
