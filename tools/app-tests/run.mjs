@@ -55,7 +55,9 @@ const firebaseStub = (uid) => `
     auth:Object.assign(()=>authObj,{EmailAuthProvider:{credential:()=>({})},GoogleAuthProvider:function(){}}),
     firestore:Object.assign(()=>({collection:()=>mkCol(''),batch(){const ops=[];return{
       set(r,v,o){ops.push(['s',r,v,o]);return this}, delete(r){ops.push(['d',r]);return this},
-      commit(){ if(ops.some(o=>o[1]._deny())) return denied(); const st=load();
+      commit(){ if(ops.some(o=>o[1]._deny())) return denied();
+        if(localStorage.getItem('__fbHang')==='1') return new Promise(()=>{});   // envoi qui n'aboutit jamais (page quittée, réseau lent)
+        const st=load();
         ops.forEach(o=>o[0]==='s'?o[1]._applySet(st,o[2],o[3]):o[1]._applyDel(st)); st.commits=(st.commits||0)+1; save(st); return Promise.resolve();}};}}),
       {FieldValue:{arrayUnion:(...v)=>({__union:v})}})};
   // Documents : 'uid' (users/uid) dans st.docs ; sous-documents 'uid/drawers/clé' dans st.sub.
@@ -3169,6 +3171,41 @@ async function main() {
     assert(chest.names[0] === 'Développé couché (machine)' && /^chest press · Pectoraux/.test(chest.sub) && !chest.create, 'chest press : ' + JSON.stringify(chest));
     assert(legp.names.includes('Presse à cuisses (assise)') && dl.names.includes('Soulevé de terre'), 'leg press / deadlift : ' + legp.names + ' ' + dl.names);
     assert(!keys.length, 'autres noms pour des exercices absents de la liste : ' + keys.join());
+  });
+
+  await test('Repas enregistré puis changement de page avant la fin de l’envoi : le repas n’est pas perdu, il est renvoyé', async () => {
+    const v = await newUser();
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(800);
+    const today = day(0);
+    // Envoi bloqué (réseau lent) : le repas est seulement sur le téléphone
+    await v.page.evaluate(() => localStorage.setItem('__fbHang', '1'));
+    await v.page.evaluate(d => { const data = TS.getData(); data.nutrition.meals.push({ id: 'lent1', date: d, type: 'déjeuner', desc: 'pâtes', glucides: 120 }); TS.saveData(data); }, today);
+    await v.page.waitForTimeout(200);
+    const marked = await v.page.evaluate(() => !!localStorage.getItem('triseason_unsent') && !window.__cloud('testeur').nutrition.meals.some(m => m.id === 'lent1'));
+    // On change de page tout de suite (l'envoi en cours est perdu), le réseau revient
+    await v.page.evaluate(() => localStorage.removeItem('__fbHang'));
+    await v.page.goto(`${BASE}/index.html`); await v.page.waitForTimeout(1500);
+    const after = await v.page.evaluate(() => ({ local: TS.getData().nutrition.meals.some(m => m.id === 'lent1'),
+      cloud: window.__cloud('testeur').nutrition.meals.some(m => m.id === 'lent1'), unsent: localStorage.getItem('triseason_unsent') }));
+    // Un autre appareil avait enregistré entre-temps : les deux sont gardés
+    await v.page.evaluate(d => {
+      localStorage.setItem('__fbHang', '1');
+      const data = TS.getData(); data.nutrition.meals.push({ id: 'ici', date: d, type: 'dîner', desc: 'riz' }); TS.saveData(data);
+      const st = JSON.parse(localStorage.getItem('__fb'));
+      const k = Object.keys(st.sub).find(x => x.startsWith('testeur/drawers/nutrition-' + d.slice(0, 7)));
+      const g = JSON.parse(st.sub[k].json); g.meals.push({ id: 'ailleurs', date: d, type: 'collation', desc: 'banane' }); st.sub[k].json = JSON.stringify(g);
+      st.docs.testeur.updatedAt = Date.now() + 60000; localStorage.setItem('__fb', JSON.stringify(st));
+    }, today);
+    await v.page.waitForTimeout(300);   // l'envoi de cette page est parti et reste bloqué
+    await v.page.evaluate(() => localStorage.removeItem('__fbHang'));
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(4500);   // tiroir modifié sans son empreinte : relu après 2 nouveaux essais
+    const both = await v.page.evaluate(() => { const ids = TS.getData().nutrition.meals.map(m => m.id); const st = JSON.parse(localStorage.getItem('__fb'));
+      return { here: ids.includes('ici'), other: ids.includes('ailleurs'), first: ids.includes('lent1'), cloud: window.__cloud('testeur').nutrition.meals.filter(m => ['ici', 'ailleurs', 'lent1'].includes(m.id)).length }; });
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(marked, 'repas pas marqué « pas encore envoyé »');
+    assert(after.local && after.cloud && !after.unsent, 'repas perdu ou pas renvoyé : ' + JSON.stringify(after));
+    assert(both.here && both.other && both.first && both.cloud === 3, 'saisies des deux appareils : ' + JSON.stringify(both));
   });
 
   await browser.close();

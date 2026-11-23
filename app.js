@@ -98,6 +98,12 @@ function pushToCloud(data) {
   if (!cloudSending) sendToCloud(ref);
 }
 let cloudSending = false, cloudPending = null;
+// Enregistrements pas encore arrivés dans le cloud. L'appli a une page par écran : si on
+// change de page (ou ferme l'appli) pendant un envoi, celui-ci est interrompu. Sans cette
+// marque, la page suivante relisait le compte en ligne (sans le dernier repas) et remplaçait
+// la copie du téléphone : la saisie était perdue. Valeur = heure du premier enregistrement
+// pas encore envoyé ; effacée quand l'envoi a réussi.
+const UNSENT_KEY = 'triseason_unsent';
 
 // ── Pastille d'état (sous la barre du haut) : synchronisation, enregistré,
 // hors connexion, chargement des données. Discrète, ne bloque rien.
@@ -116,7 +122,7 @@ function syncPill(state, text) {
   if (!navigator.onLine && state !== 'offline') state = 'offline';
   const labels = {
     loading: '<span class="spinner"></span>Chargement de tes données…',
-    sending: '<span class="spinner"></span>Synchronisation…',
+    sending: '<span class="spinner"></span>Gardé sur ce téléphone · envoi…',   // pas besoin d'attendre : renvoyé à la prochaine ouverture si besoin
     saved: 'Enregistré',
     error: 'Pas encore enregistré dans le cloud : nouvel essai au prochain enregistrement',
     offline: cloudLoaded ? 'Pas de réseau : tes saisies seront envoyées au retour du réseau'
@@ -149,7 +155,10 @@ async function sendToCloud(ref) {
       try {
         if (cloudLayout === 2) await writeDrawers(ref, data);
         else await writeSingleDoc(ref, data);
-        if (!cloudPending) syncPill(navigator.onLine ? 'saved' : 'offline');
+        if (!cloudPending) {
+          try { localStorage.removeItem(UNSENT_KEY); } catch {}
+          syncPill(navigator.onLine ? 'saved' : 'offline');
+        }
       } catch (err) {
         console.warn('[ORKA] Échec de la synchronisation cloud :', err.message);
         syncPill('error');
@@ -392,7 +401,7 @@ function markActiveToday(uid) {
 // synchronisation : sinon un nouveau compte « hériterait » des données de la
 // personne précédente (et les enverrait dans son propre cloud).
 const OWNER_KEY = 'triseason_owner';
-const LOCAL_USER_KEYS = [DB_KEY, OWNER_KEY, 'triseason_active_day'];
+const LOCAL_USER_KEYS = [DB_KEY, OWNER_KEY, 'triseason_active_day', UNSENT_KEY];
 
 function clearLocalUserData() {
   LOCAL_USER_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch {} });
@@ -535,12 +544,23 @@ function syncFromCloud(uid) {
       // toutes les données dans le document principal (elles font alors foi).
       let localData = null;
       try { localData = localStorage.getItem(DB_KEY) ? getData() : null; } catch {}
+      let unsent = 0;
+      try { unsent = Number(localStorage.getItem(UNSENT_KEY)) || 0; } catch {}
       const read = await readDrawers(ref, v, localData);
       const cloudData = read.data, inDrawers = !!read.index;
       cloudLayout = inDrawers ? 2 : 1;
       cloudIndex = inDrawers ? { ...read.index } : {};
       cloudLoaded = true;
-      if (compactStoredSessions(cloudData)) saveData(cloudData); // allégée une fois, renvoyée au cloud
+      if (unsent && localData) {
+        // Des saisies de cet appareil ne sont pas encore arrivées dans le cloud : elles sont
+        // gardées et renvoyées. Si un autre appareil a enregistré depuis, les deux sont
+        // réunis (séances, repas, ravitaillements : aucun n'est perdu).
+        const newer = (v.updatedAt || 0) > unsent;
+        const data = newer ? mergeUnsent(cloudData, localData) : localData;
+        localStorage.setItem(DB_KEY, JSON.stringify(data));
+        window.dispatchEvent(new CustomEvent('triseason:update', { detail: data }));
+        pushToCloud(data);
+      } else if (compactStoredSessions(cloudData)) saveData(cloudData); // allégée une fois, renvoyée au cloud
       else {
         localStorage.setItem(DB_KEY, JSON.stringify(cloudData));
         window.dispatchEvent(new CustomEvent('triseason:update', { detail: cloudData }));
@@ -569,6 +589,16 @@ function syncFromCloud(uid) {
     doneLoading();
   });
 }
+// Réunit la copie du cloud et des saisies pas encore envoyées de cet appareil : pour les
+// séances, repas et ravitaillements, tous ceux des deux côtés (même identifiant : la version
+// de cet appareil) ; pour le reste, la version de cet appareil.
+function mergeUnsent(cloud, local) {
+  const byId = (a, b) => { const m = new Map(); (a || []).forEach(x => m.set(x.id, x)); (b || []).forEach(x => m.set(x.id, x)); return [...m.values()]; };
+  const out = { ...cloud, ...local, sessions: byId(cloud.sessions, local.sessions) };
+  const cn = cloud.nutrition || {}, ln = local.nutrition || {};
+  out.nutrition = { ...cn, ...ln, meals: byId(cn.meals, ln.meals), fuel: byId(cn.fuel, ln.fuel) };
+  return out;
+}
 // Lance le déménagement (file d'envoi : jamais en même temps qu'un enregistrement).
 function pushToCloudSoon(ref) { if (!cloudSending) sendToCloud(ref); }
 
@@ -596,6 +626,8 @@ function saveData(data) {
   if (window.TS_LOGGED_OUT) return;
   localStorage.setItem(DB_KEY, JSON.stringify(data));
   ownExCache = null;
+  // Pas encore envoyé au cloud : marqué tant que l'envoi n'a pas réussi (voir syncFromCloud)
+  if (cloudLoaded && window.TS_USER) { try { if (!localStorage.getItem(UNSENT_KEY)) localStorage.setItem(UNSENT_KEY, String(Date.now())); } catch {} }
   window.dispatchEvent(new CustomEvent('triseason:update', { detail: data }));
   pushToCloud(data);
 }
@@ -4612,7 +4644,7 @@ window.TS = {
   splitData, assembleData, drawerHash, cloudLayoutNow: () => cloudLayout,
   MUSCU_GROUPS, MUSCU_GROUP_OF, MUSCLE_GROUP, MUSCU_ALIASES, muscuOwnExercise, saveMuscuExercise, deleteMuscuExercise, MUSCU_CATALOG, MUSCLES, MUSCU_ZONES, muscuZones, muscuTargets, muscuCustomExercises, hasMuscu, sportsShown, sportsChosen, sportOn, muscuOn, setSportsChosen, ALL_SPORTS, sportImported, triOn, multisportShown, limitOptions, lastMuscuSession, muscuVolume, exSeries, exMaxKg, muscuSetsText,
   bodyWeightOn, isHoldExercise, exHold, holdByName, rememberMuscuHold, oneRepMax, muscuExerciseHistory, muscuRecords, muscuRecordEvents, muscuSessionRecords, muscuRecordText, MUSCU_RM_REPS, muscuMuscleLoad, MUSCU_LOAD_MODES, muscuBodyMapSvg, bodyMapLevel, renderBodyMap,
-  syncScrollLock, monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
+  syncScrollLock, mergeUnsent, monthSummary, monthSummaryPages, showMonthSummary, maybeShowMonthSummary, showWelcome, maybeShowWelcome, nutritionLater, welcomeTarget, shiftMonth, monthName,
   monthCompare, showMonthCompare, monthsWithSessions, monthCalHtml,
   SPORTS, COMP_TYPES,
 };

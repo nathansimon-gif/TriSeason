@@ -134,7 +134,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   n'est connecté. Pendant la vérification, `html.ts-boot` cache la page et un
   écran de démarrage (`#tsSplash`, visible après ~0,3 s) s'affiche.
 - **États de chargement** (app.js) : `syncPill(state)` = pastille sous la barre
-  du haut (« Synchronisation… », « Enregistré », hors connexion, erreur,
+  du haut (« Gardé sur ce téléphone · envoi… », « Enregistré », hors connexion, erreur,
   « Chargement de tes données… ») ; `html.ts-loading-data` = cartes « en cours
   de chargement » quand il n'y a pas de copie locale et que le compte est relu ;
   `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
@@ -205,6 +205,10 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   `data`) continue de fonctionner. Si `data.sessions` existe dans le document
   principal (appareil resté sur une ancienne version), il fait foi et il est
   rangé à nouveau. Règles de référence : `firestore.rules` (à coller dans la console).
+- **Saisies pas encore envoyées** : `saveData` pose `localStorage.triseason_unsent` (heure du 1er enregistrement non envoyé),
+  effacé quand l'envoi réussit. À l'ouverture d'une page, si la marque est là, la copie locale est gardée et renvoyée au lieu
+  d'être remplacée par le cloud (sinon un repas saisi juste avant de changer de page était perdu) ; si le cloud a été modifié
+  depuis par un autre appareil (`updatedAt` plus récent), les deux sont réunis (`mergeUnsent` : séances, repas, ravitaillements).
 - `pushToCloud` n'envoie rien tant que les données du compte n'ont pas été lues
   (`cloudLoaded`) : un navigateur vide ne doit jamais écraser le cloud.
   Un seul envoi à la fois : pendant un envoi, seule la dernière version attend
