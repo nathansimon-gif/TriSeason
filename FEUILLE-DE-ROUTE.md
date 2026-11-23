@@ -9,13 +9,16 @@ Les cases cochées passent dans « Fait » en bas de page.
 
 ## Maintenant (en cours)
 
-- [ ] 🧑🤖 **Notifications et rappels sur le téléphone, à en reparler lundi 16 novembre** (demandé le 14/11/2026 ; **à reprendre avec Nathan après le rapport du lundi 16 novembre**, il a demandé qu'on le lui rappelle). Chaque rappel activé ou non par la personne (Profil → Paramètres), à l'heure qu'elle choisit :
+- [ ] 🧑🤖 **Notifications et rappels sur le téléphone (retenus le 23/11, voir les décisions ci-dessous)** (demandé le 14/11/2026 ; **à reprendre avec Nathan après le rapport du lundi 16 novembre**, il a demandé qu'on le lui rappelle). Chaque rappel activé ou non par la personne (Profil → Paramètres), à l'heure qu'elle choisit :
   - **Courses** : à J-7 d'une compétition (et pourquoi pas la veille)
-  - **Séances prévues** : le matin pour celles du jour, la veille au soir pour celles du lendemain
+  - **Séances prévues** : le matin, pour celles du jour seulement (décidé le 23/11 : pas la veille, pour ne pas être trop envahissant)
   - **Repas** : le soir si rien n'est noté pour la journée
+  - **Ressenti** : un rappel quand 5 séances récentes n'ont pas de ressenti (décidé le 23/11)
   - **Équipement** : chaussures, vélo ou combinaison qui approchent ou atteignent leur seuil de kilomètres (idée retenue par Nathan le 14/11)
   - **Résumé du mois** : le 1er du mois, « Ton résumé d'octobre est prêt » (idée retenue par Nathan le 14/11)
-  - **Autres idées** : ressenti à noter après une séance arrivée de Strava, pesée, défis de la semaine le dimanche
+  - **Autres idées** : pesée, défis de la semaine le dimanche (le ressenti est couvert par le rappel ci-dessus)
+  - **Espace pro (décidé le 23/11)** : notification quand un pro ajoute ou modifie quelque chose (plan, note), avec le même garde-fou : aucun contenu de santé dans le message
+  - **Chat avec le pro (idée, à étudier)** : faisable techniquement avec Firebase, mais il faut traiter les messages comme des données de santé (conservation, signalement, modération). Plus simple et plus sûr pour commencer : des **demandes structurées** (« ajuster mon plan », « question sur un repas ») dans un fil par personne, sans échange en direct
   - **Conditions** : l'appli installée sur l'écran d'accueil (iPhone avec iOS 16.4 ou plus, Android), accord de la personne pour les notifications ; le petit serveur Cloudflare (gratuit) envoie les messages à l'heure prévue ; mise à jour de la politique de confidentialité (le message passe par le service de notifications d'Apple ou de Google, **sans donnée de santé** dedans : « Course dans 7 jours », « Pense à noter tes repas »)
 - [ ] 🧑 **Nouveau nom, la suite** (l'appli affiche ORKA partout, mais **ORKA est déjà utilisé par une autre appli** : choisir un autre nom, puis Claude le remplace partout) :
   - choisir le logo (pistes dessinées le 6 novembre : aileron, élan, de zéro au sommet, tache de l'orque), puis Claude met l'icône dans l'appli
