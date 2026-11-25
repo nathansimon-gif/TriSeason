@@ -1042,9 +1042,27 @@ async function offSearch() {
       try { data = await offFetch(TS.SERVER_URL + '/off/search?q=' + encodeURIComponent(q), 1); }
       catch (e) { data = await offFetch(direct, 3); }
     } else data = await offFetch(direct, 3);
-    offFound = (data.products || []).map(offProduct).filter(Boolean).slice(0, 8);
+    // La nouvelle recherche d'Open Food Facts ne donne plus les valeurs nutritionnelles
+    // (champ « nutriments » vide) : on les lit produit par produit, par code-barres.
+    const list = await offWithNutrients(data.products || []);
+    offFound = list.map(offProduct).filter(Boolean).slice(0, 8);
     renderOffResults(q);
   } catch (e) { offStatus(OFF_ERROR); }
+}
+
+// Complète les produits sans valeurs nutritionnelles (12 au plus, en parallèle).
+async function offWithNutrients(products) {
+  const hasValues = p => { const n = p && p.nutriments || {}; return ['carbohydrates_100g', 'proteins_100g', 'fat_100g'].some(k => offNum(n[k]) !== null); };
+  const todo = products.filter(p => p && p.code && !hasValues(p)).slice(0, 12);
+  if (!todo.length) return products;
+  const got = new Map();
+  await Promise.all(todo.map(async p => {
+    try {
+      const d = await offFetchOnce(OFF_BASE + '/api/v2/product/' + encodeURIComponent(p.code) + '.json?fields=nutriments,serving_quantity', 8000);
+      if (d && d.status === 1 && d.product) got.set(p.code, d.product);
+    } catch (e) { /* ce produit reste sans valeurs : il sera masqué */ }
+  }));
+  return products.map(p => got.has(p.code) ? { ...p, nutriments: got.get(p.code).nutriments || {}, serving_quantity: p.serving_quantity || got.get(p.code).serving_quantity } : p);
 }
 
 async function offLookup(code) {
