@@ -1033,11 +1033,15 @@ async function offSearch() {
   try {
     // Par le serveur ORKA s'il est en place (nouvelle recherche, plus rapide),
     // sinon directement l'ancienne recherche d'Open Food Facts.
-    const url = TS.SERVER_URL
-      ? TS.SERVER_URL + '/off/search?q=' + encodeURIComponent(q)
-      : OFF_BASE + '/cgi/search.pl?action=process&json=1&search_simple=1&page_size=20&lc=fr'
-        + '&fields=' + OFF_FIELDS + '&search_terms=' + encodeURIComponent(q);
-    const data = await offFetch(url, TS.SERVER_URL ? 1 : 3);
+    // Si le serveur ORKA ne répond pas (hors service, limite atteinte…), on se rabat sur la
+    // recherche directe d'Open Food Facts : la recherche d'aliments marche alors quand même.
+    const direct = OFF_BASE + '/cgi/search.pl?action=process&json=1&search_simple=1&page_size=20&lc=fr'
+      + '&fields=' + OFF_FIELDS + '&search_terms=' + encodeURIComponent(q);
+    let data;
+    if (TS.SERVER_URL) {
+      try { data = await offFetch(TS.SERVER_URL + '/off/search?q=' + encodeURIComponent(q), 1); }
+      catch (e) { data = await offFetch(direct, 3); }
+    } else data = await offFetch(direct, 3);
     offFound = (data.products || []).map(offProduct).filter(Boolean).slice(0, 8);
     renderOffResults(q);
   } catch (e) { offStatus(OFF_ERROR); }
