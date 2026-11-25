@@ -407,7 +407,8 @@ async function main() {
       const url = r.request().url(); asked.push(url);
       const compote = { code: '3045320001570', product_name: 'Compote pomme', brands: 'Andros, Andros SAS', serving_quantity: '100',
         nutriments: { carbohydrates_100g: 14, proteins_100g: 0.3, fat_100g: 0.2, 'energy-kcal_100g': 60 } };
-      const body = url.includes('/api/v2/product/')
+      const body = url.includes('/api/v2/product/1.json') ? { status: 0 }   // le produit « Sans valeurs » reste inconnu
+        : url.includes('/api/v2/product/')
         ? { status: 1, product: { ...compote, product_name: 'Pâte à tartiner', brands: 'Marque', nutriments: { carbohydrates_100g: 57, proteins_100g: 6, fat_100g: 31 } } }
         : { products: [compote, { code: '1', product_name: 'Sans valeurs', nutriments: {} }] };
       r.fulfill({ body: JSON.stringify(body), contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' } });
@@ -437,7 +438,7 @@ async function main() {
     assert(gluc === '70', `glucides ${gluc} au lieu de 70 (riz 42 + compote 28 ; « pomme » ne doit pas être recompté)`);
     assert(gluc2 === '87', `glucides ${gluc2} au lieu de 87 après le code-barres`);
     assert(saved.glucides === 87 && saved.products?.length === 2 && saved.products[0].qty === 200 && !saved.products[0].label, 'repas enregistré : ' + JSON.stringify(saved));
-    assert(asked.length === 2 && asked[0].includes('workers.dev/off/search?q=compote') && asked[1].includes('openfoodfacts.org/api/v2/product/3017620422003'), 'requêtes : ' + asked.join(' | '));
+    assert(asked.length === 3 && asked[0].includes('workers.dev/off/search?q=compote') && asked[1].includes('openfoodfacts.org/api/v2/product/1.json') && asked[2].includes('openfoodfacts.org/api/v2/product/3017620422003'), 'requêtes : ' + asked.join(' | '));   // 2e : valeurs du produit qui n'en avait pas
     return 'recherche, code-barres et enregistrement';
   });
 
@@ -3331,6 +3332,31 @@ async function main() {
     await v.ctx.close();
     assert(shown === 1, 'produits : ' + shown);
     assert(asked.length === 2 && /workers\.dev\/off\/search/.test(asked[0]) && /world\.openfoodfacts\.org\/cgi\/search\.pl/.test(asked[1]), 'requêtes : ' + asked.join(' | '));
+  });
+
+  await test('Nutrition : la recherche d’aliments complète les valeurs nutritionnelles que la nouvelle recherche ne donne plus', async () => {
+    const v = await newUser();
+    const asked = [];
+    await v.ctx.route(/openfoodfacts\.org|workers\.dev\/off\//, r => {
+      const url = r.request().url(); asked.push(url);
+      const cors = { 'Access-Control-Allow-Origin': '*' };
+      if (/workers\.dev/.test(url)) return r.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify({ products: [
+        { code: '111', product_name: 'Compote A', brands: 'xx:andros', nutriments: {} },
+        { code: '222', product_name: 'Compote B', brands: '', nutriments: {}, serving_quantity: 100 },
+        { code: '333', product_name: 'Compote inconnue', brands: '', nutriments: {} }] }) });
+      const code = (url.match(/product\/(\d+)\.json/) || [])[1];
+      const nutr = { '111': { carbohydrates_100g: 14, proteins_100g: 0.3, fat_100g: 0.2 }, '222': { carbohydrates_100g: 11, proteins_100g: 0.2, fat_100g: 0.1 } }[code];
+      r.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify(nutr ? { status: 1, product: { code, nutriments: nutr } } : { status: 0 }) });
+    });
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(700);
+    await v.page.evaluate(() => openMealModal());
+    await v.page.fill('#off_q', 'compote'); await v.page.click('text=Chercher');
+    await v.page.waitForSelector('.off-item', { timeout: 8000 });
+    const names = await v.page.$$eval('.off-item', els => els.map(e => e.textContent));
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(names.length === 2 && /Compote A/.test(names[0]) && /Compote B/.test(names[1]), 'produits affichés : ' + JSON.stringify(names));
+    assert(asked.filter(u => /api\/v2\/product/.test(u)).length === 3, 'lectures par code-barres : ' + asked.join(' | '));
   });
 
   await browser.close();
