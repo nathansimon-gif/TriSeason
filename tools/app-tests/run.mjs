@@ -3313,6 +3313,26 @@ async function main() {
     assert(r.top >= 20, 'fenêtre trop haute : ' + r.top);
   });
 
+  await test('Nutrition : si le serveur ORKA ne répond pas, la recherche d’aliments se rabat sur Open Food Facts', async () => {
+    const v = await newUser();
+    const asked = [];
+    await v.ctx.route(/openfoodfacts\.org|workers\.dev\/off\//, r => {
+      const url = r.request().url(); asked.push(url);
+      if (/workers\.dev/.test(url)) return r.fulfill({ status: 503, body: 'indisponible', headers: { 'Access-Control-Allow-Origin': '*' } });
+      r.fulfill({ body: JSON.stringify({ products: [{ code: '1', product_name: 'Compote pomme', brands: 'Andros', serving_quantity: '100', nutriments: { carbohydrates_100g: 14, proteins_100g: 0.3, fat_100g: 0.2, 'energy-kcal_100g': 60 } }] }),
+        contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' } });
+    });
+    await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(700);
+    await v.page.evaluate(() => openMealModal());
+    await v.page.fill('#off_q', 'compote'); await v.page.click('text=Chercher');
+    await v.page.waitForSelector('.off-item', { timeout: 8000 });
+    const shown = await v.page.locator('.off-item').count();
+    assert(!v.errors.length, v.errors[0]);
+    await v.ctx.close();
+    assert(shown === 1, 'produits : ' + shown);
+    assert(asked.length === 2 && /workers\.dev\/off\/search/.test(asked[0]) && /world\.openfoodfacts\.org\/cgi\/search\.pl/.test(asked[1]), 'requêtes : ' + asked.join(' | '));
+  });
+
   await browser.close();
   server.close();
 
