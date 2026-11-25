@@ -3346,7 +3346,8 @@ async function main() {
         { code: '333', product_name: 'Compote inconnue', brands: '', nutriments: {} }] }) });
       const code = (url.match(/product\/(\d+)\.json/) || [])[1];
       const nutr = { '111': { carbohydrates_100g: 14, proteins_100g: 0.3, fat_100g: 0.2 }, '222': { carbohydrates_100g: 11, proteins_100g: 0.2, fat_100g: 0.1 } }[code];
-      r.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify(nutr ? { status: 1, product: { code, nutriments: nutr } } : { status: 0 }) });
+      const fiche = { '111': { product_name_fr: 'Compote pomme nature', brands: 'Andros, Andros SAS', quantity: '800g' }, '222': { product_name: 'Compote poire' } }[code] || {};
+      r.fulfill({ contentType: 'application/json', headers: cors, body: JSON.stringify(nutr ? { status: 1, product: { code, ...fiche, nutriments: nutr } } : { status: 0 }) });
     });
     await v.page.goto(`${BASE}/nutrition.html`); await v.page.waitForTimeout(700);
     await v.page.evaluate(() => openMealModal());
@@ -3355,7 +3356,7 @@ async function main() {
     const names = await v.page.$$eval('.off-item', els => els.map(e => e.textContent));
     assert(!v.errors.length, v.errors[0]);
     await v.ctx.close();
-    assert(names.length === 2 && /Compote A/.test(names[0]) && /Compote B/.test(names[1]), 'produits affichés : ' + JSON.stringify(names));
+    assert(names.length === 2 && /Compote pomme nature/.test(names[0]) && /Andros/.test(names[0]) && /800g/.test(names[0]) && !/xx:/.test(names.join()) && /Compote poire/.test(names[1]), 'produits affichés : ' + JSON.stringify(names));
     assert(asked.filter(u => /api\/v2\/product/.test(u)).length === 3, 'lectures par code-barres : ' + asked.join(' | '));
   });
 
