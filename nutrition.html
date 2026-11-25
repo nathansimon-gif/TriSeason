@@ -993,9 +993,10 @@ function offProduct(p) {
   if (g === null && pr === null && l === null) return null;
   const name = String(p.product_name_fr || p.product_name || '').trim();
   if (!name) return null;
-  const brand = String(p.brands || '').split(',')[0].trim();
+  // « xx:andros » : le préfixe de langue des marques de la nouvelle recherche est retiré
+  const brand = String(p.brands || '').split(',')[0].trim().replace(/^[a-z]{2,3}:/i, '').trim();
   const kcal = offNum(n['energy-kcal_100g']);
-  return { code: String(p.code || ''), name, brand, g: g || 0, p: pr || 0, l: l || 0,
+  return { code: String(p.code || ''), name, brand, pack: String(p.quantity || '').trim().slice(0, 20), g: g || 0, p: pr || 0, l: l || 0,
            kcal: kcal !== null ? kcal : (g || 0) * 4 + (pr || 0) * 4 + (l || 0) * 9,
            serving: offNum(p.serving_quantity) };
 }
@@ -1058,11 +1059,13 @@ async function offWithNutrients(products) {
   const got = new Map();
   await Promise.all(todo.map(async p => {
     try {
-      const d = await offFetchOnce(OFF_BASE + '/api/v2/product/' + encodeURIComponent(p.code) + '.json?fields=nutriments,serving_quantity', 8000);
+      const d = await offFetchOnce(OFF_BASE + '/api/v2/product/' + encodeURIComponent(p.code) + '.json?fields=product_name,product_name_fr,brands,quantity,nutriments,serving_quantity', 8000);
       if (d && d.status === 1 && d.product) got.set(p.code, d.product);
     } catch (e) { /* ce produit reste sans valeurs : il sera masqué */ }
   }));
-  return products.map(p => got.has(p.code) ? { ...p, nutriments: got.get(p.code).nutriments || {}, serving_quantity: p.serving_quantity || got.get(p.code).serving_quantity } : p);
+  // Le nom et la marque de la fiche complète sont plus propres que ceux de la recherche (« xx:andros »)
+  return products.map(p => { const f = got.get(p.code); return f ? { ...p, nutriments: f.nutriments || {}, serving_quantity: p.serving_quantity || f.serving_quantity,
+    product_name_fr: f.product_name_fr || p.product_name_fr, product_name: f.product_name || p.product_name, brands: f.brands || p.brands, quantity: f.quantity || p.quantity } : p; });
 }
 
 async function offLookup(code) {
@@ -1083,7 +1086,7 @@ function renderOffResults(q) {
   if (!offFound.length) { offStatus('Aucun produit trouvé pour « ' + escHtml(q) + ' ». Essaie un autre nom, la marque, ou le code-barres.'); return; }
   document.getElementById('off_results').innerHTML = '<div class="off-list">' + offFound.map((p, i) =>
     `<button type="button" class="off-item" id="off_item_${i}" onclick="selectOffProduct(${i})">
-      <span>${escHtml(p.name)}${p.brand ? ' <span class="off-item__brand">· ' + escHtml(p.brand) + '</span>' : ''}</span>
+      <span>${escHtml(p.name)}${p.brand || p.pack ? ' <span class="off-item__brand">· ' + escHtml([p.brand, p.pack].filter(Boolean).join(' · ')) + '</span>' : ''}</span>
       <span class="off-item__macros">${Math.round(p.g)} g gluc. · ${Math.round(p.kcal)} kcal /100 g</span>
     </button><div id="off_qty_${i}"></div>`).join('') + '</div>';
 }
