@@ -122,7 +122,6 @@ function syncPill(state, text) {
   if (!navigator.onLine && state !== 'offline') state = 'offline';
   const labels = {
     loading: '<span class="spinner"></span>Chargement de tes données…',
-    sending: '<span class="spinner"></span>Gardé sur ce téléphone · envoi…',   // pas besoin d'attendre : renvoyé à la prochaine ouverture si besoin
     saved: 'Enregistré',
     error: 'Pas encore enregistré dans le cloud : nouvel essai au prochain enregistrement',
     offline: cloudLoaded ? 'Pas de réseau : tes saisies seront envoyées au retour du réseau'
@@ -134,7 +133,7 @@ function syncPill(state, text) {
   if (state === 'error') syncPillTimer = setTimeout(() => syncPill(null), 4500);
 }
 window.addEventListener('offline', () => syncPill('offline'));
-window.addEventListener('online', () => syncPill(cloudSending ? 'sending' : null));
+window.addEventListener('online', () => syncPill(null));
 document.addEventListener('DOMContentLoaded', () => {
   if (!navigator.onLine) syncPill('offline');
   else if (document.documentElement.classList.contains('ts-loading-data')) syncPill('loading');
@@ -151,7 +150,6 @@ async function sendToCloud(ref) {
       }
       const data = cloudPending;
       cloudPending = null;
-      syncPill('sending');
       try {
         if (cloudLayout === 2) await writeDrawers(ref, data);
         else await writeSingleDoc(ref, data);
