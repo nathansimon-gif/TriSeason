@@ -139,7 +139,7 @@ HTML par écran, chacune avec son `<style>` et son `<script>` en ligne.
   n'est connecté. Pendant la vérification, `html.ts-boot` cache la page et un
   écran de démarrage (`#tsSplash`, visible après ~0,3 s) s'affiche.
 - **États de chargement** (app.js) : `syncPill(state)` = pastille sous la barre
-  du haut (« Gardé sur ce téléphone · envoi… », « Enregistré », hors connexion, erreur,
+  du haut (« Enregistré » (pas de message pendant l'envoi : on n'attend pas), hors connexion, erreur,
   « Chargement de tes données… ») ; `html.ts-loading-data` = cartes « en cours
   de chargement » quand il n'y a pas de copie locale et que le compte est relu ;
   `.spinner` = roue en ligne (imports, recherche d'aliments, boutons Strava).
